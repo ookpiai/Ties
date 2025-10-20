@@ -1,0 +1,353 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  
+  /* TIES Together Brand Colors - Clean White Theme with Red Accents */
+  --color-background: #ffffff; /* Pure white - Primary Background */
+  --color-foreground: #1a1a1a; /* Dark text - Primary Text */
+  --color-card: #f8f9fa; /* Light gray - Surface Background */
+  --color-card-foreground: #1a1a1a; /* Dark text */
+  --color-popover: #ffffff; /* Pure white */
+  --color-popover-foreground: #1a1a1a; /* Dark text */
+  --color-primary: #dc2626; /* Bright red - Primary Actions */
+  --color-primary-foreground: #ffffff; /* White text on red */
+  --color-secondary: #f1f5f9; /* Light blue-gray - Secondary Actions */
+  --color-secondary-foreground: #1a1a1a; /* Dark text */
+  --color-muted: #e2e8f0; /* Light gray - Borders & Dividers */
+  --color-muted-foreground: #64748b; /* Medium gray text */
+  --color-accent: #dc2626; /* Bright red - Accents */
+  --color-accent-foreground: #ffffff; /* White text on red */
+  --color-destructive: #dc2626; /* Bright red - Critical/Error */
+  --color-border: #e2e8f0; /* Light gray - Borders & Dividers */
+  --color-input: #ffffff; /* Pure white - Input backgrounds */
+  --color-ring: #dc2626; /* Bright red - Focus rings */
+  
+  /* Semantic Colors */
+  --color-success: #16a34a; /* Success Green */
+  --color-warning: #d97706; /* Warning Orange */
+  --color-info: #2563eb; /* Info Blue */
+  
+  /* Chart colors using brand palette */
+  --color-chart-1: #dc2626; /* Bright red */
+  --color-chart-2: #1a1a1a; /* Dark text */
+  --color-chart-3: #16a34a; /* Success Green */
+  --color-chart-4: #d97706; /* Warning Orange */
+  --color-chart-5: #2563eb; /* Info Blue */
+  
+  /* Sidebar colors */
+  --color-sidebar: #ffffff; /* Pure white */
+  --color-sidebar-foreground: #1a1a1a; /* Dark text */
+  --color-sidebar-primary: #dc2626; /* Bright red */
+  --color-sidebar-primary-foreground: #ffffff; /* White */
+  --color-sidebar-accent: #f8f9fa; /* Light gray */
+  --color-sidebar-accent-foreground: #1a1a1a; /* Dark text */
+  --color-sidebar-border: #e2e8f0; /* Light gray */
+  --color-sidebar-ring: #dc2626; /* Bright red */
+}
+
+:root {
+  --radius: 0.625rem;
+  
+  /* TIES Together Brand Colors - Clean White Theme with Red Accents */
+  --background: #ffffff; /* Pure white - Primary Background */
+  --foreground: #1a1a1a; /* Dark text - Primary Text */
+  --card: #f8f9fa; /* Light gray - Surface Background */
+  --card-foreground: #1a1a1a; /* Dark text */
+  --popover: #ffffff; /* Pure white */
+  --popover-foreground: #1a1a1a; /* Dark text */
+  --primary: #dc2626; /* Bright red - Primary Actions */
+  --primary-foreground: #ffffff; /* White text on red */
+  --secondary: #f1f5f9; /* Light blue-gray - Secondary Actions */
+  --secondary-foreground: #1a1a1a; /* Dark text */
+  --muted: #e2e8f0; /* Light gray - Borders & Dividers */
+  --muted-foreground: #64748b; /* Medium gray text */
+  --accent: #dc2626; /* Bright red - Accents */
+  --accent-foreground: #ffffff; /* White text on red */
+  --destructive: #dc2626; /* Bright red - Critical/Error */
+  --border: #e2e8f0; /* Light gray - Borders & Dividers */
+  --input: #ffffff; /* Pure white - Input backgrounds */
+  --ring: #dc2626; /* Bright red - Focus rings */
+  
+  /* Semantic Colors */
+  --success: #16a34a; /* Success Green */
+  --warning: #d97706; /* Warning Orange */
+  --info: #2563eb; /* Info Blue */
+  
+  /* Chart colors using brand palette */
+  --chart-1: #dc2626; /* Bright red */
+  --chart-2: #1a1a1a; /* Dark text */
+  --chart-3: #16a34a; /* Success Green */
+  --chart-4: #d97706; /* Warning Orange */
+  --chart-5: #2563eb; /* Info Blue */
+  
+  /* Sidebar colors */
+  --sidebar: #ffffff; /* Pure white */
+  --sidebar-foreground: #1a1a1a; /* Dark text */
+  --sidebar-primary: #dc2626; /* Bright red */
+  --sidebar-primary-foreground: #ffffff; /* White */
+  --sidebar-accent: #f8f9fa; /* Light gray */
+  --sidebar-accent-foreground: #1a1a1a; /* Dark text */
+  --sidebar-border: #e2e8f0; /* Light gray */
+  --sidebar-ring: #dc2626; /* Bright red */
+}
+
+/* Typography System - TIES Together Brand Guidelines */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+    font-weight: 400; /* Regular for body text */
+  }
+  
+  /* Typography Hierarchy */
+  .page-title {
+    font-family: 'Anton', sans-serif;
+    font-weight: 400;
+    font-size: 32px;
+    color: #1a1a1a; /* Dark text */
+  }
+  
+  .section-header {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600; /* Semi-Bold */
+    font-size: 24px;
+    color: #1a1a1a; /* Dark text */
+  }
+  
+  .card-title {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600; /* Semi-Bold */
+    font-size: 18px;
+    color: #1a1a1a; /* Dark text */
+  }
+  
+  .body-text {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400; /* Regular */
+    font-size: 16px;
+    color: #1a1a1a; /* Dark text */
+  }
+  
+  .form-label, .button-text {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500; /* Medium */
+    font-size: 14px;
+    color: #1a1a1a; /* Dark text */
+  }
+  
+  .helper-text {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400; /* Regular */
+    font-size: 12px;
+    color: #64748b; /* Medium gray */
+  }
+  
+  .display-text {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-weight: 400;
+    color: #1a1a1a; /* Dark text */
+  }
+  
+  /* Navigation Active State */
+  .nav-active {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600; /* Semi-Bold */
+    color: #dc2626; /* Bright red */
+    background-color: #f8f9fa; /* Light gray */
+  }
+  
+  /* Button States */
+  .btn-primary {
+    background-color: #dc2626; /* Bright red */
+    color: #ffffff;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500; /* Medium */
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .btn-primary:hover {
+    background-color: #b91c1c; /* Darker red on hover */
+    transform: translateY(-1px);
+  }
+  
+  .btn-primary:disabled {
+    background-color: #e2e8f0; /* Light gray */
+    color: #64748b;
+  }
+  
+  .btn-secondary {
+    background-color: transparent;
+    border: 1px solid #e2e8f0; /* Light gray */
+    color: #1a1a1a;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500; /* Medium */
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .btn-secondary:hover {
+    background-color: #f8f9fa;
+    border-color: #cbd5e1;
+  }
+  
+  /* Status Colors */
+  .status-success {
+    color: #16a34a; /* Success Green */
+  }
+  
+  .status-warning {
+    color: #d97706; /* Warning Orange */
+  }
+  
+  .status-error {
+    color: #dc2626; /* Bright red */
+  }
+  
+  .status-info {
+    color: #2563eb; /* Info Blue */
+  }
+  
+  /* Headings default to Inter Semi-Bold */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600; /* Semi-Bold */
+    color: #1a1a1a; /* Dark text */
+  }
+  
+  /* Override h1 for page titles to use Anton */
+  h1.page-title {
+    font-family: 'Anton', sans-serif;
+    font-weight: 400;
+  }
+  
+  /* Clean Feed Layout Styles - No Sidebars */
+  .feed-main {
+    width: 100%;
+    min-height: 100vh;
+    background-color: #ffffff;
+    padding: 0;
+  }
+  
+  .feed-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+  
+  .welcome-banner {
+    background-color: #16a34a;
+    color: #ffffff;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+  
+  .feed-empty {
+    background-color: #f8f9fa;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 3rem 2rem;
+    text-align: center;
+    margin: 2rem 0;
+  }
+  
+  .profile-card {
+    background-color: #f8f9fa;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .explore-box {
+    background-color: #f8f9fa;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+  }
+  
+  .filter-button {
+    background-color: transparent;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 0.5rem;
+    width: 100%;
+    text-align: left;
+  }
+  
+  .filter-button:hover {
+    background-color: #f8f9fa;
+    border-color: #cbd5e1;
+    color: #1a1a1a;
+  }
+}
+
+/* Scrollbar Styling for Light Theme */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f8f9fa;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Animation Classes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .feed-content {
+    padding: 0.5rem;
+  }
+  
+  .profile-card,
+  .explore-box {
+    padding: 1rem;
+  }
+}
+
