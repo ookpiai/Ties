@@ -1,0 +1,162 @@
+/* eslint-disable */
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Share+Tech+Mono&display=swap');
+
+@layer base {
+  :root {
+    /* light */
+    --bg: #F4F5F7;
+    --surface: #FFFFFF;
+    --surface-2: #F6F7FA;
+    --border: #E5E7EB;
+    --text: #0F172A;
+    --text-muted: #6B7280;
+    --accent: #E03131;       /* brand red */
+    --accent-hover: #F03E3E; /* red hover */
+    --focus: #F03E3E;
+  }
+
+  html.dark {
+    /* dark (black + red) */
+    --bg: #0B0D12;           /* near-black page background */
+    --surface: #121620;      /* cards/panels */
+    --surface-2: #171B26;    /* sidebars/inputs */
+    --border: #242A36;
+    --text: #E6E9F2;
+    --text-muted: #A7B0C2;
+    --accent: #E03131;
+    --accent-hover: #F03E3E;
+    --focus: #F03E3E;
+  }
+
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .bg-app {
+    background-color: var(--bg);
+  }
+
+  .bg-surface {
+    background-color: var(--surface);
+  }
+
+  .bg-surface-2 {
+    background-color: var(--surface-2);
+  }
+
+  .text-app {
+    color: var(--text);
+  }
+
+  .text-muted {
+    color: var(--text-muted);
+  }
+
+  .border-app {
+    border-color: var(--border);
+  }
+
+  .btn-primary {
+    background-color: var(--accent);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background-color: var(--accent-hover);
+  }
+
+  .focus-ring:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--focus), 0 0 0 4px rgba(0,0,0,0.1);
+  }
+
+  .surface-transparent {
+    background-color: transparent;
+  }
+
+  .btn {
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 200ms;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background-color: var(--accent);
+    color: white;
+  }
+  
+  .btn:hover {
+    background-color: var(--accent-hover);
+  }
+  
+  .card {
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+    padding: 1.5rem;
+    transition: all 200ms;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  
+  .card:hover {
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  }
+
+  /* Floating animations for login page */
+  @keyframes float {
+    0%, 100% {
+      transform: translate(0, 0) scale(1);
+    }
+    33% {
+      transform: translate(30px, -30px) scale(1.1);
+    }
+    66% {
+      transform: translate(-20px, 20px) scale(0.9);
+    }
+  }
+
+  @keyframes float-delayed {
+    0%, 100% {
+      transform: translate(0, 0) scale(1);
+    }
+    33% {
+      transform: translate(-40px, 30px) scale(0.95);
+    }
+    66% {
+      transform: translate(25px, -25px) scale(1.05);
+    }
+  }
+
+  @keyframes float-slow {
+    0%, 100% {
+      transform: translate(0, 0) scale(1);
+    }
+    50% {
+      transform: translate(20px, 20px) scale(1.08);
+    }
+  }
+
+  .animate-float {
+    animation: float 20s ease-in-out infinite;
+  }
+
+  .animate-float-delayed {
+    animation: float-delayed 25s ease-in-out infinite;
+  }
+
+  .animate-float-slow {
+    animation: float-slow 30s ease-in-out infinite;
+  }
+}
