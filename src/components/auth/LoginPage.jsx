@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../App'
+import { supabase } from '../../lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -9,14 +9,13 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
-    username: '',
+    email: '',
     password: ''
   })
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const { login } = useAuth()
   const navigate = useNavigate()
 
   const handleChange = (e) => {
@@ -34,15 +33,30 @@ const LoginPage = () => {
     setError('')
 
     try {
-      const result = await login(formData)
-      
-      if (result.success) {
-        navigate('/dashboard')
+      // Real Supabase authentication
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      })
+
+      if (signInError) throw signInError
+
+      // Check if profile exists
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single()
+
+      if (!profile) {
+        // First time login, redirect to profile setup
+        navigate('/profile/setup')
       } else {
-        setError(result.error || 'Login failed')
+        // Profile exists, go to dashboard
+        navigate('/dashboard')
       }
     } catch (err) {
-      setError('An unexpected error occurred')
+      setError(err.message || 'Login failed. Please check your credentials.')
     } finally {
       setLoading(false)
     }
@@ -111,17 +125,17 @@ const LoginPage = () => {
             )}
 
                 <div>
-                  <Label htmlFor="username" className="text-black">Username or Email</Label>
+                  <Label htmlFor="email" className="text-black">Email</Label>
                   <div className="mt-1">
                     <Input
-                      id="username"
-                      name="username"
-                      type="text"
-                      autoComplete="username"
+                      id="email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
                       required
-                      value={formData.username}
+                      value={formData.email}
                       onChange={handleChange}
-                      placeholder="Enter your username or email"
+                      placeholder="Enter your email"
                       className="text-black placeholder:text-black/40"
                     />
                   </div>
@@ -212,16 +226,11 @@ const LoginPage = () => {
                 </div>
               </div>
 
-              {/* Demo credentials info */}
+              {/* Info message */}
               <div className="mt-6 bg-blue-50/80 border border-blue-200/50 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-blue-800 mb-2">Demo Credentials</h3>
-                <p className="text-xs text-blue-700 mb-2">
-                  You can use these demo accounts to explore:
+                <p className="text-xs text-blue-700">
+                  Don't have an account? Sign up to create your profile and start connecting with creatives.
                 </p>
-                <div className="text-xs text-blue-700 space-y-1">
-                  <div><strong>Freelancer:</strong> demo_freelancer / password123</div>
-                  <div><strong>Organiser:</strong> demo_organiser / password123</div>
-                </div>
               </div>
             </div>
           </div>

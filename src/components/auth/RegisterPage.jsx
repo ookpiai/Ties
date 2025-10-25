@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../App'
+import { supabase } from '../../lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -26,7 +26,6 @@ const RegisterPage = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const { register } = useAuth()
   const navigate = useNavigate()
 
   const userRoles = [
@@ -122,16 +121,41 @@ const RegisterPage = () => {
     }
 
     try {
-      const { confirmPassword, ...registrationData } = formData
-      const result = await register(registrationData)
-      
-      if (result.success) {
-        navigate('/dashboard')
-      } else {
-        setError(result.error || 'Registration failed')
+      // Real Supabase signup
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+      })
+
+      if (signUpError) throw signUpError
+
+      // Map role to Supabase profile role format
+      const roleMapping = {
+        'freelancer': 'Artist',
+        'organiser': 'Organiser',
+        'venue': 'Venue',
+        'vendor': 'Crew',
+        'collective': 'Artist'
       }
+
+      // Create profile in database
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: data.user.id,
+          display_name: `${formData.first_name} ${formData.last_name}`.trim() || formData.username,
+          role: roleMapping[formData.role] || 'Artist',
+          city: formData.location || null,
+          bio: formData.bio || null,
+          avatar_url: null
+        })
+
+      if (profileError) throw profileError
+
+      // Success! Navigate to dashboard
+      navigate('/dashboard')
     } catch (err) {
-      setError('An unexpected error occurred')
+      setError(err.message || 'Registration failed. Please try again.')
     } finally {
       setLoading(false)
     }
