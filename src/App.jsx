@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { supabase } from './lib/supabase'
 import AppLayout from './components/layout/AppLayout'
 import LandingPage from './components/LandingPage'
 import LoginPage from './components/auth/LoginPage'
@@ -58,16 +59,50 @@ const AuthProvider = ({ children }) => {
   // Check authentication status on app load
   useEffect(() => {
     checkAuth()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        loadUserProfile(session.user.id)
+      } else {
+        setUser(null)
+        setLoading(false)
+      }
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
+
+  const loadUserProfile = async (userId) => {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+
+      if (profile) {
+        setUser({
+          id: userId,
+          ...profile,
+          onboarding_completed: true
+        })
+      }
+      setLoading(false)
+    } catch (error) {
+      console.error('Error loading profile:', error)
+      setLoading(false)
+    }
+  }
 
   const checkAuth = async () => {
     try {
-      // For demo purposes, automatically log in with mock user
-      // In production, this would check for a valid session/token
-      setTimeout(() => {
-        setUser(mockUser)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        await loadUserProfile(session.user.id)
+      } else {
         setLoading(false)
-      }, 1000)
+      }
     } catch (error) {
       console.error('Auth check failed:', error)
       setLoading(false)
@@ -76,46 +111,26 @@ const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-      // Mock login - in production this would call the backend
-      console.log('Login attempt:', credentials)
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // For demo, accept any credentials and log in with mock user
-      setUser(mockUser)
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: credentials.email,
+        password: credentials.password,
+      })
+
+      if (error) throw error
+
+      await loadUserProfile(data.user.id)
       return { success: true }
     } catch (error) {
-      return { success: false, error: 'Network error' }
+      return { success: false, error: error.message }
     }
   }
 
   const register = async (userData) => {
     try {
-      // Mock registration - in production this would call the backend
-      console.log('Registration attempt:', userData)
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // For demo, create a mock user based on registration data
-      const newUser = {
-        ...mockUser,
-        username: userData.username,
-        email: userData.email,
-        first_name: userData.first_name,
-        last_name: userData.last_name,
-        role: userData.role,
-        bio: userData.bio || '',
-        location: userData.location || '',
-        onboarding_completed: false // New users need onboarding
-      }
-      
-      setUser(newUser)
-      setNeedsOnboarding(true) // Trigger onboarding flow
+      // This is handled in RegisterPage.jsx now
       return { success: true }
     } catch (error) {
-      return { success: false, error: 'Network error' }
+      return { success: false, error: error.message }
     }
   }
 
@@ -141,8 +156,7 @@ const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      // Mock logout
-      console.log('Logout')
+      await supabase.auth.signOut()
     } catch (error) {
       console.error('Logout error:', error)
     } finally {
