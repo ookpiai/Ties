@@ -110,9 +110,9 @@ const CleanFeedDashboard = () => {
   ]
 
   return (
-    <div className="feed-main">
+    <div className="feed-main dark:bg-[#0B0B0B]">
       {/* Feed Content */}
-      <div className="feed-content">
+      <div className="feed-content dark:bg-[#0B0B0B]">
         {/* Feed Header */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="section-header text-[var(--foreground)]">Your Feed</h1>
@@ -123,11 +123,11 @@ const CleanFeedDashboard = () => {
         </div>
 
         {/* Feed Display Box */}
-        <div className="feed-empty">
+        <div className="feed-empty dark:bg-[#111315] dark:border-[#1F1F1F]">
           <div className="mb-4">
             <Camera size={48} className="mx-auto text-[var(--secondary)] mb-4" />
-            <h3 className="card-title mb-2 text-[var(--foreground)]">Your feed is empty</h3>
-            <p className="text-[var(--secondary)]">
+            <h3 className="card-title mb-2 text-[var(--foreground)] dark:text-white">Your feed is empty</h3>
+            <p className="text-[var(--secondary)] dark:text-[#B3B3B3]">
               Start following other creatives or create your first post to see content here
             </p>
           </div>
@@ -147,15 +147,15 @@ const CleanFeedDashboard = () => {
           {quickStats.map((stat, index) => {
             const IconComponent = stat.icon
             return (
-              <div key={index} className="profile-card">
+              <div key={index} className="profile-card dark:bg-[#111315] dark:border-[#1F1F1F]">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="p-2 rounded-lg bg-[var(--muted)]">
-                    <IconComponent size={20} className="text-[var(--foreground)]" />
+                  <div className="p-2 rounded-lg bg-[var(--muted)] dark:bg-[#1F1F1F]">
+                    <IconComponent size={20} className="text-[var(--foreground)] dark:text-white" />
                   </div>
-                  <span className="text-2xl font-bold text-[var(--foreground)]">{stat.value}</span>
+                  <span className="text-2xl font-bold text-[var(--foreground)] dark:text-white">{stat.value}</span>
                 </div>
-                <h4 className="text-sm font-medium text-[var(--foreground)] mb-1">{stat.label}</h4>
-                <p className="text-xs text-[var(--secondary)]">{stat.change}</p>
+                <h4 className="text-sm font-medium text-[var(--foreground)] dark:text-white mb-1">{stat.label}</h4>
+                <p className="text-xs text-[var(--secondary)] dark:text-[#B3B3B3]">{stat.change}</p>
               </div>
             )
           })}
@@ -164,9 +164,9 @@ const CleanFeedDashboard = () => {
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Activity */}
-          <div className="profile-card">
+          <div className="profile-card dark:bg-[#111315] dark:border-[#1F1F1F]">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="card-title">Recent Activity</h3>
+              <h3 className="card-title dark:text-white">Recent Activity</h3>
               <button className="text-sm text-primary hover:underline">View All</button>
             </div>
             
@@ -184,8 +184,8 @@ const CleanFeedDashboard = () => {
                       <IconComponent size={16} />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground">{activity.title}</p>
-                      <p className="text-xs text-muted-foreground">{activity.time}</p>
+                      <p className="text-sm font-medium text-foreground dark:text-white">{activity.title}</p>
+                      <p className="text-xs text-muted-foreground dark:text-[#B3B3B3]">{activity.time}</p>
                     </div>
                     <div className={`px-2 py-1 rounded-full text-xs ${
                       activity.status === 'pending' ? 'bg-warning/20 text-warning' :
@@ -202,22 +202,22 @@ const CleanFeedDashboard = () => {
           </div>
 
           {/* Upcoming Events */}
-          <div className="profile-card">
+          <div className="profile-card dark:bg-[#111315] dark:border-[#1F1F1F]">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="card-title">Upcoming Events</h3>
+              <h3 className="card-title dark:text-white">Upcoming Events</h3>
               <button className="text-sm text-primary hover:underline">View Calendar</button>
             </div>
             
             <div className="space-y-4">
               {upcomingEvents.map((event) => (
-                <div key={event.id} className="flex items-start gap-3 p-3 bg-card rounded-lg border border-border">
+                <div key={event.id} className="flex items-start gap-3 p-3 bg-card dark:bg-[#1F1F1F] rounded-lg border border-border dark:border-[#1F1F1F]">
                   <div className="p-2 rounded-lg bg-primary/20 text-primary">
                     <Calendar size={16} />
                   </div>
                   <div className="flex-1">
-                    <h4 className="text-sm font-medium text-foreground">{event.title}</h4>
-                    <p className="text-xs text-muted-foreground mb-1">{event.client}</p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <h4 className="text-sm font-medium text-foreground dark:text-white">{event.title}</h4>
+                    <p className="text-xs text-muted-foreground dark:text-[#B3B3B3] mb-1">{event.client}</p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground dark:text-[#B3B3B3]">
                       <Clock size={12} />
                       <span>{event.date} at {event.time}</span>
                     </div>
@@ -236,25 +236,25 @@ const CleanFeedDashboard = () => {
         </div>
 
         {/* Performance Insights */}
-        <div className="profile-card mt-6">
-          <h3 className="card-title mb-4">Performance Insights</h3>
+        <div className="profile-card dark:bg-[#111315] dark:border-[#1F1F1F] mt-6">
+          <h3 className="card-title dark:text-white mb-4">Performance Insights</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center">
               <div className="text-3xl font-bold text-success mb-2">94%</div>
-              <div className="text-sm text-muted-foreground">Response Rate</div>
+              <div className="text-sm text-muted-foreground dark:text-[#B3B3B3]">Response Rate</div>
               <div className="text-xs text-success mt-1">+5% from last month</div>
             </div>
             
             <div className="text-center">
               <div className="text-3xl font-bold text-primary mb-2">4.8</div>
-              <div className="text-sm text-muted-foreground">Average Rating</div>
+              <div className="text-sm text-muted-foreground dark:text-[#B3B3B3]">Average Rating</div>
               <div className="text-xs text-success mt-1">Based on 23 reviews</div>
             </div>
             
             <div className="text-center">
               <div className="text-3xl font-bold text-info mb-2">$2,450</div>
-              <div className="text-sm text-muted-foreground">This Month</div>
+              <div className="text-sm text-muted-foreground dark:text-[#B3B3B3]">This Month</div>
               <div className="text-xs text-success mt-1">+18% from last month</div>
             </div>
           </div>
@@ -262,50 +262,50 @@ const CleanFeedDashboard = () => {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-          <button className="profile-card hover:bg-surface-hover transition-colors text-left">
+          <button className="profile-card dark:bg-[#111315] dark:border-[#1F1F1F] hover:bg-surface-hover transition-colors text-left">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/20 text-primary">
                 <Users size={20} />
               </div>
               <div>
-                <div className="font-medium text-foreground">Find Talent</div>
-                <div className="text-xs text-muted-foreground">Discover creatives</div>
+                <div className="font-medium text-foreground dark:text-white">Find Talent</div>
+                <div className="text-xs text-muted-foreground dark:text-[#B3B3B3]">Discover creatives</div>
               </div>
             </div>
           </button>
           
-          <button className="profile-card hover:bg-surface-hover transition-colors text-left">
+          <button className="profile-card dark:bg-[#111315] dark:border-[#1F1F1F] hover:bg-surface-hover transition-colors text-left">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-success/20 text-success">
                 <Briefcase size={20} />
               </div>
               <div>
-                <div className="font-medium text-foreground">Create Booking</div>
-                <div className="text-xs text-muted-foreground">Book a service</div>
+                <div className="font-medium text-foreground dark:text-white">Create Booking</div>
+                <div className="text-xs text-muted-foreground dark:text-[#B3B3B3]">Book a service</div>
               </div>
             </div>
           </button>
           
-          <button className="profile-card hover:bg-surface-hover transition-colors text-left">
+          <button className="profile-card dark:bg-[#111315] dark:border-[#1F1F1F] hover:bg-surface-hover transition-colors text-left">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-info/20 text-info">
                 <Star size={20} />
               </div>
               <div>
-                <div className="font-medium text-foreground">New Project</div>
-                <div className="text-xs text-muted-foreground">Start collaboration</div>
+                <div className="font-medium text-foreground dark:text-white">New Project</div>
+                <div className="text-xs text-muted-foreground dark:text-[#B3B3B3]">Start collaboration</div>
               </div>
             </div>
           </button>
           
-          <button className="profile-card hover:bg-surface-hover transition-colors text-left">
+          <button className="profile-card dark:bg-[#111315] dark:border-[#1F1F1F] hover:bg-surface-hover transition-colors text-left">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-warning/20 text-warning">
                 <MessageSquare size={20} />
               </div>
               <div>
-                <div className="font-medium text-foreground">Send Message</div>
-                <div className="text-xs text-muted-foreground">Connect with others</div>
+                <div className="font-medium text-foreground dark:text-white">Send Message</div>
+                <div className="text-xs text-muted-foreground dark:text-[#B3B3B3]">Connect with others</div>
               </div>
             </div>
           </button>

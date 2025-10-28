@@ -32,12 +32,48 @@ import {
 } from 'lucide-react'
 
 const MessagesPage = () => {
-  const { user } = useAuth()
+  // Check for Supabase configuration
+  const hasSupabaseConfig = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY
+  
+  // Safely get user with fallback
+  let user = null
+  try {
+    const auth = useAuth()
+    user = auth?.user
+  } catch (error) {
+    console.error('Auth error:', error)
+  }
+  
+  // Mock user for development if no user is logged in
+  const currentUser = user || {
+    id: 1,
+    first_name: 'Developer',
+    last_name: 'User',
+    role: 'freelancer'
+  }
+  
   const [selectedConversation, setSelectedConversation] = useState(null)
   const [messageText, setMessageText] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [showNewMessage, setShowNewMessage] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState(null)
   const messagesEndRef = useRef(null)
+
+  // Show configuration warning if Supabase is not configured
+  if (!hasSupabaseConfig) {
+    return (
+      <div className="flex items-center justify-center min-h-screen p-6">
+        <div className="max-w-md text-center">
+          <MessageCircle className="w-16 h-16 mx-auto mb-4 text-yellow-500" />
+          <h2 className="text-2xl font-bold mb-2">Configuration Required</h2>
+          <p className="text-gray-600 mb-4">
+            Supabase environment variables are missing. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   // Mock conversations data
   const [conversations, setConversations] = useState([
@@ -45,7 +81,7 @@ const MessagesPage = () => {
       id: 1,
       participants: [
         { id: 2, name: 'Sarah Chen', avatar: null, role: 'freelancer', online: true },
-        { id: 1, name: user?.first_name + ' ' + user?.last_name, avatar: null, role: user?.role }
+        { id: 1, name: currentUser.first_name + ' ' + currentUser.last_name, avatar: null, role: currentUser.role }
       ],
       lastMessage: {
         id: 15,
@@ -65,7 +101,7 @@ const MessagesPage = () => {
       id: 2,
       participants: [
         { id: 3, name: 'Marcus Rodriguez', avatar: null, role: 'freelancer', online: false },
-        { id: 1, name: user?.first_name + ' ' + user?.last_name, avatar: null, role: user?.role }
+        { id: 1, name: currentUser.first_name + ' ' + currentUser.last_name, avatar: null, role: currentUser.role }
       ],
       lastMessage: {
         id: 28,
@@ -85,7 +121,7 @@ const MessagesPage = () => {
       id: 3,
       participants: [
         { id: 4, name: 'The Creative Collective', avatar: null, role: 'collective', online: true },
-        { id: 1, name: user?.first_name + ' ' + user?.last_name, avatar: null, role: user?.role }
+        { id: 1, name: currentUser.first_name + ' ' + currentUser.last_name, avatar: null, role: currentUser.role }
       ],
       lastMessage: {
         id: 42,

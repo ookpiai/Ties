@@ -161,8 +161,8 @@ const ProfilePage = () => {
   const roleContent = getRoleSpecificContent()
 
   return (
-    <div className="min-h-screen bg-app text-app transition-colors duration-200">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-app dark:bg-[#0B0B0B] text-app transition-colors duration-200">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 dark:bg-[#0B0B0B]">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">

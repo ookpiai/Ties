@@ -1158,7 +1158,7 @@ const FunctionalStudioPage = () => {
   )
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background dark:bg-[#0B0B0B]">
       <div className="w-full px-6 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -1167,8 +1167,8 @@ const FunctionalStudioPage = () => {
               <Crown className="w-8 h-8 text-primary" />
             </div>
             <div>
-              <h1 className="page-title">TIES Together Studio</h1>
-              <p className="text-muted-foreground">
+              <h1 className="page-title dark:text-white">TIES Together Studio</h1>
+              <p className="text-muted-foreground dark:text-[#B3B3B3]">
                 Professional event management workspace with fully functional collaboration tools
               </p>
             </div>
@@ -1184,14 +1184,14 @@ const FunctionalStudioPage = () => {
               >
                 ← Back to Workspaces
               </button>
-              <h2 className="text-xl font-semibold">{selectedWorkspace.title}</h2>
+              <h2 className="text-xl font-semibold dark:text-white">{selectedWorkspace.title}</h2>
             </div>
             <WorkspaceDetail workspace={selectedWorkspace} />
           </div>
         ) : (
           <div>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="section-header">My Studio Workspaces</h2>
+              <h2 className="section-header dark:text-white">My Studio Workspaces</h2>
               <button 
                 onClick={() => setShowCreateWorkspace(true)}
                 className="btn-primary flex items-center gap-2"

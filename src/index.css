@@ -17,13 +17,18 @@
   }
 
   html.dark {
-    /* dark (black + red) */
-    --bg: #0B0D12;           /* near-black page background */
-    --surface: #121620;      /* cards/panels */
-    --surface-2: #171B26;    /* sidebars/inputs */
-    --border: #242A36;
-    --text: #E6E9F2;
-    --text-muted: #A7B0C2;
+    /* dark (pure black unified theme) */
+    --bg: #0B0B0B;           /* pure black page background */
+    --bg-page: #0B0B0B;      /* page background */
+    --bg-surface: #111315;   /* content surface wrapper */
+    --bg-card: #0B0B0B;      /* card background - pure black */
+    --surface: #0B0B0B;      /* cards/panels - pure black */
+    --surface-2: #111315;    /* sidebars/inputs */
+    --border: #1F1F1F;       /* subtle border */
+    --text: #FFFFFF;         /* white primary text */
+    --text-primary: #FFFFFF; /* white primary text */
+    --text-muted: #B3B3B3;   /* grey secondary text */
+    --text-secondary: #B3B3B3; /* grey secondary text */
     --accent: #E03131;
     --accent-hover: #F03E3E;
     --focus: #F03E3E;
@@ -37,6 +42,30 @@
     background-color: var(--bg);
     color: var(--text);
     min-height: 100vh;
+  }
+
+  /* Dark mode text overrides */
+  html.dark h1, html.dark h2, html.dark h3, html.dark h4, html.dark h5, html.dark h6 {
+    color: var(--text-primary);
+  }
+
+  html.dark p, html.dark li, html.dark span, html.dark label {
+    color: var(--text-primary);
+  }
+
+  html.dark .muted, html.dark .subtext {
+    color: var(--text-secondary);
+  }
+
+  /* Dark mode inputs */
+  html.dark input, html.dark textarea, html.dark select {
+    color: var(--text-primary);
+    background: var(--bg-surface);
+    border-color: var(--border);
+  }
+
+  html.dark ::placeholder {
+    color: var(--text-secondary);
   }
 }
 
@@ -112,6 +141,28 @@
   
   .card:hover {
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  }
+
+  /* Dark mode utility classes */
+  .dm-page {
+    background-color: var(--bg-page);
+  }
+
+  .dm-surface {
+    background-color: var(--bg-surface);
+  }
+
+  .dm-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
+  }
+
+  .dm-text {
+    color: var(--text-primary);
+  }
+
+  .dm-subtext {
+    color: var(--text-secondary);
   }
 
   /* Floating animations for login page */

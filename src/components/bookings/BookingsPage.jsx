@@ -267,8 +267,8 @@ const BookingsPage = () => {
   const filteredJobs = filterData(jobs)
 
   return (
-    <div className="min-h-screen bg-app text-app transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0B0B0B] text-app transition-colors duration-200">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 dark:bg-[#0B0B0B]">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Bookings & Jobs</h1>
@@ -330,7 +330,7 @@ const BookingsPage = () => {
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-300 dark:border-[#1F1F1F] dark:bg-[#111315] dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Categories</option>
             <option value="design">Design</option>
@@ -357,7 +357,7 @@ const BookingsPage = () => {
             <div className="grid gap-6">
               {filteredBookings.length > 0 ? (
                 filteredBookings.map((booking) => (
-                  <Card key={booking.id} className="hover:shadow-md transition-shadow bg-surface border border-app text-app rounded-2xl">
+                  <Card key={booking.id} className="hover:shadow-md transition-shadow bg-surface dark:bg-[#111315] border border-app dark:border-[#1F1F1F] text-app rounded-2xl">
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -380,29 +380,29 @@ const BookingsPage = () => {
 
                           <div className="grid md:grid-cols-2 gap-4 mb-4">
                             <div className="space-y-2">
-                              <div className="flex items-center text-sm text-slate-600 dark:text-white">
+                              <div className="flex items-center text-sm text-slate-600 dark:text-[#B3B3B3]">
                                 <Users className="w-4 h-4 mr-2" />
                                 <span>Client: {booking.client.name}</span>
                               </div>
-                              <div className="flex items-center text-sm text-slate-600 dark:text-white">
+                              <div className="flex items-center text-sm text-slate-600 dark:text-[#B3B3B3]">
                                 <Briefcase className="w-4 h-4 mr-2" />
                                 <span>Freelancer: {booking.freelancer.name}</span>
                               </div>
-                              <div className="flex items-center text-sm text-slate-600 dark:text-white">
+                              <div className="flex items-center text-sm text-slate-600 dark:text-[#B3B3B3]">
                                 <MapPin className="w-4 h-4 mr-2" />
                                 <span>{booking.location}</span>
                               </div>
                             </div>
                             <div className="space-y-2">
-                              <div className="flex items-center text-sm text-slate-600 dark:text-white">
+                              <div className="flex items-center text-sm text-slate-600 dark:text-[#B3B3B3]">
                                 <Calendar className="w-4 h-4 mr-2" />
                                 <span>{formatDate(booking.startDate)} - {formatDate(booking.endDate)}</span>
                               </div>
-                              <div className="flex items-center text-sm text-slate-600 dark:text-white">
+                              <div className="flex items-center text-sm text-slate-600 dark:text-[#B3B3B3]">
                                 <DollarSign className="w-4 h-4 mr-2" />
                                 <span>{formatBudget(booking.budget)}</span>
                               </div>
-                              <div className="flex items-center text-sm text-slate-600 dark:text-white">
+                              <div className="flex items-center text-sm text-slate-600 dark:text-[#B3B3B3]">
                                 <Clock className="w-4 h-4 mr-2" />
                                 <span>Updated {formatDate(booking.lastUpdate)}</span>
                               </div>
@@ -462,14 +462,14 @@ const BookingsPage = () => {
             <div className="grid gap-6">
               {filteredJobs.length > 0 ? (
                 filteredJobs.map((job) => (
-                  <Card key={job.id} className="hover:shadow-md transition-shadow">
+                  <Card key={job.id} className="hover:shadow-md transition-shadow bg-surface dark:bg-[#111315] border border-app dark:border-[#1F1F1F] text-app rounded-2xl">
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-3 mb-3">
                             <div className="flex items-center space-x-2">
                               {getCategoryIcon(job.category)}
-                              <h3 className="text-lg font-semibold text-gray-900">
+                              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                                 {job.title}
                               </h3>
                             </div>
@@ -485,40 +485,40 @@ const BookingsPage = () => {
 
                           <div className="grid md:grid-cols-2 gap-4 mb-4">
                             <div className="space-y-2">
-                              <div className="flex items-center text-sm text-gray-600">
+                              <div className="flex items-center text-sm text-gray-600 dark:text-[#B3B3B3]">
                                 <Building className="w-4 h-4 mr-2" />
                                 <span>{job.company.name}</span>
                               </div>
-                              <div className="flex items-center text-sm text-gray-600">
+                              <div className="flex items-center text-sm text-gray-600 dark:text-[#B3B3B3]">
                                 <MapPin className="w-4 h-4 mr-2" />
                                 <span>{job.location}</span>
                               </div>
-                              <div className="flex items-center text-sm text-gray-600">
+                              <div className="flex items-center text-sm text-gray-600 dark:text-[#B3B3B3]">
                                 <Clock className="w-4 h-4 mr-2" />
                                 <span>{job.duration}</span>
                               </div>
                             </div>
                             <div className="space-y-2">
-                              <div className="flex items-center text-sm text-gray-600">
+                              <div className="flex items-center text-sm text-gray-600 dark:text-[#B3B3B3]">
                                 <DollarSign className="w-4 h-4 mr-2" />
                                 <span>{formatBudget(job.budget)}</span>
                               </div>
-                              <div className="flex items-center text-sm text-gray-600">
+                              <div className="flex items-center text-sm text-gray-600 dark:text-[#B3B3B3]">
                                 <Users className="w-4 h-4 mr-2" />
                                 <span>{job.applicants} applicants</span>
                               </div>
-                              <div className="flex items-center text-sm text-gray-600">
+                              <div className="flex items-center text-sm text-gray-600 dark:text-[#B3B3B3]">
                                 <Calendar className="w-4 h-4 mr-2" />
                                 <span>Deadline: {formatDate(job.deadline)}</span>
                               </div>
                             </div>
                           </div>
 
-                          <p className="text-gray-700 mb-4">{job.description}</p>
+                          <p className="text-gray-700 dark:text-white/80 mb-4">{job.description}</p>
 
                           <div className="mb-4">
-                            <h4 className="text-sm font-medium text-gray-900 mb-2">Requirements:</h4>
-                            <ul className="text-sm text-gray-600 space-y-1">
+                            <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Requirements:</h4>
+                            <ul className="text-sm text-gray-600 dark:text-[#B3B3B3] space-y-1">
                               {job.requirements.map((req, index) => (
                                 <li key={index} className="flex items-start">
                                   <span className="w-1 h-1 bg-gray-400 rounded-full mt-2 mr-2 flex-shrink-0"></span>

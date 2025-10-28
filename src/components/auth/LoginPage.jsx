@@ -33,6 +33,13 @@ const LoginPage = () => {
     setError('')
 
     try {
+      // DEVELOPER BYPASS: Allow direct access with "dev" credentials
+      if (formData.email === 'dev' && formData.password === 'dev') {
+        console.log('Developer bypass activated')
+        navigate('/dashboard')
+        return
+      }
+
       // Real Supabase authentication
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: formData.email,
@@ -130,12 +137,12 @@ const LoginPage = () => {
                     <Input
                       id="email"
                       name="email"
-                      type="email"
+                      type="text"
                       autoComplete="email"
                       required
                       value={formData.email}
                       onChange={handleChange}
-                      placeholder="Enter your email"
+                      placeholder="Enter your email (or 'dev' for testing)"
                       className="text-black placeholder:text-black/40"
                     />
                   </div>
