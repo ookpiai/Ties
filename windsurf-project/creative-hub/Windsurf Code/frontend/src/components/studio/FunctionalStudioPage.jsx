@@ -1081,7 +1081,7 @@ const FunctionalStudioPage = () => {
 
   const WorkspaceCard = ({ workspace }) => (
     <div 
-      className="profile-card hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-primary"
+      className="profile-card workspace-card hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-primary"
       onClick={() => setSelectedWorkspace(workspace)}
     >
       <div className="flex items-start justify-between mb-4">
@@ -1150,7 +1150,7 @@ const FunctionalStudioPage = () => {
           <Users size={14} />
           <span>{workspace.collaborators} collaborators</span>
         </div>
-        <button className="btn-secondary text-sm">
+        <button className="btn-secondary text-sm btn-open-studio" data-action="open-studio">
           Open Studio
         </button>
       </div>
@@ -1158,7 +1158,7 @@ const FunctionalStudioPage = () => {
   )
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" data-page="studio">
       <div className="w-full px-6 py-8">
         {/* Header */}
         <div className="mb-8">

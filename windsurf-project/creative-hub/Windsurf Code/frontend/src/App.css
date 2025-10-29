@@ -351,3 +351,66 @@
   }
 }
 
+/* ========================
+   DARK MODE POLISH - DISCOVER TALENT, STUDIO, REPORT
+   ======================== */
+
+/* Discover Talent - "+1 more" Chip White Text */
+.dark .more-chip,
+.dark [data-more-chip] {
+  color: #FFFFFF !important;
+  background: transparent !important;
+  border-color: #E63946 !important;
+}
+
+/* Additional selectors for talent cards */
+.dark [data-page="discover"] .more-chip,
+.dark [data-page="discover"] [data-more-chip] {
+  color: #FFFFFF !important;
+  background: transparent !important;
+  border-color: #E63946 !important;
+}
+
+/* Discover Talent - Sort Dropdown Dark Mode */
+.dark [data-page="discover"] select {
+  background: #151515 !important;
+  color: #FFFFFF !important;
+  border-color: #1F1F1F !important;
+}
+
+.dark [data-page="discover"] select option {
+  background: #151515;
+  color: #FFFFFF;
+}
+
+/* Studio Landing - Open Studio Button with Red Outline (Already Implemented) */
+.dark [data-page="studio"] .workspace-card .btn-open-studio,
+.dark [data-page="studio"] .workspace-card [data-action="open-studio"] {
+  background: #E63946;
+  color: #FFFFFF;
+  border: 2px solid #E63946;
+  box-shadow: none;
+}
+
+.dark [data-page="studio"] .workspace-card .btn-open-studio:focus-visible,
+.dark [data-page="studio"] .workspace-card [data-action="open-studio"]:focus-visible {
+  outline: 2px solid #E63946;
+  outline-offset: 2px;
+}
+
+/* Report a Problem - Submit Report Button RED (Already Implemented) */
+.dark [data-page="report-bug"] .btn-submit,
+.dark [data-page="report-bug"] button[type="submit"],
+.dark .report-form .btn-submit,
+.dark button[type="submit"][data-submit="report"] {
+  background: #E63946 !important;
+  color: #FFFFFF !important;
+  border: 1px solid #E63946 !important;
+  box-shadow: none;
+}
+
+.dark [data-page="report-bug"] .btn-submit:hover,
+.dark [data-page="report-bug"] button[type="submit"]:hover {
+  filter: brightness(1.05);
+}
+

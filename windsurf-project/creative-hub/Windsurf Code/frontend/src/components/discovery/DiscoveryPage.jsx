@@ -355,10 +355,10 @@ const DiscoveryPage = () => {
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value)}
-                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 dark:bg-[#151515] dark:text-white dark:border-[#1F1F1F]"
                     >
                       {sortOptions.map(option => (
-                        <option key={option.value} value={option.value}>
+                        <option key={option.value} value={option.value} data-sort={option.value}>
                           {option.label}
                         </option>
                       ))}
@@ -534,7 +534,7 @@ const DiscoveryPage = () => {
                           </Badge>
                         ))}
                         {professional.skills.length > 3 && (
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs more-chip dark:text-white dark:bg-transparent dark:border-[#E63946]" data-more-chip>
                             +{professional.skills.length - 3} more
                           </Badge>
                         )}
