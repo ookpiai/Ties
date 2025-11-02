@@ -116,7 +116,86 @@
 
 ---
 
+## 🔒 PHASE SIGN-OFF PROCESS (CRITICAL)
+
+**When you complete a phase, you MUST complete the sign-off checklist before moving to the next phase.**
+
+### How to Sign Off a Phase:
+
+1. **Complete all tasks** in DEVELOPMENT_ROADMAP.md for that phase
+2. **Navigate to** the "🔒 PHASE SIGN-OFF TRACKER" section (top of DEVELOPMENT_ROADMAP.md)
+3. **Check off ALL items** in that phase's sign-off checklist
+4. **Change status** from 🔴 NOT STARTED → 🟢 COMPLETE
+5. **Fill in sign-off date** (today's date)
+6. **Fill in "Signed by"** (your name)
+7. **Change checkbox** from ⬜ to ✅
+8. **Commit the sign-off** with message: "Phase X sign-off complete"
+9. **DO NOT proceed** to next phase until ALL checklist items are ✅
+
+### Example Sign-Off:
+
+**BEFORE (Phase not complete):**
+```
+### ⬜ PHASE 1: FOUNDATION (Days 1-5)
+**Status:** 🔴 NOT STARTED
+**Sign-off Date:** ___________
+**Signed by:** ___________
+
+**Sign-off Checklist (ALL must be ✅ before Phase 2):**
+- [ ] All Day 1-5 tasks checked off below
+- [ ] Users can register with email
+- [ ] Users can register with Google OAuth
+```
+
+**AFTER (Phase complete):**
+```
+### ✅ PHASE 1: FOUNDATION (Days 1-5)
+**Status:** 🟢 COMPLETE
+**Sign-off Date:** November 15, 2025
+**Signed by:** [Your Name]
+
+**Sign-off Checklist (ALL must be ✅ before Phase 2):**
+- [x] All Day 1-5 tasks checked off below
+- [x] Users can register with email
+- [x] Users can register with Google OAuth
+```
+
+### ⚠️ ENFORCEMENT RULES
+
+**You CANNOT move to the next phase unless:**
+- ✅ ALL tasks in current phase are complete
+- ✅ ALL sign-off checklist items are checked
+- ✅ Status changed to 🟢 COMPLETE
+- ✅ Sign-off date and name filled in
+- ✅ V1_IMPLEMENTATION_TRACKER.md updated with new percentages
+- ✅ Changes committed to git
+
+**If ANY item is unchecked:**
+- 🚫 DO NOT proceed to next phase
+- 🚫 DO NOT start work on next phase tasks
+- ✅ Complete missing items first
+- ✅ Test thoroughly before signing off
+
+---
+
 ## 🚨 GOLDEN RULES - NEVER FORGET THESE
+
+### Rule 0: Complete Phase Sign-Off Before Moving Forward
+❌ **DON'T:** "I finished most of Phase 1, let me start Phase 2"
+✅ **DO:** "Let me complete the Phase 1 sign-off checklist, then move to Phase 2"
+
+**Why:** Sign-off ensures quality and prevents incomplete features from causing issues later.
+
+**The Sign-Off Rule:**
+- Complete ALL tasks in a phase
+- Check off ALL items in sign-off checklist
+- Change status to 🟢 COMPLETE
+- Fill in date and name
+- Update V1_IMPLEMENTATION_TRACKER.md
+- Commit the sign-off
+- ONLY THEN proceed to next phase
+
+---
 
 ### Rule 1: Follow the Roadmap Sequentially
 ❌ **DON'T:** "Calendar looks hard, let me skip to messaging"
