@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 export function TitoLoader({ show }: { show: boolean }) {
   if (!show) return null
