@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /mnt/c/Users/oo/Desktop/ties-together/TIES-Together-V2 log --oneline -20)",
+      "Bash(wc -l:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm install)",
+      "Bash(xargs cat:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git config:*)",
+      "Bash(git push:*)",
+      "Bash(git -C /mnt/c/Users/oo/Desktop/ties-together/TIES-Together-V2 status)",
+      "Bash(git -C /mnt/c/Users/oo/Desktop/ties-together/TIES-Together-V2 diff --stat)",
+      "Bash(git -C /mnt/c/Users/oo/Desktop/ties-together/TIES-Together-V2 log --oneline -5)",
+      "Bash(git -C /mnt/c/Users/oo/Desktop/ties-together/TIES-Together-V2 add CODEBASE_ANALYSIS.md PLATFORM_OVERVIEW.md V1_IMPLEMENTATION_TRACKER.md WORKFLOW_CLARIFICATIONS.md)",
+      "Bash(git -C /mnt/c/Users/oo/Desktop/ties-together/TIES-Together-V2 push origin dev)",
+      "Bash(git -C /mnt/c/Users/oo/Desktop/ties-together/TIES-Together-V2 add DEVELOPMENT_ROADMAP.md)",
+      "Bash(git -C /mnt/c/Users/oo/Desktop/ties-together/TIES-Together-V2 commit -m \"$(cat <<''EOF''\ndocs: Add sequential development roadmap for v1 implementation\n\nCreated DEVELOPMENT_ROADMAP.md - a concise, actionable guide for implementing\nfeatures in the correct order.\n\nKey structure:\n- 7 phases over 53 working days (10-11 weeks)\n- Phase 1: Foundation & Auth (Days 1-5)\n- Phase 2: Discovery & Search (Days 6-10)\n- Phase 3: Calendar & Availability (Days 11-17)\n- Phase 4: Payments & Direct Booking (Days 18-30)\n- Phase 5: Job Posting System (Days 31-40)\n- Phase 6: Communication & Polish (Days 41-45)\n- Phase 7: Deployment & Launch (Days 46-53)\n\nEach phase includes:\n- Clear goal statement\n- Day-by-day task breakdown\n- Completion criteria\n- File references for implementation\n\nCritical path dependencies clearly marked to prevent skipping ahead.\nDesigned to be followed sequentially while updating V1_IMPLEMENTATION_TRACKER.md.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git -C /mnt/c/Users/oo/Desktop/ties-together/TIES-Together-V2 log --oneline -3)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
