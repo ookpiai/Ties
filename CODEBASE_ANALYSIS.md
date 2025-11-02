@@ -1310,24 +1310,116 @@ Application Models
 - **Sorting:** Pro users first, verified users first, then by creation date
 
 ### 2. Booking System (via Stripe Connect API)
-- **Create Booking:** Client books freelancer/vendor/venue
-- **Payment Processing:** Stripe Payment Intents API
+
+**CRITICAL v1 FEATURE:** TIES Together has TWO distinct booking workflows that must both be fully functional:
+
+#### **Workflow 1: Direct Booking** (Discover → Book)
+1. User logs in and navigates to Discovery page
+2. Filters/searches for freelancers or venues by location, skills, price
+3. Clicks on a profile to view full details
+4. Views portfolio, rates, and **real-time availability**
+5. Selects dates and checks if available (via calendar sync)
+6. If available, clicks "Book Now"
+7. Completes payment via Stripe Checkout
+8. Receives email confirmation from TIES Together
+9. Booking appears in their "Bookings" tab
+10. Venue/freelancer receives notification and can accept/decline
+
+**Current Status:** UI exists but no calendar sync, availability checking incomplete, payment not integrated
+
+#### **Workflow 2: Job Posting & Application** (Upwork-style)
+1. User creates a job post describing needs (e.g., "Need photographer + venue for wedding")
+2. Post includes: title, description, budget, location, required skills, dates
+3. Post appears in public **Job Feed** where all users can see it
+4. Interested freelancers/venues click "Apply Now"
+5. They submit application with cover message and portfolio samples
+6. Original poster sees all applicants in "View Applicants" section
+7. Poster reviews each applicant's profile, portfolio, and application
+8. Poster selects one or more candidates (e.g., photographer AND venue)
+9. Selected candidates receive booking confirmation
+10. Payment processed via Stripe escrow
+11. Non-selected applicants notified they weren't chosen
+
+**Current Status:** Only 5% implemented - UI buttons exist but NO backend support, NO application database, NO applicant management
+
+#### **Booking System Components:**
+
+**Payment Processing:** Stripe Payment Intents API
   - Secure payment capture
   - 3D Secure authentication
   - Automatic receipt generation
-- **Booking Lifecycle:**
+
+**Booking Lifecycle:**
   1. Pending (awaiting freelancer response) - Payment pre-authorized
   2. Accepted (freelancer confirms) - Payment captured to escrow
   3. Declined (freelancer rejects) - Payment refunded via Stripe Refunds API
   4. Completed (job done) - Funds released via Stripe Transfer API
   5. Cancelled (either party cancels) - Refund policy enforced
-- **Booking Details:** Title, description, budget, dates, location
-- **Commission:** 10% for free users, 8% for Pro users (automatically split via Stripe Connect)
-- **Jobs Board:** Public listing of pending bookings
-- **Booking Management:** Edit (pending only), delete, status updates
-- **Invoicing:** Automatic PDF invoice generation via Stripe Invoices API
 
-### 3. Messaging System (via Supabase Realtime API)
+**Calendar Integration & Availability:**
+  - Real-time availability checking for venues
+  - Calendar sync (Google Calendar API) to show blocked dates
+  - Prevents double-booking
+  - Shows available time slots in booking UI
+  - Automatic calendar updates when booking confirmed
+  - **Status:** NOT IMPLEMENTED - no calendar tables, no sync, no availability checking
+
+**Booking Details:** Title, description, budget, dates, location
+**Commission:** 10% for free users, 8% for Pro users (automatically split via Stripe Connect)
+**Jobs Board:** Public listing of available jobs and bookings
+**Booking Management:** Edit (pending only), delete, status updates
+**Invoicing:** Automatic PDF invoice generation via Stripe Invoices API
+**Email Notifications:** SendGrid API for all booking status changes
+
+### 3. Job Posting & Application System (CRITICAL v1 REQUIREMENT - Upwork-style)
+
+**Purpose:** Job marketplace where users post needs and freelancers/venues apply
+
+**Current Implementation Status:** 5% - UI mockup only, NO backend support
+
+#### **Job Creation:**
+- **UI:** "Post Job" button exists in BookingsPage.jsx but opens empty form
+- **Backend:** NO endpoint for creating job posts
+- **Database:** NO `JobPosting` model exists (currently reuses `Booking` model)
+- **Fields Needed:** title, description, budget, location, required_skills, dates, deadline
+
+#### **Job Feed/Board:**
+- **UI:** "Jobs Board" tab displays 4 hardcoded jobs with mock data
+- **Backend:** `/api/bookings/jobs` returns pending bookings as jobs (partial solution)
+- **Filters:** Search by title, category, location (UI only, not functional)
+- **Display:** Shows job title, budget, requirements, applicant count (mock number)
+
+#### **Application Submission:**
+- **UI:** "Apply Now" button exists but is non-functional
+- **Backend:** NO `/api/jobs/{id}/apply` endpoint
+- **Database:** NO `JobApplication` model exists
+- **Required:** Cover message, portfolio selection, availability confirmation
+
+#### **Applicant Management:**
+- **UI:** NO "View Applicants" interface exists
+- **Backend:** NO endpoints to retrieve/manage applicants
+- **Database:** NO applicant tracking
+- **Required:** List all applicants, view profiles, accept/reject candidates
+
+#### **Selection & Hiring:**
+- **UI:** NO candidate selection interface
+- **Backend:** NO accept/reject application endpoints
+- **Process:** When candidate selected, create booking and process payment
+- **Notifications:** Email to selected and rejected applicants
+
+**What Needs to Be Built (Estimated 8-10 days):**
+- [ ] Create `JobPosting` database model with relationships
+- [ ] Create `JobApplication` database model
+- [ ] Build `/backend/src/routes/jobs.py` with full CRUD
+- [ ] Implement application submission endpoint
+- [ ] Implement applicant retrieval and management endpoints
+- [ ] Build job creation form component
+- [ ] Build application submission modal
+- [ ] Build applicants list/management UI
+- [ ] Connect to real job data (remove mock)
+- [ ] Add email notifications for all job/application events
+
+### 4. Messaging System (via Supabase Realtime API)
 - **1:1 Messaging:** Direct conversations between users
 - **Real-time Delivery:** Supabase Realtime API for instant message delivery
 - **Thread Management:** Messages grouped by thread_id
