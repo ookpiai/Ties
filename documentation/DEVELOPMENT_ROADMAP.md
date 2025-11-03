@@ -203,7 +203,9 @@ Auth → Discovery → Calendar → Payments → Workflow 1 → Workflow 2 → L
 - [x] Create production Supabase project
 - [x] Get Supabase credentials, add to `.env`
 - [ ] Apply for Stripe Connect platform account ⚠️ **DEFERRED - Awaiting team approval. MUST complete before Phase 4!**
-- [ ] Register Google OAuth app (Google Cloud Console)
+- [x] Register Google OAuth app (Google Cloud Console)
+- [x] Get Google OAuth Client ID and Secret
+- [ ] Add Google OAuth credentials to Supabase (in progress)
 - [ ] Create SendGrid account, start domain verification
 - [ ] Create Mapbox account, get API key
 - [ ] Register Facebook/Apple OAuth apps (optional for v1)

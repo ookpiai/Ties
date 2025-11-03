@@ -90,9 +90,9 @@ TOTAL:              ████████████░░░░░░░░
 - ✅ User model with 30+ fields
 
 **What's NOT Working:**
-- ❌ Supabase credentials are PLACEHOLDERS (.env shows `placeholder.supabase.co`)
+- ✅ ~~Supabase credentials are PLACEHOLDERS~~ **FIXED** - Production credentials configured
 - ❌ Frontend and backend auth systems are disconnected (two separate systems)
-- ❌ No OAuth integration (Google, Facebook, Apple) despite v1 requirement
+- 🟡 OAuth integration partial: Google OAuth app registered, needs Supabase integration
 - ❌ No password reset flow
 - ❌ No email verification
 - ❌ No "Remember Me" persistence
@@ -100,8 +100,9 @@ TOTAL:              ████████████░░░░░░░░
 ### V1 Requirements
 
 **Must Have:**
-- [ ] Configure real Supabase credentials
-- [ ] Implement Google OAuth (critical for v1)
+- [x] Configure real Supabase credentials ✅ **DONE**
+- [x] Register Google OAuth app ✅ **DONE**
+- [ ] Add Google OAuth credentials to Supabase (in progress)
 - [ ] Implement Facebook OAuth
 - [ ] Implement Apple OAuth
 - [ ] Add password reset flow
@@ -113,8 +114,8 @@ TOTAL:              ████████████░░░░░░░░
 **Estimated Effort:** 3 days
 
 **Blockers:**
-- Need Supabase project setup with production credentials
-- Need OAuth app registration with Google, Facebook, Apple
+- ✅ ~~Need Supabase project setup with production credentials~~ **RESOLVED**
+- 🟡 OAuth app registration: Google ✅ done, Facebook/Apple pending (optional for v1)
 
 **Files to Modify:**
 - `/src/routes/Login.tsx` - Add social login buttons
