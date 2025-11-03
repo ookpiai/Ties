@@ -152,6 +152,8 @@ Auth → Discovery → Calendar → Payments → Workflow 1 → Workflow 2 → L
 **Sign-off Date:** ___________
 **Signed by:** ___________
 
+**🚨 PREREQUISITE BLOCKER:** SendGrid sender email verification must be completed before starting email notifications. Deferred from Day 1 - awaiting custom domain purchase (e.g., noreply@tiestogether.com). API key already configured.
+
 **Sign-off Checklist (ALL must be ✅ before Phase 7):**
 - [ ] All Day 41-45 tasks checked off below
 - [ ] Messaging shows REAL messages (no mock data)
@@ -207,11 +209,14 @@ Auth → Discovery → Calendar → Payments → Workflow 1 → Workflow 2 → L
 - [x] Get Google OAuth Client ID and Secret
 - [x] Add Google OAuth credentials to Supabase
 - [x] Update backend .env with Google OAuth credentials
-- [ ] Create SendGrid account, start domain verification
+- [x] Create SendGrid account and get API key
+- [ ] Verify SendGrid sender email ⚠️ **DEFERRED - Awaiting custom domain purchase. MUST complete before Phase 6!**
 - [ ] Create Mapbox account, get API key
 - [ ] Register Facebook/Apple OAuth apps (optional for v1)
 
-**📌 NOTE:** Stripe Connect (Task 2) deferred until team approval received. This is CRITICAL and must be completed before starting Phase 4 (Payments & Direct Booking). Approval can take 1-2 weeks.
+**📌 NOTE 1:** Stripe Connect (Task 2) deferred until team approval received. This is CRITICAL and must be completed before starting Phase 4 (Payments & Direct Booking). Approval can take 1-2 weeks.
+
+**📌 NOTE 2:** SendGrid sender verification (Task 4 partial) deferred until custom domain is purchased and email addresses are available (e.g., noreply@tiestogether.com). API key obtained and configured. Sender verification MUST be completed before Phase 6 (Email Notifications).
 
 ### Day 2: Frontend-Backend Auth Connection
 - [ ] Choose auth strategy: Supabase JWT to Flask OR full Flask migration

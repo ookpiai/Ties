@@ -871,20 +871,24 @@ TOTAL:              ████████████░░░░░░░░
 
 ### Overall Progress
 ```
-SendGrid Setup:     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0%
+SendGrid Setup:     ████████░░░░░░░░░░░░░░░░░░░░░░  25% (API key configured, sender verification deferred)
 Email Templates:    ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0%
 Transactional:      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0%
 Testing:            ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0%
 ─────────────────────────────────────────────────
-TOTAL:              ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0%
+TOTAL:              ██░░░░░░░░░░░░░░░░░░░░░░░░░░░░  6%
 ```
 
-### Current State: 🔴 Not Implemented
+### Current State: 🟡 Partially Configured
+
+**What's Working:**
+- ✅ SendGrid account created
+- ✅ API key generated and stored in backend .env
 
 **What's NOT Working:**
-- ❌ No SendGrid integration
+- 🟡 Sender email verification **DEFERRED** - awaiting custom domain purchase
 - ❌ No email templates
-- ❌ No notifications
+- ❌ No transactional email sending
 
 ### V1 Requirements
 
@@ -901,8 +905,8 @@ TOTAL:              ░░░░░░░░░░░░░░░░░░░░
 **Estimated Effort:** 2 days
 
 **Blockers:**
-- Need SendGrid account
-- Need domain verification for sending
+- ✅ ~~Need SendGrid account~~ **RESOLVED** - Account created, API key configured
+- 🟡 Need sender email verification - **DEFERRED** until custom domain purchased (e.g., noreply@tiestogether.com). Must complete before implementing email notifications in Phase 6.
 
 ---
 
