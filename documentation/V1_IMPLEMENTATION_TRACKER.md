@@ -262,9 +262,9 @@ TOTAL:              ██████████░░░░░░░░░░
 **Estimated Effort:** 5 days (3 days for map, 2 days for text search)
 
 **Blockers:**
-- Need Mapbox API key
+- ✅ ~~Need Mapbox API key~~ **RESOLVED** - Token configured in frontend .env
 - Need venue data with coordinates in database
-- Need Google Places API key for autocomplete
+- Need Google Places API key for autocomplete (optional - can defer to v2)
 
 **Files to Create:**
 - `/src/components/discovery/VenueMapView.jsx` - NEW map component

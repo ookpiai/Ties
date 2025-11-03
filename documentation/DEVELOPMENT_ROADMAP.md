@@ -210,7 +210,8 @@ Auth → Discovery → Calendar → Payments → Workflow 1 → Workflow 2 → L
 - [x] Create SendGrid account and get API key
 - [x] Verify SendGrid sender email (hello@tiestogether.com.au)
 - [x] Update backend .env with SendGrid credentials
-- [ ] Create Mapbox account, get API key
+- [x] Create Mapbox account and get access token
+- [x] Add Mapbox token to frontend .env
 - [ ] Register Facebook/Apple OAuth apps (optional for v1)
 
 **📌 NOTE:** Stripe Connect (Task 2) deferred until team approval received. This is CRITICAL and must be completed before starting Phase 4 (Payments & Direct Booking). Approval can take 1-2 weeks.
