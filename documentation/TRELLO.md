@@ -1,7 +1,6 @@
 # TIES Together V1 - Trello Project Cards
 
 **Purpose:** Copy/paste content for Trello cards to manage v1 development
-**Timeline:** 53 working days (10-11 weeks)
 **Target:** Launch-ready marketplace with 250 concurrent users
 
 ---
@@ -27,8 +26,7 @@
 
 # PHASE 1: FOUNDATION & AUTH ⚡
 
-**Timeline:** Days 1-5 (Week 1)
-**Status:** 🟢 Day 1 Complete, Days 2-5 Ready
+**Status:** 🟢 External Services Complete, Auth Implementation Ready
 **Dependencies:** None (starting point)
 **Critical Path:** YES - blocks everything else
 
@@ -36,10 +34,10 @@
 Users can sign up, log in, and create persistent profiles with OAuth support.
 
 ## Key Deliverables
-✅ Day 1: External services configured (Supabase, Google OAuth, SendGrid, Mapbox)
-☐ Day 2: Frontend-backend auth connection working
-☐ Day 3-4: Google OAuth "Sign in with Google" implemented
-☐ Day 5: Profile editing saves to backend and persists
+✅ External services configured (Supabase, Google OAuth, SendGrid, Mapbox)
+☐ Frontend-backend auth connection working
+☐ Google OAuth "Sign in with Google" implemented
+☐ Profile editing saves to backend and persists
 
 ## Sign-Off Criteria
 - [ ] Users can register with email + Google OAuth
@@ -61,7 +59,6 @@ Users can sign up, log in, and create persistent profiles with OAuth support.
 
 # PHASE 2: DISCOVERY & SEARCH 🔍
 
-**Timeline:** Days 6-10 (Week 2)
 **Dependencies:** Phase 1 (auth must work first)
 **Critical Path:** YES - core user experience
 
@@ -69,10 +66,10 @@ Users can sign up, log in, and create persistent profiles with OAuth support.
 Users discover freelancers and venues through text search + interactive map (Airbnb-style).
 
 ## Key Deliverables
-☐ Days 6-7: Replace mock data with real backend queries
-☐ Days 6-7: Search filters working (role, location, skills, price)
-☐ Days 8-10: Map-based venue search (Mapbox integration)
-☐ Days 8-10: Venue markers, popups, "Search this area" button
+☐ Replace mock data with real backend queries
+☐ Search filters working (role, location, skills, price)
+☐ Map-based venue search (Mapbox integration)
+☐ Venue markers, popups, "Search this area" button
 
 ## Sign-Off Criteria
 - [ ] Discovery shows REAL users from database (no mock data)
@@ -87,14 +84,10 @@ Users discover freelancers and venues through text search + interactive map (Air
 - Backend: PostgreSQL full-text search
 - Geocoding: Mapbox Geocoding API
 
-## Effort Estimate
-5 days (3 days map, 2 days text search)
-
 ---
 
 # PHASE 3: CALENDAR & AVAILABILITY 📅
 
-**Timeline:** Days 11-17 (Weeks 3-4)
 **Dependencies:** Phase 1 (user profiles) + Phase 2 (discovery)
 **Critical Path:** YES - required for Workflow 1
 
@@ -102,11 +95,11 @@ Users discover freelancers and venues through text search + interactive map (Air
 Real-time availability checking prevents double-booking for direct bookings.
 
 ## Key Deliverables
-☐ Days 11-12: Create `calendar_blocks` table in database
-☐ Days 11-12: 4 availability API endpoints (get, block, check, delete)
-☐ Days 13-15: Calendar UI component showing blocked/available dates
-☐ Days 13-15: Manual date blocking in settings
-☐ Days 16-17: Automatic calendar blocking when booking confirmed
+☐ Create `calendar_blocks` table in database
+☐ 4 availability API endpoints (get, block, check, delete)
+☐ Calendar UI component showing blocked/available dates
+☐ Manual date blocking in settings
+☐ Automatic calendar blocking when booking confirmed
 
 ## Sign-Off Criteria
 - [ ] `calendar_blocks` table exists with proper schema
@@ -121,14 +114,10 @@ Real-time availability checking prevents double-booking for direct bookings.
 - Backend: PostgreSQL date range queries
 - Optional: Google Calendar two-way sync (defer to v1.1)
 
-## Effort Estimate
-5-7 days (basic calendar: 5 days, Google sync: +2 days)
-
 ---
 
 # PHASE 4: PAYMENTS & DIRECT BOOKING 💳
 
-**Timeline:** Days 18-30 (Weeks 4-6)
 **Dependencies:** Phase 3 (calendar), Stripe Connect approval
 **Critical Path:** YES - core revenue feature
 
@@ -136,11 +125,11 @@ Real-time availability checking prevents double-booking for direct bookings.
 Workflow 1 (Direct Booking) fully functional: Discover → Book → Pay → Complete
 
 ## Key Deliverables
-☐ Days 18-20: Stripe Connect onboarding for freelancers
-☐ Days 21-23: Payment processing with escrow
-☐ Day 24: Commission calculation (8% Pro, 10% Free)
-☐ Days 25-27: Booking creation with availability check + payment
-☐ Days 28-30: Booking lifecycle (accept/decline/complete/payout)
+☐ Stripe Connect onboarding for freelancers
+☐ Payment processing with escrow
+☐ Commission calculation (8% Pro, 10% Free)
+☐ Booking creation with availability check + payment
+☐ Booking lifecycle (accept/decline/complete/payout)
 
 ## Sign-Off Criteria
 - [ ] Stripe Connect account approved ⚠️ PREREQUISITE
@@ -159,17 +148,13 @@ Workflow 1 (Direct Booking) fully functional: Discover → Book → Pay → Comp
 - SendGrid (email notifications - already configured)
 
 ## Blockers/Risks
-🔴 **BLOCKER:** Stripe Connect approval (1-2 week wait)
+🔴 **BLOCKER:** Stripe Connect approval
 ⚠️ Start application IMMEDIATELY to avoid delays
-
-## Effort Estimate
-10-12 days (3 days Stripe setup, 7 days implementation)
 
 ---
 
 # PHASE 5: JOB POSTING SYSTEM 📝
 
-**Timeline:** Days 31-40 (Weeks 7-8)
 **Dependencies:** Phase 4 (payment system must work)
 **Critical Path:** YES - required workflow for v1
 
@@ -177,10 +162,10 @@ Workflow 1 (Direct Booking) fully functional: Discover → Book → Pay → Comp
 Workflow 2 (Upwork-style) fully functional: Post Job → Apply → Select → Book → Pay
 
 ## Key Deliverables
-☐ Days 31-32: Create `job_postings` + `job_applications` tables + 9 API endpoints
-☐ Days 33-35: Job creation form + public job feed (replace mock data)
-☐ Days 36-38: Application submission system + applicant management UI
-☐ Days 39-40: Candidate selection → automatic booking creation + payment
+☐ Create `job_postings` + `job_applications` tables + 9 API endpoints
+☐ Job creation form + public job feed (replace mock data)
+☐ Application submission system + applicant management UI
+☐ Candidate selection → automatic booking creation + payment
 
 ## Sign-Off Criteria
 - [ ] `job_postings` and `job_applications` tables exist
@@ -199,9 +184,6 @@ Workflow 2 (Upwork-style) fully functional: Post Job → Apply → Select → Bo
 - Payments: Uses Phase 4 Stripe integration
 - Emails: SendGrid (already configured)
 
-## Effort Estimate
-8-10 days
-
 ## Current Status
 ⚠️ **5% implemented** - Only UI mockup exists, all backend missing
 
@@ -209,7 +191,6 @@ Workflow 2 (Upwork-style) fully functional: Post Job → Apply → Select → Bo
 
 # PHASE 6: COMMUNICATION & POLISH 💬
 
-**Timeline:** Days 41-45 (Week 9)
 **Dependencies:** Phase 5 (both workflows complete)
 **Critical Path:** Medium - enhances UX
 
@@ -217,11 +198,11 @@ Workflow 2 (Upwork-style) fully functional: Post Job → Apply → Select → Bo
 Messaging works, all email notifications sent, settings persist.
 
 ## Key Deliverables
-☐ Days 41-42: Connect messaging to backend (remove mock data)
-☐ Days 41-42: Send message works, polling for new messages
-☐ Days 43-44: Create 12 email templates (SendGrid)
-☐ Days 43-44: All transactional emails implemented
-☐ Day 45: Settings save to backend, Dashboard shows real stats
+☐ Connect messaging to backend (remove mock data)
+☐ Send message works, polling for new messages
+☐ Create 12 email templates (SendGrid)
+☐ All transactional emails implemented
+☐ Settings save to backend, Dashboard shows real stats
 
 ## Sign-Off Criteria
 - [ ] Messaging shows REAL messages (no mock data)
@@ -252,14 +233,10 @@ Messaging works, all email notifications sent, settings persist.
 - SendGrid (emails - already configured)
 - Backend: Message API endpoints
 
-## Effort Estimate
-5 days
-
 ---
 
 # PHASE 7: DEPLOYMENT & LAUNCH 🚀
 
-**Timeline:** Days 46-53 (Weeks 10-11)
 **Dependencies:** Phase 6 (all features complete)
 **Critical Path:** YES - production launch
 
@@ -267,11 +244,11 @@ Messaging works, all email notifications sent, settings persist.
 Production-ready platform deployed and tested with 250 concurrent users.
 
 ## Key Deliverables
-☐ Days 46-47: Deploy frontend (Vercel) + backend (Railway/Render) to production
-☐ Day 48: Install Sentry (error tracking) + Google Analytics
-☐ Days 49-50: Load test with 250 concurrent users, optimize performance
-☐ Days 51-52: End-to-end testing (both workflows on production)
-☐ Day 53: LAUNCH! 🎉
+☐ Deploy frontend (Vercel) + backend (Railway/Render) to production
+☐ Install Sentry (error tracking) + Google Analytics
+☐ Load test with 250 concurrent users, optimize performance
+☐ End-to-end testing (both workflows on production)
+☐ LAUNCH! 🎉
 
 ## Sign-Off Criteria
 - [ ] Frontend deployed to production (Vercel/Netlify)
@@ -294,9 +271,6 @@ Production-ready platform deployed and tested with 250 concurrent users.
 - CDN: Cloudflare (free tier)
 - Monitoring: Sentry + Google Analytics
 - SSL: Automatic via hosting platform
-
-## Effort Estimate
-5-8 days
 
 ## Success Criteria for Launch
 ✅ 250 concurrent users supported
@@ -333,16 +307,14 @@ Phase 7 (Launch)
 
 # ⚡ QUICK REFERENCE
 
-## Timeline
-- **Phase 1:** Days 1-5 (Week 1) ✅ Day 1 COMPLETE
-- **Phase 2:** Days 6-10 (Week 2)
-- **Phase 3:** Days 11-17 (Weeks 3-4)
-- **Phase 4:** Days 18-30 (Weeks 4-6)
-- **Phase 5:** Days 31-40 (Weeks 7-8)
-- **Phase 6:** Days 41-45 (Week 9)
-- **Phase 7:** Days 46-53 (Weeks 10-11)
-
-**Total:** 53 working days (10-11 weeks)
+## Phase Status
+- **Phase 1:** ✅ External Services COMPLETE, Auth Implementation Ready
+- **Phase 2:** Discovery & Search
+- **Phase 3:** Calendar & Availability
+- **Phase 4:** Payments & Direct Booking
+- **Phase 5:** Job Posting System
+- **Phase 6:** Communication & Polish
+- **Phase 7:** Deployment & Launch
 
 ## External Services (Configured ✅)
 - ✅ Supabase (Auth + Database)
@@ -378,10 +350,10 @@ Phase 7 (Launch)
 3. Create 7 cards (one per phase) in "Backlog" list
 4. Copy/paste each phase section above as card description
 5. Add labels (Critical Path, Backend, Frontend, etc.)
-6. Move Phase 1 to "In Progress" (Day 1 complete, Days 2-5 in progress)
+6. Move Phase 1 to "In Progress" (External services complete, auth implementation in progress)
 7. Convert "Sign-Off Criteria" into Trello checklists
 8. Add team members to relevant cards
-9. Set due dates based on timeline
+9. Set due dates based on your timeline
 
 ## Card Movement Rules:
 - **Backlog:** Not yet started
@@ -398,6 +370,6 @@ Phase 7 (Launch)
 
 ---
 
-**Last Updated:** November 3, 2025
-**Status:** Phase 1 Day 1 Complete, Day 2 Ready to Start
-**Next Milestone:** Complete Phase 1 (5 days from start)
+**Last Updated:** November 4, 2025
+**Status:** Phase 1 External Services Complete, Auth Implementation Ready to Start
+**Next Milestone:** Complete Phase 1 (Foundation & Auth)
