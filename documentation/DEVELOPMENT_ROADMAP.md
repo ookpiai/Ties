@@ -199,7 +199,7 @@ Auth → Discovery → Calendar → Payments → Workflow 1 → Workflow 2 → L
 
 **Goal:** Users can sign up, log in, and create persistent profiles
 
-### Day 1: External Service Setup (CRITICAL - DO FIRST)
+### Day 1: External Service Setup (CRITICAL - DO FIRST) ✅ COMPLETE
 - [x] Create production Supabase project
 - [x] Get Supabase credentials, add to `.env`
 - [ ] Apply for Stripe Connect platform account ⚠️ **DEFERRED - Awaiting team approval. MUST complete before Phase 4!**
@@ -212,6 +212,7 @@ Auth → Discovery → Calendar → Payments → Workflow 1 → Workflow 2 → L
 - [x] Update backend .env with SendGrid credentials
 - [x] Create Mapbox account and get access token
 - [x] Add Mapbox token to frontend .env
+- [x] Verify dev server starts with all configurations
 - [ ] Register Facebook/Apple OAuth apps (optional for v1)
 
 **📌 NOTE:** Stripe Connect (Task 2) deferred until team approval received. This is CRITICAL and must be completed before starting Phase 4 (Payments & Direct Booking). Approval can take 1-2 weeks.
