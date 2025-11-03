@@ -5,6 +5,30 @@
 
 ---
 
+# 📋 PROJECT SUMMARY CARD
+
+## About TIES Together
+
+TIES Together is a creative marketplace platform connecting freelance talent with venues and clients in the entertainment and events industry. The platform serves photographers, models, musicians, makeup artists, event organizers, and venues—enabling seamless discovery, booking, and payment processing. Our mission is to eliminate the friction in creative collaboration by providing two distinct workflows: Direct Booking for instant hires and Job Posting for competitive talent selection. TIES Together handles everything from availability management and secure payments to real-time messaging and automated notifications, creating a trusted ecosystem where creatives and venues can focus on their craft instead of administrative overhead.
+
+## Phase Overview
+
+**Phase 1: Foundation & Auth** builds the authentication system that underpins the entire platform. Users will be able to sign up with email or Google OAuth, create persistent profiles with avatar uploads, and maintain secure login sessions. This phase includes configuring all external services (Supabase, Google OAuth, SendGrid, Mapbox, Stripe Connect) and establishing the connection between the React frontend and Flask backend. Without authentication working flawlessly, no other feature can function—making this the critical foundation for everything that follows.
+
+**Phase 2: Discovery & Search** transforms the platform into a dynamic marketplace where users can discover talent and venues. Freelancers and venues become searchable through text filters (role, location, skills, price range) and an interactive Airbnb-style map powered by Mapbox. Users can explore public profiles, view portfolios, and identify potential collaborators based on their specific needs. This phase replaces all mock data with real database queries, ensuring the discovery experience reflects actual platform users.
+
+**Phase 3: Calendar & Availability** introduces real-time availability management to prevent double-booking and scheduling conflicts. Freelancers and venues can manually block dates in their calendar, view their availability at a glance, and have dates automatically blocked when bookings are confirmed. The system includes a dedicated database table for calendar blocks and four API endpoints (get, block, check, delete) that power the calendar UI. This phase is essential for Workflow 1 (Direct Booking), as clients need to see accurate availability before requesting bookings.
+
+**Phase 4: Payments & Direct Booking** completes Workflow 1 by implementing the full booking lifecycle: Discover → Book → Pay → Complete. This phase integrates Stripe Connect for marketplace payments with escrow, ensuring funds are held securely until services are completed. Freelancers onboard their Stripe accounts to receive payouts, clients can book talent with confidence knowing payments are protected, and the platform calculates commissions automatically (8% for Pro users, 10% for Free users). Stripe webhooks handle payment events, and email notifications keep all parties informed throughout the booking process.
+
+**Phase 5: Job Posting System** builds Workflow 2, an Upwork-style system where clients post jobs and freelancers submit applications to compete for work. Clients create job listings with project details, budgets, and requirements, which appear in a public job feed. Freelancers browse available jobs, submit applications with cover messages and portfolio links, and clients review all applicants in a management dashboard. When a client selects their preferred candidate, the system automatically creates a booking and processes payment using the infrastructure from Phase 4. Rejected applicants receive notifications, maintaining transparency throughout the hiring process.
+
+**Phase 6: Communication & Polish** enhances user experience by implementing real-time messaging and comprehensive email notifications. Users can send messages to each other through the platform (powered by Supabase Realtime API), eliminating the need for external communication. All 12 transactional email templates are created in SendGrid—covering welcome emails, booking requests, payment confirmations, job applications, candidate selections, and new message alerts. Settings pages are connected to the backend so preferences persist across sessions, and the dashboard displays real statistics instead of placeholder data.
+
+**Phase 7: Deployment & Launch** takes the platform from development to production. The frontend deploys to Vercel, the backend to Railway or Render, and the custom domain is configured with SSL certificates. Sentry error tracking and Google Analytics are installed to monitor platform health and user behavior. Load testing ensures the platform can handle 250 concurrent users without performance degradation. Both workflows undergo comprehensive end-to-end testing on production, cross-browser testing confirms compatibility, and a security audit verifies the platform is launch-ready. Once all criteria are met, TIES Together goes live to the public.
+
+---
+
 ## 📋 TRELLO BOARD STRUCTURE
 
 **Recommended Lists:**
