@@ -100,6 +100,8 @@ Auth → Discovery → Calendar → Payments → Workflow 1 → Workflow 2 → L
 **Sign-off Date:** ___________
 **Signed by:** ___________
 
+**🚨 PREREQUISITE BLOCKER:** Stripe Connect application must be submitted and approved before starting this phase. Application deferred from Day 1 - awaiting team approval. Start application process at least 2 weeks before Phase 4!
+
 **Sign-off Checklist (ALL must be ✅ before Phase 5):**
 - [ ] All Day 18-30 tasks checked off below
 - [ ] Stripe Connect account approved
@@ -198,13 +200,15 @@ Auth → Discovery → Calendar → Payments → Workflow 1 → Workflow 2 → L
 **Goal:** Users can sign up, log in, and create persistent profiles
 
 ### Day 1: External Service Setup (CRITICAL - DO FIRST)
-- [ ] Create production Supabase project
-- [ ] Get Supabase credentials, add to `.env`
-- [ ] Apply for Stripe Connect platform account
+- [x] Create production Supabase project
+- [x] Get Supabase credentials, add to `.env`
+- [ ] Apply for Stripe Connect platform account ⚠️ **DEFERRED - Awaiting team approval. MUST complete before Phase 4!**
 - [ ] Register Google OAuth app (Google Cloud Console)
 - [ ] Create SendGrid account, start domain verification
 - [ ] Create Mapbox account, get API key
 - [ ] Register Facebook/Apple OAuth apps (optional for v1)
+
+**📌 NOTE:** Stripe Connect (Task 2) deferred until team approval received. This is CRITICAL and must be completed before starting Phase 4 (Payments & Direct Booking). Approval can take 1-2 weeks.
 
 ### Day 2: Frontend-Backend Auth Connection
 - [ ] Choose auth strategy: Supabase JWT to Flask OR full Flask migration
