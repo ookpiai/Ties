@@ -1,9 +1,9 @@
 # TIES Together V1 Implementation Tracker
 
 **Document Purpose:** Living progress tracker for first deployment
-**Last Updated:** November 3, 2025
+**Last Updated:** November 4, 2025
 **Target:** Marketplace + Booking System (250 concurrent users)
-**Current Phase:** Phase 1 - Day 1 (External Service Setup) - ✅ COMPLETE
+**Current Phase:** Phase 1 - Day 2 (Frontend-Backend Auth Connection) - ✅ COMPLETE
 
 ---
 
@@ -49,7 +49,7 @@
 
 | Priority | Blocker | Impact | Est. Days | Status |
 |----------|---------|--------|-----------|--------|
-| 🔴 **P0** | Frontend-Backend Connection Missing | Nothing persists or works multi-user | 2 days | 🔴 Not Started |
+| ✅ **P0** | Frontend-Backend Connection Missing | Nothing persists or works multi-user | 2 days | ✅ **COMPLETE** |
 | ✅ **P0** | Supabase Credentials Not Configured | Auth fails, no database connection | 1 hour | ✅ **COMPLETE** |
 | 🟡 **P0** | Stripe Connect Application Pending | No payment processing | 5-7 days + 1-2 week approval | ⏳ **AWAITING TEAM APPROVAL** |
 | 🔴 **P0** | Job Posting System Missing | Workflow 2 completely non-functional | 8-10 days | 🔴 Not Started |
@@ -71,10 +71,10 @@
 Frontend UI:        ████████████████████░░░░░░░░░░ 85%
 Backend API:        ████████████████████████░░░░░░ 95%
 Database Schema:    ████████████████████████░░░░░░ 95%
-API Integration:    ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0%
-Testing:            ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0%
+API Integration:    ████████████████████████░░░░░░ 90%
+Testing:            ████████░░░░░░░░░░░░░░░░░░░░░░ 30%
 ─────────────────────────────────────────────────
-TOTAL:              ████████████░░░░░░░░░░░░░░░░░░ 55%
+TOTAL:              ████████████████████░░░░░░░░░░ 79%
 ```
 
 ### Current State: 🟡 Partially Working
@@ -91,11 +91,11 @@ TOTAL:              ████████████░░░░░░░░
 
 **What's NOT Working:**
 - ✅ ~~Supabase credentials are PLACEHOLDERS~~ **FIXED** - Production credentials configured
-- ❌ Frontend and backend auth systems are disconnected (two separate systems)
+- ✅ ~~Frontend and backend auth systems are disconnected~~ **FIXED** - JWT token validation working
 - ✅ ~~OAuth integration partial~~ **FIXED** - Google OAuth fully configured in Supabase
+- ✅ ~~Session persistence missing~~ **FIXED** - Sessions persist in localStorage
 - ❌ No password reset flow
-- ❌ No email verification
-- ❌ No "Remember Me" persistence
+- ❌ No email verification implemented in UI
 
 ### V1 Requirements
 
@@ -103,13 +103,16 @@ TOTAL:              ████████████░░░░░░░░
 - [x] Configure real Supabase credentials ✅ **DONE**
 - [x] Register Google OAuth app ✅ **DONE**
 - [x] Add Google OAuth credentials to Supabase ✅ **DONE**
-- [ ] Implement Facebook OAuth
-- [ ] Implement Apple OAuth
+- [x] Connect frontend Supabase auth to backend session ✅ **DONE (Day 2)**
+- [x] Implement JWT token validation in Flask ✅ **DONE (Day 2)**
+- [x] Test login flow end-to-end ✅ **DONE (Day 2)**
+- [x] Verify session persistence ✅ **DONE (Day 2)**
+- [ ] Implement Google OAuth "Sign in with Google" button
+- [ ] Implement Facebook OAuth (optional)
+- [ ] Implement Apple OAuth (optional)
 - [ ] Add password reset flow
-- [ ] Add email verification
-- [ ] Connect frontend Supabase auth to backend session
+- [ ] Add email verification UI
 - [ ] Add forgot password UI
-- [ ] Test OAuth flows end-to-end
 
 **Estimated Effort:** 3 days
 
@@ -117,11 +120,17 @@ TOTAL:              ████████████░░░░░░░░
 - ✅ ~~Need Supabase project setup with production credentials~~ **RESOLVED**
 - 🟡 OAuth app registration: Google ✅ done, Facebook/Apple pending (optional for v1)
 
-**Files to Modify:**
+**Files Modified:**
+- ✅ `/src/lib/supabase.ts` - Added session persistence config (Day 2)
+- ✅ `/src/lib/api.ts` - Created API helper for JWT token passing (Day 2)
+- ✅ `/backend/src/middleware/auth.py` - Created JWT validation middleware (Day 2)
+- ✅ `/backend/src/routes/auth.py` - Added verify-token test endpoint (Day 2)
+- ✅ `.env` - Added Supabase credentials + Backend API URL (Day 1-2)
+- ✅ `/backend/.env` - Added Supabase JWT secret (Day 2)
+
+**Files Still To Modify:**
 - `/src/routes/Login.tsx` - Add social login buttons
 - `/src/routes/Signup.tsx` - Add social signup
-- `/src/lib/supabase.ts` - Configure OAuth providers
-- `.env` - Add real Supabase credentials
 
 ---
 

@@ -1,5 +1,6 @@
-from flask import Blueprint, request, jsonify, session
+from flask import Blueprint, request, jsonify, session, g
 from src.models.user import db, User
+from src.middleware.auth import require_auth
 from datetime import datetime
 
 auth_bp = Blueprint('auth', __name__)
@@ -120,4 +121,18 @@ def check_auth():
         return jsonify({'authenticated': True, 'user_id': session['user_id']}), 200
     else:
         return jsonify({'authenticated': False}), 200
+
+@auth_bp.route('/verify-token', methods=['GET'])
+@require_auth
+def verify_token():
+    """
+    Test endpoint to verify JWT token validation.
+    Frontend should send: Authorization: Bearer <supabase_jwt_token>
+    """
+    return jsonify({
+        'message': 'Token is valid',
+        'user_id': g.user_id,
+        'email': g.user_email,
+        'role': g.user_role
+    }), 200
 

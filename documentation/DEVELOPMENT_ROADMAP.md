@@ -217,11 +217,11 @@ Auth → Discovery → Calendar → Payments → Workflow 1 → Workflow 2 → L
 
 **📌 NOTE:** Stripe Connect (Task 2) deferred until team approval received. This is CRITICAL and must be completed before starting Phase 4 (Payments & Direct Booking). Approval can take 1-2 weeks.
 
-### Day 2: Frontend-Backend Auth Connection
-- [ ] Choose auth strategy: Supabase JWT to Flask OR full Flask migration
-- [ ] Implement auth token passing between frontend/backend
-- [ ] Test login flow end-to-end
-- [ ] Verify session persistence works
+### Day 2: Frontend-Backend Auth Connection ✅ COMPLETE
+- [x] Choose auth strategy: Supabase JWT to Flask OR full Flask migration
+- [x] Implement auth token passing between frontend/backend
+- [x] Test login flow end-to-end
+- [x] Verify session persistence works
 
 ### Day 3-4: OAuth Implementation
 - [ ] Implement Google OAuth (REQUIRED)
