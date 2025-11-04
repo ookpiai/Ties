@@ -107,9 +107,9 @@ TOTAL:              ████████████████████
 - [x] Implement JWT token validation in Flask ✅ **DONE (Day 2)**
 - [x] Test login flow end-to-end ✅ **DONE (Day 2)**
 - [x] Verify session persistence ✅ **DONE (Day 2)**
-- [ ] Implement Google OAuth "Sign in with Google" button
-- [ ] Implement Facebook OAuth (optional)
-- [ ] Implement Apple OAuth (optional)
+- [x] Implement Google OAuth "Sign in with Google" button ✅ **DONE (Day 3-4)**
+- [ ] Implement Facebook OAuth (optional - DEFERRED to v2)
+- [ ] Implement Apple OAuth (optional - DEFERRED to v2)
 - [ ] Add password reset flow
 - [ ] Add email verification UI
 - [ ] Add forgot password UI
@@ -127,10 +127,11 @@ TOTAL:              ████████████████████
 - ✅ `/backend/src/routes/auth.py` - Added verify-token test endpoint (Day 2)
 - ✅ `.env` - Added Supabase credentials + Backend API URL (Day 1-2)
 - ✅ `/backend/.env` - Added Supabase JWT secret (Day 2)
+- ✅ `/src/components/auth/LoginPage.jsx` - Added Google OAuth button (Day 3-4)
+- ✅ `/src/components/auth/RegisterPage.jsx` - Added Google OAuth button (Day 3-4)
 
 **Files Still To Modify:**
-- `/src/routes/Login.tsx` - Add social login buttons
-- `/src/routes/Signup.tsx` - Add social signup
+- `/src/components/profile/ProfilePage.jsx` - Connect to backend API (Day 5)
 
 ---
 
@@ -989,12 +990,12 @@ TOTAL:              ████░░░░░░░░░░░░░░░░
 - [ ] Connect auth flow between Supabase and Flask
 - [ ] Test user registration and login end-to-end
 
-### Day 3-4: OAuth Implementation
-- [ ] Register OAuth apps (Google, Facebook, Apple)
-- [ ] Implement Google OAuth
-- [ ] Implement Facebook OAuth
-- [ ] Implement Apple OAuth
-- [ ] Test all auth flows
+### Day 3-4: OAuth Implementation ✅ COMPLETE
+- [x] Register OAuth apps (Google, Facebook, Apple)
+- [x] Implement Google OAuth
+- [ ] Implement Facebook OAuth (DEFERRED to v2)
+- [ ] Implement Apple OAuth (DEFERRED to v2)
+- [x] Test all auth flows (Google only for v1)
 
 ### Day 5: Profile Persistence
 - [ ] Connect profile editing to backend

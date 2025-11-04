@@ -223,12 +223,12 @@ Auth → Discovery → Calendar → Payments → Workflow 1 → Workflow 2 → L
 - [x] Test login flow end-to-end
 - [x] Verify session persistence works
 
-### Day 3-4: OAuth Implementation
-- [ ] Implement Google OAuth (REQUIRED)
-- [ ] Test Google sign-in flow
-- [ ] Implement Facebook OAuth (optional)
-- [ ] Implement Apple OAuth (optional)
-- [ ] Test all OAuth providers
+### Day 3-4: OAuth Implementation ✅ COMPLETE
+- [x] Implement Google OAuth (REQUIRED)
+- [x] Test Google sign-in flow
+- [ ] Implement Facebook OAuth (optional - DEFERRED to v2)
+- [ ] Implement Apple OAuth (optional - DEFERRED to v2)
+- [x] Test all OAuth providers (Google only for v1)
 
 ### Day 5: Profile Persistence
 - [ ] Connect `/src/components/profile/ProfilePage.jsx` to backend API
