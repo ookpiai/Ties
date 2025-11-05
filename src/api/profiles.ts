@@ -43,3 +43,44 @@ export async function listProfiles() {
   if (error) throw error
   return data as Profile[]
 }
+
+export interface SearchFilters {
+  query?: string
+  role?: string
+  location?: string
+  limit?: number
+}
+
+export async function searchProfiles(filters: SearchFilters = {}) {
+  let query = supabase
+    .from('profiles')
+    .select('*')
+
+  // Apply text search filter (searches display_name and bio)
+  if (filters.query) {
+    query = query.or(`display_name.ilike.%${filters.query}%,bio.ilike.%${filters.query}%`)
+  }
+
+  // Apply role filter
+  if (filters.role && filters.role !== 'all') {
+    query = query.eq('role', filters.role)
+  }
+
+  // Apply location filter
+  if (filters.location) {
+    query = query.ilike('city', `%${filters.location}%`)
+  }
+
+  // Apply limit
+  if (filters.limit) {
+    query = query.limit(filters.limit)
+  }
+
+  // Order by created_at (newest first)
+  query = query.order('created_at', { ascending: false })
+
+  const { data, error } = await query
+
+  if (error) throw error
+  return data as Profile[]
+}

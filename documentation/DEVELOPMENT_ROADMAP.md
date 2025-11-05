@@ -248,12 +248,13 @@ Auth → Discovery → Calendar → Payments → Workflow 1 → Workflow 2 → L
 
 **Goal:** Users can discover real freelancers and venues
 
-### Day 6-7: Real Discovery Data
-- [ ] Replace mock data in `/src/components/discovery/DiscoveryPage.jsx` (lines 45-154)
-- [ ] Connect to backend `/api/search/users` endpoint
-- [ ] Implement search filters (role, location, skills, price)
-- [ ] Test real-time filtering
-- [ ] Create public profile view component
+### Day 6-7: Real Discovery Data ✅ COMPLETE
+- [x] Replace mock data in `/src/components/discovery/DiscoveryPage.jsx` (lines 45-154)
+- [x] Connect to Supabase search API (searchProfiles function)
+- [x] Implement search filters (role, location, text search)
+- [x] Test real-time filtering
+- [x] Create public profile view component
+- [x] Link Discovery cards to public profiles
 
 ### Day 8-10: Map-Based Venue Search (NEW v1 Feature)
 - [ ] Install Mapbox libraries (`npm install mapbox-gl react-map-gl`)

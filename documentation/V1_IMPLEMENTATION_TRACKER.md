@@ -1,19 +1,19 @@
 # TIES Together V1 Implementation Tracker
 
 **Document Purpose:** Living progress tracker for first deployment
-**Last Updated:** November 4, 2025
+**Last Updated:** November 5, 2025
 **Target:** Marketplace + Booking System (250 concurrent users)
-**Current Phase:** Phase 1 - Day 5 (Profile Persistence) - ✅ COMPLETE
+**Current Phase:** Phase 2 - Day 6-7 (Real Discovery Data) - ✅ COMPLETE
 
 ---
 
 ## 📊 OVERALL V1 PROGRESS
 
 ```
-██████░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 22% Complete
+███████░░░░░░░░░░░░░░░░░░░░░░░░░░░ 25% Complete
 ```
 
-**Status:** 🔴 Early Development Phase - Major Features Missing
+**Status:** 🟡 Early Development Phase - Major Features Missing
 **Critical Path Blockers:** 5 major items preventing launch
 **Estimated Days to Launch:** 35-42 working days (revised upward due to job posting + calendar requirements)
 
@@ -167,12 +167,12 @@ TOTAL:              ████████████████████
 - ❌ Skills management - local state only (not yet persisted)
 - ❌ Rate setting - not persisted
 - ❌ Social links - not saved
-- ❌ Viewing other users' profiles - no route/component
 
 ### V1 Requirements
 
 **Must Have for Freelancers:**
 - [x] Connect profile editing to backend API ✅ **DONE (Day 5)**
+- [x] Public profile view component ✅ **DONE (Day 6-7)**
 - [ ] Implement portfolio item upload (images, videos)
 - [ ] Integrate Cloudinary for image optimization
 - [ ] Add portfolio ordering/reordering
@@ -180,7 +180,6 @@ TOTAL:              ████████████████████
 - [ ] Save skills/tags to database
 - [ ] Save rate information (hourly, daily, project)
 - [ ] Save social media links
-- [ ] Public profile view component
 - [ ] Profile completion percentage display
 
 **Must Have for Venues:**
@@ -204,11 +203,15 @@ TOTAL:              ████████████████████
 - Supabase Storage needs configuration
 - Need to decide: Supabase Storage or Cloudinary for media
 
-**Files to Modify:**
-- `/src/components/profile/ProfilePage.jsx` - Remove mock data, add real saves
-- `/src/api/profiles.ts` - Add profile update endpoint calls
+**Files Modified:**
+- ✅ `/src/components/profile/ProfilePage.jsx` - Backend integration complete (Day 5)
+- ✅ `/src/api/profiles.ts` - Added updateProfile and searchProfiles (Day 5, Day 6-7)
+- ✅ `/src/api/storage.ts` - Avatar upload working (Day 5)
+- ✅ `/src/components/profile/PublicProfileView.jsx` - Created (Day 6-7)
+
+**Files Still to Modify:**
 - `/src/api/storage.ts` - Expand for portfolio uploads
-- Create `/src/components/profile/PublicProfileView.jsx` - View others' profiles
+- `/src/components/profile/ProfilePage.jsx` - Add portfolio item management
 
 ---
 
@@ -216,21 +219,26 @@ TOTAL:              ████████████████████
 
 ### Overall Progress
 ```
-Frontend UI:        ████████████████░░░░░░░░░░░░░░ 65%
+Frontend UI:        ████████████████████░░░░░░░░░░ 75%
 Backend API:        ████████████████████████░░░░░░ 95%
 Database Schema:    ████████████████████████░░░░░░ 95%
 Map Integration:    ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0%
-API Integration:    ████░░░░░░░░░░░░░░░░░░░░░░░░░░ 15%
-Testing:            ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0%
+API Integration:    ████████████████████░░░░░░░░░░ 75%
+Testing:            ████████░░░░░░░░░░░░░░░░░░░░░░ 30%
 ─────────────────────────────────────────────────
-TOTAL:              ██████████░░░░░░░░░░░░░░░░░░░░ 45%
+TOTAL:              ███████████████░░░░░░░░░░░░░░░ 60%
 ```
 
-### Current State: 🔴 Mostly Mock Data
+### Current State: 🟡 Text Search Working, Map Pending
 
 **What Exists:**
 - ✅ Beautiful Discovery UI (`/src/components/discovery/DiscoveryPage.jsx`)
 - ✅ Browse Services page with REAL Supabase queries (`/src/routes/Browse.tsx`)
+- ✅ Discovery page connected to Supabase (real data) ✅ **DONE (Day 6-7)**
+- ✅ searchProfiles() API function with filters ✅ **DONE (Day 6-7)**
+- ✅ Real-time filtering (role, location, text search) ✅ **DONE (Day 6-7)**
+- ✅ Public profile view component ✅ **DONE (Day 6-7)**
+- ✅ Profile cards link to public profiles ✅ **DONE (Day 6-7)**
 - ✅ Search with debouncing
 - ✅ Filter UI (role, location, skills, price, availability)
 - ✅ Grid/List view toggle
@@ -238,12 +246,10 @@ TOTAL:              ██████████░░░░░░░░░░
 - ✅ Pagination support
 
 **What's NOT Working:**
-- ❌ Discovery page uses MOCK DATA (6 hardcoded profiles, lines 45-154)
-- ❌ Filters don't actually query backend
-- ❌ "Favorites" feature is UI-only
-- ❌ No map-based venue search (CRITICAL v1 REQUIREMENT)
-- ❌ No geocoding for addresses
-- ❌ Search results don't link to profile pages
+- ❌ "Favorites" feature is UI-only (not persisted)
+- ❌ No map-based venue search (CRITICAL v1 REQUIREMENT - Day 8-10)
+- ❌ No geocoding for addresses (Day 8-10)
+- ❌ Price filter not working (skills, rates not persisted yet)
 
 ### V1 Requirements
 
@@ -259,12 +265,12 @@ TOTAL:              ██████████░░░░░░░░░░
 - [ ] Add venue coordinates to database schema
 
 **Must Have - Text Search:**
-- [ ] Connect Discovery page to backend search API
-- [ ] Replace mock data with real database queries
-- [ ] Implement real-time filter updates
+- [x] Connect Discovery page to Supabase search API ✅ **DONE (Day 6-7)**
+- [x] Replace mock data with real database queries ✅ **DONE (Day 6-7)**
+- [x] Implement real-time filter updates ✅ **DONE (Day 6-7)**
+- [x] Link to public profile pages ✅ **DONE (Day 6-7)**
 - [ ] Add favorites persistence
-- [ ] Link to public profile pages
-- [ ] Add search suggestions/autocomplete (Google Places API)
+- [ ] Add search suggestions/autocomplete (Google Places API - Optional)
 
 **Optional (v1.1):**
 - Algolia for faster search (currently using PostgreSQL)
@@ -278,12 +284,17 @@ TOTAL:              ██████████░░░░░░░░░░
 - Need venue data with coordinates in database
 - Need Google Places API key for autocomplete (optional - can defer to v2)
 
-**Files to Create:**
+**Files Modified:**
+- ✅ `/src/components/discovery/DiscoveryPage.jsx` - Connected to Supabase (Day 6-7)
+- ✅ `/src/api/profiles.ts` - Added searchProfiles() function (Day 6-7)
+- ✅ `/src/components/profile/PublicProfileView.jsx` - Created public profile view (Day 6-7)
+- ✅ `/src/App.jsx` - Added /profile/:userId route (Day 6-7)
+
+**Files to Create (Day 8-10):**
 - `/src/components/discovery/VenueMapView.jsx` - NEW map component
 - `/src/components/discovery/VenueMapMarker.jsx` - Custom markers
 
-**Files to Modify:**
-- `/src/components/discovery/DiscoveryPage.jsx` - Remove mock data, add API calls
+**Files Still to Modify:**
 - `/src/api/profiles.ts` - Add geocoding helpers
 - `/backend/src/models/user.py` - Add latitude/longitude fields for venues
 

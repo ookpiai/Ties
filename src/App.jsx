@@ -50,6 +50,7 @@ import AdminDashboard from './components/admin/AdminDashboard'
 import FunctionalStudioPage from './components/studio/FunctionalStudioPage'
 import EnhancedOnboarding from './components/onboarding/EnhancedOnboarding'
 import ProfilePage from './components/profile/ProfilePage'
+import PublicProfileView from './components/profile/PublicProfileView'
 import ProjectsPage from './components/projects/ProjectsPage'
 import GuidedOnboarding from './components/onboarding/GuidedOnboarding'
 import { LiveRegionManager, initFocusVisible, createSkipLink } from './utils/accessibility'
@@ -362,6 +363,13 @@ function App() {
             <ProtectedRoute>
               <AppLayout>
                 <BookingsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/profile/:userId" element={
+            <ProtectedRoute>
+              <AppLayout>
+                <PublicProfileView />
               </AppLayout>
             </ProtectedRoute>
           } />
