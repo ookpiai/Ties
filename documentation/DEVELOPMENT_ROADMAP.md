@@ -230,12 +230,12 @@ Auth → Discovery → Calendar → Payments → Workflow 1 → Workflow 2 → L
 - [ ] Implement Apple OAuth (optional - DEFERRED to v2)
 - [x] Test all OAuth providers (Google only for v1)
 
-### Day 5: Profile Persistence
-- [ ] Connect `/src/components/profile/ProfilePage.jsx` to backend API
-- [ ] Remove `TODO: Save to backend` comment (line 70)
-- [ ] Implement profile save functionality
-- [ ] Test avatar upload to Supabase Storage
-- [ ] Test profile edit persistence
+### Day 5: Profile Persistence ✅ COMPLETE
+- [x] Connect `/src/components/profile/ProfilePage.jsx` to backend API
+- [x] Remove `TODO: Save to backend` comment (line 70)
+- [x] Implement profile save functionality
+- [x] Test avatar upload to Supabase Storage
+- [x] Test profile edit persistence
 
 **✅ Phase 1 Complete When:**
 - Users can register with email + Google OAuth

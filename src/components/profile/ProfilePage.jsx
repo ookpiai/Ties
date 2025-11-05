@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../App'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -8,16 +8,17 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { 
-  User, 
-  Settings, 
-  Camera, 
-  MapPin, 
-  Mail, 
-  Phone, 
-  Globe, 
-  Instagram, 
-  Twitter, 
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  User,
+  Settings,
+  Camera,
+  MapPin,
+  Mail,
+  Phone,
+  Globe,
+  Instagram,
+  Twitter,
   Linkedin,
   Plus,
   Edit,
@@ -29,17 +30,27 @@ import {
   Users,
   Briefcase,
   Award,
-  Eye
+  Eye,
+  Loader2
 } from 'lucide-react'
+import { updateProfile, getProfile } from '../../api/profiles'
+import { uploadAvatar } from '../../api/storage'
 
 const ProfilePage = () => {
   const { user } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [avatarFile, setAvatarFile] = useState(null)
+  const fileInputRef = useRef(null)
+
   const [profileData, setProfileData] = useState({
     first_name: user?.first_name || '',
     last_name: user?.last_name || '',
     bio: user?.bio || '',
     location: user?.location || '',
+    avatar_url: user?.avatar_url || '',
     website: '',
     phone: '',
     instagram: '',
@@ -66,10 +77,85 @@ const ProfilePage = () => {
     project_url: ''
   })
 
+  // Load profile data from Supabase on mount
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!user?.id) return
+
+      try {
+        const profile = await getProfile(user.id)
+        // Parse display_name into first_name and last_name
+        const nameParts = (profile.display_name || '').split(' ')
+        setProfileData(prev => ({
+          ...prev,
+          first_name: nameParts[0] || '',
+          last_name: nameParts.slice(1).join(' ') || '',
+          bio: profile.bio || '',
+          location: profile.city || '',
+          avatar_url: profile.avatar_url || ''
+        }))
+      } catch (error) {
+        console.error('Failed to load profile:', error)
+      }
+    }
+
+    loadProfile()
+  }, [user?.id])
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setAvatarFile(file)
+      // Preview the image
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setProfileData(prev => ({
+          ...prev,
+          avatar_url: reader.result
+        }))
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
   const handleSave = async () => {
-    // TODO: Save to backend
-    console.log('Saving profile:', profileData)
-    setIsEditing(false)
+    if (!user?.id) return
+
+    setIsSaving(true)
+    setSaveError('')
+    setSaveSuccess(false)
+
+    try {
+      let avatarUrl = profileData.avatar_url
+
+      // Upload avatar if a new file was selected
+      if (avatarFile) {
+        avatarUrl = await uploadAvatar(avatarFile, user.id)
+      }
+
+      // Combine first_name and last_name into display_name for the Profile type
+      const display_name = `${profileData.first_name} ${profileData.last_name}`.trim()
+
+      // Update profile with fields that exist in the Profile type
+      await updateProfile(user.id, {
+        display_name,
+        bio: profileData.bio,
+        city: profileData.location,
+        avatar_url: avatarUrl
+      })
+
+      setSaveSuccess(true)
+      setIsEditing(false)
+      setAvatarFile(null)
+
+      // Hide success message after 3 seconds
+      setTimeout(() => setSaveSuccess(false), 3000)
+    } catch (error) {
+      console.error('Failed to save profile:', error)
+      setSaveError(error.message || 'Failed to save profile. Please try again.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const addSkill = () => {
@@ -183,14 +269,24 @@ const ProfilePage = () => {
               )}
               {isEditing ? (
                 <div className="flex space-x-2">
-                  <Button onClick={handleSave} size="sm">
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Changes
+                  <Button onClick={handleSave} size="sm" disabled={isSaving}>
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" />
+                        Save Changes
+                      </>
+                    )}
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setIsEditing(false)} 
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsEditing(false)}
                     size="sm"
+                    disabled={isSaving}
                   >
                     <X className="w-4 h-4 mr-2" />
                     Cancel
@@ -204,6 +300,20 @@ const ProfilePage = () => {
               )}
             </div>
           </div>
+
+          {/* Success/Error Messages */}
+          {saveSuccess && (
+            <Alert className="bg-green-50 border-green-200 mt-4">
+              <AlertDescription className="text-green-800">
+                Profile updated successfully!
+              </AlertDescription>
+            </Alert>
+          )}
+          {saveError && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertDescription>{saveError}</AlertDescription>
+            </Alert>
+          )}
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
@@ -224,18 +334,28 @@ const ProfilePage = () => {
                   <div className="text-center">
                     <div className="relative inline-block">
                       <Avatar className="w-24 h-24 mx-auto">
-                        <AvatarImage src="/placeholder-avatar.jpg" />
+                        <AvatarImage src={profileData.avatar_url || "/placeholder-avatar.jpg"} />
                         <AvatarFallback className="text-lg">
                           {getInitials()}
                         </AvatarFallback>
                       </Avatar>
                       {isEditing && (
-                        <Button 
-                          size="sm" 
-                          className="absolute -bottom-2 -right-2 rounded-full w-8 h-8 p-0"
-                        >
-                          <Camera className="w-4 h-4" />
-                        </Button>
+                        <>
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleAvatarChange}
+                          />
+                          <Button
+                            size="sm"
+                            className="absolute -bottom-2 -right-2 rounded-full w-8 h-8 p-0"
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            <Camera className="w-4 h-4" />
+                          </Button>
+                        </>
                       )}
                     </div>
                     
@@ -258,22 +378,30 @@ const ProfilePage = () => {
                             })}
                             placeholder="Last Name"
                           />
+                          <Input
+                            value={profileData.location}
+                            onChange={(e) => setProfileData({
+                              ...profileData,
+                              location: e.target.value
+                            })}
+                            placeholder="Location (e.g., Sydney, Australia)"
+                          />
                         </div>
                       ) : (
-                        <h3 className="text-xl font-semibold text-slate-900 dark:text-white">
-                          {profileData.first_name} {profileData.last_name}
-                        </h3>
-                      )}
-                      
-                      <p className="text-slate-600 dark:text-white/80 capitalize">
-                        {user?.role}
-                      </p>
-                      
-                      {profileData.location && (
-                        <div className="flex items-center justify-center mt-2 text-slate-500 dark:text-white/60">
-                          <MapPin className="w-4 h-4 mr-1" />
-                          <span className="text-sm">{profileData.location}</span>
-                        </div>
+                        <>
+                          <h3 className="text-xl font-semibold text-slate-900 dark:text-white">
+                            {profileData.first_name} {profileData.last_name}
+                          </h3>
+                          <p className="text-slate-600 dark:text-white/80 capitalize mt-1">
+                            {user?.role}
+                          </p>
+                          {profileData.location && (
+                            <div className="flex items-center justify-center mt-2 text-slate-500 dark:text-white/60">
+                              <MapPin className="w-4 h-4 mr-1" />
+                              <span className="text-sm">{profileData.location}</span>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
 
