@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../App'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import AvailabilityCalendar from '../calendar/AvailabilityCalendar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -209,37 +210,37 @@ const ProfilePage = () => {
         return {
           title: 'Freelancer Profile',
           subtitle: 'Showcase your skills and attract clients',
-          tabs: ['overview', 'portfolio', 'skills', 'rates']
+          tabs: ['overview', 'portfolio', 'skills', 'rates', 'availability']
         }
       case 'organiser':
         return {
           title: 'Organiser Profile',
           subtitle: 'Manage your events and projects',
-          tabs: ['overview', 'projects', 'team', 'preferences']
+          tabs: ['overview', 'projects', 'team', 'preferences', 'availability']
         }
       case 'venue':
         return {
           title: 'Venue Profile',
           subtitle: 'Showcase your space and amenities',
-          tabs: ['overview', 'space', 'amenities', 'booking']
+          tabs: ['overview', 'space', 'amenities', 'booking', 'availability']
         }
       case 'vendor':
         return {
           title: 'Vendor Profile',
           subtitle: 'List your services and equipment',
-          tabs: ['overview', 'services', 'equipment', 'rates']
+          tabs: ['overview', 'services', 'equipment', 'rates', 'availability']
         }
       case 'collective':
         return {
           title: 'Collective Profile',
           subtitle: 'Represent your creative group',
-          tabs: ['overview', 'members', 'projects', 'services']
+          tabs: ['overview', 'members', 'projects', 'services', 'availability']
         }
       default:
         return {
           title: 'Profile',
           subtitle: 'Manage your account',
-          tabs: ['overview', 'settings']
+          tabs: ['overview', 'settings', 'availability']
         }
     }
   }
@@ -317,7 +318,7 @@ const ProfilePage = () => {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             {roleContent.tabs.map((tab) => (
               <TabsTrigger key={tab} value={tab} className="capitalize">
                 {tab}
@@ -729,6 +730,14 @@ const ProfilePage = () => {
               </Card>
             </TabsContent>
           )}
+
+          {/* Availability Tab */}
+          <TabsContent value="availability">
+            <AvailabilityCalendar
+              userId={user?.id}
+              isOwnProfile={true}
+            />
+          </TabsContent>
         </Tabs>
       </div>
     </div>

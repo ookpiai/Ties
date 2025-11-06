@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import AvailabilityCalendar from '../calendar/AvailabilityCalendar'
 import {
   User,
   MapPin,
@@ -140,10 +141,11 @@ const PublicProfileView = () => {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
             <TabsTrigger value="reviews">Reviews</TabsTrigger>
+            <TabsTrigger value="availability">Availability</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -268,6 +270,14 @@ const PublicProfileView = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Availability Tab */}
+          <TabsContent value="availability">
+            <AvailabilityCalendar
+              userId={userId}
+              isOwnProfile={false}
+            />
           </TabsContent>
         </Tabs>
       </div>
