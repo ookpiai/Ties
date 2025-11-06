@@ -279,13 +279,21 @@ Auth → Discovery → Calendar → Payments → Workflow 1 → Workflow 2 → L
 
 **Goal:** Real-time availability checking prevents double-booking
 
-### Day 11-12: Calendar Database & API
-- [ ] Create `calendar_blocks` table in Supabase
-- [ ] Backend: `GET /api/users/:id/availability`
-- [ ] Backend: `POST /api/users/:id/availability/block`
-- [ ] Backend: `GET /api/users/:id/availability/check`
-- [ ] Backend: `DELETE /api/users/:id/availability/:blockId`
-- [ ] Test availability API endpoints
+### Day 11-12: Calendar Database & API ✅ COMPLETE
+- [x] Create `calendar_blocks` table in Supabase
+- [x] Create availability API layer (src/api/availability.ts)
+  - `getCalendarBlocks()` - Get user's blocked dates
+  - `createCalendarBlock()` - Block dates manually
+  - `updateCalendarBlock()` - Update existing block
+  - `deleteCalendarBlock()` - Remove block
+  - `checkDateOverlap()` - Check for conflicts
+  - `checkAvailability()` - Get day-by-day availability
+  - `areDatesAvailable()` - Quick availability check
+  - `blockDatesForBooking()` - Auto-block for booking
+  - `releaseDatesForBooking()` - Release when cancelled
+- [x] Create RLS policies for security
+- [x] Create helper functions (check_date_overlap, get_available_dates)
+- [x] Test availability API endpoints (all 7 tests passed)
 
 ### Day 13-15: Calendar UI Components
 - [ ] Create `AvailabilityCalendar.jsx` component
