@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import VenueMapView from './VenueMapView'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -28,6 +29,7 @@ import {
   SlidersHorizontal,
   Grid3X3,
   List,
+  Map,
   X,
   Loader2
 } from 'lucide-react'
@@ -264,6 +266,13 @@ const DiscoveryPage = () => {
               >
                 <List className="w-4 h-4" />
               </Button>
+              <Button
+                variant={viewMode === 'map' ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode('map')}
+              >
+                <Map className="w-4 h-4" />
+              </Button>
             </div>
           </div>
 
@@ -406,7 +415,7 @@ const DiscoveryPage = () => {
         )}
 
         {/* Empty State */}
-        {!isLoading && !error && filteredProfessionals.length === 0 && (
+        {!isLoading && !error && filteredProfessionals.length === 0 && viewMode !== 'map' && (
           <div className="text-center py-12">
             <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No profiles found</h3>
@@ -414,8 +423,15 @@ const DiscoveryPage = () => {
           </div>
         )}
 
+        {/* Map View */}
+        {viewMode === 'map' && (
+          <div className="h-[600px] rounded-lg overflow-hidden border border-gray-200">
+            <VenueMapView />
+          </div>
+        )}
+
         {/* Professionals Grid/List */}
-        {!isLoading && !error && filteredProfessionals.length > 0 && (
+        {!isLoading && !error && filteredProfessionals.length > 0 && viewMode !== 'map' && (
           <div className={viewMode === 'grid'
             ? "grid md:grid-cols-2 lg:grid-cols-3 gap-6"
             : "space-y-4"

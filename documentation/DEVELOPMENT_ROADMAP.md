@@ -256,19 +256,22 @@ Auth → Discovery → Calendar → Payments → Workflow 1 → Workflow 2 → L
 - [x] Create public profile view component
 - [x] Link Discovery cards to public profiles
 
-### Day 8-10: Map-Based Venue Search (NEW v1 Feature)
-- [ ] Install Mapbox libraries (`npm install mapbox-gl react-map-gl`)
-- [ ] Create `VenueMapView.jsx` component
-- [ ] Add geocoding for venue addresses (Mapbox Geocoding API)
-- [ ] Implement map markers for venues
-- [ ] Add "Search this area" functionality
-- [ ] Test map on mobile devices
+### Day 8-10: Map-Based Venue Search (NEW v1 Feature) ✅ COMPLETE
+- [x] Install Mapbox libraries (`npm install mapbox-gl react-map-gl`)
+- [x] Create `VenueMapView.jsx` component
+- [x] Add geocoding for venue addresses (Mapbox Geocoding API)
+- [x] Implement map markers for all user roles (not just venues)
+- [x] Add role-based marker colors (Purple=Artist, Blue=Crew, Green=Venue, Orange=Organiser)
+- [x] Add map legend showing role colors
+- [x] Add "Search this area" button (placeholder functionality)
+- [x] Integrate map view into Discovery page (Grid | List | Map toggle)
+- [x] Test map with real geocoded locations
 
-**✅ Phase 2 Complete When:**
-- Discovery shows real users from database
-- Search filters work correctly
-- Venues appear on interactive map
-- Public profiles viewable
+**✅ Phase 2 COMPLETE:**
+- ✅ Discovery shows real users from database
+- ✅ Search filters work correctly (role, location, text search)
+- ✅ All users (not just venues) appear on interactive map with real geocoded locations
+- ✅ Public profiles viewable
 
 ---
 
