@@ -121,14 +121,6 @@ const RegisterPage = () => {
     }
 
     try {
-      // Real Supabase signup
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-      })
-
-      if (signUpError) throw signUpError
-
       // Map role to Supabase profile role format
       const roleMapping = {
         'freelancer': 'Artist',
@@ -138,21 +130,30 @@ const RegisterPage = () => {
         'collective': 'Artist'
       }
 
-      // Create profile in database (use upsert to handle duplicate gracefully)
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: data.user.id,
-          display_name: `${formData.first_name} ${formData.last_name}`.trim() || formData.username,
-          role: roleMapping[formData.role] || 'Artist',
-          city: formData.location || null,
-          bio: formData.bio || null,
-          avatar_url: null
-        }, {
-          onConflict: 'id'
-        })
+      // Supabase signup with profile metadata
+      // The database trigger will automatically create the profile
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            display_name: `${formData.first_name} ${formData.last_name}`.trim() || formData.username,
+            role: roleMapping[formData.role] || 'Artist',
+            city: formData.location || null,
+            bio: formData.bio || null
+          }
+        }
+      })
 
-      if (profileError) throw profileError
+      if (signUpError) throw signUpError
+
+      // Profile is automatically created by database trigger
+      // If email confirmation is required, show message
+      if (data?.user?.identities?.length === 0) {
+        setError('Please check your email to confirm your account before logging in.')
+        setLoading(false)
+        return
+      }
 
       // Success! Navigate to dashboard
       navigate('/dashboard')
