@@ -132,20 +132,26 @@ const RegisterPage = () => {
 
       // Supabase signup with profile metadata
       // The database trigger will automatically create the profile
+      const profileMetadata = {
+        display_name: `${formData.first_name} ${formData.last_name}`.trim() || formData.username,
+        role: roleMapping[formData.role] || 'Artist',
+        city: formData.location || null,
+        bio: formData.bio || null
+      }
+
+      console.log('Registering with metadata:', profileMetadata)
+
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
-          data: {
-            display_name: `${formData.first_name} ${formData.last_name}`.trim() || formData.username,
-            role: roleMapping[formData.role] || 'Artist',
-            city: formData.location || null,
-            bio: formData.bio || null
-          }
+          data: profileMetadata
         }
       })
 
       if (signUpError) throw signUpError
+
+      console.log('Registration response:', data)
 
       // Profile is automatically created by database trigger
       // If email confirmation is required, show message

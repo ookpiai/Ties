@@ -12,17 +12,43 @@
 -- Function to create profile automatically
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  user_display_name TEXT;
+  user_role TEXT;
+  user_bio TEXT;
+  user_city TEXT;
+  user_avatar TEXT;
 BEGIN
+  -- Extract metadata with better handling
+  user_display_name := COALESCE(
+    NEW.raw_user_meta_data->>'display_name',
+    NEW.raw_user_meta_data->>'full_name',
+    NEW.raw_user_meta_data->>'name',
+    SPLIT_PART(NEW.email, '@', 1)
+  );
+
+  user_role := COALESCE(NEW.raw_user_meta_data->>'role', 'Artist');
+  user_bio := NEW.raw_user_meta_data->>'bio';
+  user_city := NEW.raw_user_meta_data->>'city';
+  user_avatar := NEW.raw_user_meta_data->>'avatar_url';
+
+  -- Insert profile with extracted data
   INSERT INTO public.profiles (id, display_name, role, avatar_url, bio, city)
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'display_name', NEW.email),
-    COALESCE(NEW.raw_user_meta_data->>'role', 'Artist'),
-    NEW.raw_user_meta_data->>'avatar_url',
-    NEW.raw_user_meta_data->>'bio',
-    NEW.raw_user_meta_data->>'city'
+    user_display_name,
+    user_role,
+    user_avatar,
+    user_bio,
+    user_city
   );
+
   RETURN NEW;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Log error but don't block user creation
+    RAISE WARNING 'Failed to create profile for user %: %', NEW.id, SQLERRM;
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
