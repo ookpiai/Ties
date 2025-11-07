@@ -6,7 +6,7 @@
  * Integrates with calendar API for automatic date blocking/releasing
  */
 
-import { supabase } from '../lib/supabaseClient'
+import { supabase } from '../lib/supabase'
 import { blockDatesForBooking, releaseDatesForBooking } from './availability'
 
 // =====================================================
