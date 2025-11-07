@@ -138,16 +138,18 @@ const RegisterPage = () => {
         'collective': 'Artist'
       }
 
-      // Create profile in database
+      // Create profile in database (use upsert to handle duplicate gracefully)
       const { error: profileError } = await supabase
         .from('profiles')
-        .insert({
+        .upsert({
           id: data.user.id,
           display_name: `${formData.first_name} ${formData.last_name}`.trim() || formData.username,
           role: roleMapping[formData.role] || 'Artist',
           city: formData.location || null,
           bio: formData.bio || null,
           avatar_url: null
+        }, {
+          onConflict: 'id'
         })
 
       if (profileError) throw profileError
