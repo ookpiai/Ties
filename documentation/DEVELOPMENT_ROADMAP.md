@@ -454,49 +454,596 @@ Auth → Discovery → Calendar → Payments → Workflow 1 → Workflow 2 → L
 
 **Goal:** Workflow 1 (Direct Booking) fully functional with payments
 
-### Day 18-20: Stripe Connect Setup
-- [ ] Wait for Stripe Connect approval (if not ready)
-- [ ] Create freelancer Stripe onboarding flow
-- [ ] Create "Connect with Stripe" button in settings
-- [ ] Handle OAuth redirect from Stripe
-- [ ] Store connected account ID in database
-- [ ] Test onboarding flow
+### 🔄 PHASE 4 RE-ORDERING STRATEGY
 
-### Day 21-23: Payment Processing
-- [ ] Create Payment Intent when booking made
-- [ ] Implement Stripe Checkout UI
-- [ ] Hold funds in escrow (platform account)
-- [ ] Test with Stripe test cards
-- [ ] Handle 3D Secure authentication
-- [ ] Show payment status in UI
+**Context:** Stripe Connect application submitted November 7, 2025. Approval takes 1-2 weeks.
 
-### Day 24: Commission & Webhooks
-- [ ] Implement commission calculation (8% Pro, 10% Free)
-- [ ] Create webhook endpoint `/api/webhooks/stripe`
-- [ ] Handle `payment_intent.succeeded`
-- [ ] Handle `payment_intent.failed`
-- [ ] Test webhook locally with Stripe CLI
+**Strategy:** Split Phase 4 into two sub-phases to maximize productivity while waiting for Stripe approval:
 
-### Day 25-27: Direct Booking Flow
-- [ ] Remove mock data from `/src/components/bookings/BookingsPage.jsx` (lines 52-200)
-- [ ] Connect booking creation to backend
-- [ ] Check availability before booking
-- [ ] Process payment via Stripe
-- [ ] Send confirmation emails (SendGrid)
-- [ ] Block dates on calendar
+- **Phase 4A (Days 25-30):** Build booking system WITHOUT payment processing
+- **Phase 4B (Days 18-24):** Add Stripe payment integration AFTER approval
 
-### Day 28-30: Booking Lifecycle
-- [ ] Implement accept/decline flow
-- [ ] Implement status transitions
-- [ ] Implement completion flow
-- [ ] Release escrow on completion
-- [ ] Test full Workflow 1 end-to-end
+**Rationale:**
+1. ✅ Don't waste 1-2 weeks waiting for Stripe
+2. ✅ Test booking logic independently before adding payment complexity
+3. ✅ Reduced risk - verify booking workflow works before handling money
+4. ✅ When Stripe approved, just plug payments into working system
+5. ✅ Calendar integration can be tested without payments
 
-**✅ Phase 4 Complete When:**
-- Freelancers connected to Stripe
-- Users can book with payment
-- Funds held in escrow
-- Full Workflow 1: Discover → Book → Pay → Accept → Complete → Payout
+**Dependencies:**
+- Phase 4A has NO dependencies (can start immediately)
+- Phase 4B requires: Stripe Connect approval + Phase 4A completion
+
+---
+
+### 📋 PHASE 4A: BOOKING SYSTEM FOUNDATION (Days 25-30) - START FIRST
+
+**Status:** Building this NOW while waiting for Stripe approval
+**Goal:** Complete booking workflow WITHOUT payment processing
+
+#### Day 25: Bookings Database Schema
+
+**Database Tables:**
+- [ ] Create `bookings` table in Supabase with schema:
+  ```sql
+  - id: UUID (primary key)
+  - client_id: UUID (references profiles.id)
+  - freelancer_id: UUID (references profiles.id)
+  - start_date: TIMESTAMPTZ
+  - end_date: TIMESTAMPTZ
+  - status: TEXT ('pending', 'accepted', 'declined', 'in_progress', 'completed', 'cancelled', 'paid')
+  - total_amount: DECIMAL(10,2)
+  - service_description: TEXT
+  - client_message: TEXT
+  - freelancer_response: TEXT
+  - stripe_payment_intent_id: TEXT (nullable, for Phase 4B)
+  - stripe_connected_account_id: TEXT (nullable, for Phase 4B)
+  - commission_amount: DECIMAL(10,2) (nullable, for Phase 4B)
+  - payout_status: TEXT (nullable, for Phase 4B)
+  - created_at: TIMESTAMPTZ
+  - updated_at: TIMESTAMPTZ
+  ```
+
+**RLS Policies:**
+- [ ] Users can view bookings where they are client OR freelancer
+- [ ] Only clients can create bookings
+- [ ] Only freelancers can update booking status (accept/decline)
+- [ ] Both parties can cancel bookings (with rules)
+
+**Helper Functions:**
+- [ ] `get_user_bookings(user_id, role)` - Get bookings as client or freelancer
+- [ ] `check_booking_overlap(user_id, start_date, end_date)` - Prevent double-booking
+- [ ] `update_booking_status(booking_id, new_status, user_id)` - Status transitions with validation
+
+**Indexes:**
+- [ ] Index on `client_id`
+- [ ] Index on `freelancer_id`
+- [ ] Index on `status`
+- [ ] Composite index on `freelancer_id + start_date + end_date`
+
+**Status Transitions Rules:**
+```
+pending → accepted (freelancer only)
+pending → declined (freelancer only)
+accepted → in_progress (automatic on start_date)
+in_progress → completed (freelancer or client after end_date)
+completed → paid (automatic in Phase 4B after payout)
+any → cancelled (client before accepted, both parties after with rules)
+```
+
+#### Day 26: Bookings API Layer
+
+**Create:** `/src/api/bookings.ts`
+
+- [ ] **createBooking(params)** - Create new booking request
+  - Check availability via `checkAvailability()`
+  - Create booking record (status: 'pending')
+  - DO NOT block calendar yet (wait for acceptance)
+  - Send email notification to freelancer
+  - Return booking object
+
+- [ ] **getBookings(userId, role)** - Get user's bookings
+  - role: 'client' or 'freelancer'
+  - Return bookings with profile details (JOIN profiles table)
+  - Sort by start_date DESC
+
+- [ ] **getBookingById(bookingId, userId)** - Get single booking
+  - Verify user is client OR freelancer
+  - Return full booking details with both user profiles
+
+- [ ] **acceptBooking(bookingId, userId, response)** - Freelancer accepts
+  - Verify user is freelancer
+  - Verify status is 'pending'
+  - Update status to 'accepted'
+  - 🔗 **Call `blockDatesForBooking()`** - Auto-block calendar dates
+  - Send email confirmation to client
+  - Return updated booking
+
+- [ ] **declineBooking(bookingId, userId, reason)** - Freelancer declines
+  - Verify user is freelancer
+  - Verify status is 'pending'
+  - Update status to 'declined'
+  - Send email notification to client
+  - Return updated booking
+
+- [ ] **cancelBooking(bookingId, userId, reason)** - Cancel booking
+  - Verify user is client OR freelancer
+  - Verify status allows cancellation
+  - Update status to 'cancelled'
+  - 🔗 **Call `releaseDatesForBooking()`** - Release calendar dates
+  - Send email notification to other party
+  - Return updated booking
+
+- [ ] **completeBooking(bookingId, userId)** - Mark booking complete
+  - Verify user is freelancer OR client
+  - Verify status is 'in_progress'
+  - Verify end_date has passed
+  - Update status to 'completed'
+  - Send email notification
+  - ⚠️ **Phase 4B:** Trigger payout process
+  - Return updated booking
+
+- [ ] **getUpcomingBookings(userId)** - Next 30 days bookings
+  - Filter by start_date >= today
+  - Filter by status IN ('accepted', 'in_progress')
+  - Sort by start_date ASC
+
+- [ ] **getBookingStats(userId)** - Dashboard statistics
+  - Count bookings by status
+  - Calculate total earnings (freelancer) or spent (client)
+  - Return stats object
+
+**TypeScript Interfaces:**
+```typescript
+interface Booking {
+  id: string
+  client_id: string
+  freelancer_id: string
+  start_date: string
+  end_date: string
+  status: BookingStatus
+  total_amount: number
+  service_description: string
+  client_message?: string
+  freelancer_response?: string
+  stripe_payment_intent_id?: string | null
+  created_at: string
+  updated_at: string
+  // Joined data:
+  client_profile?: Profile
+  freelancer_profile?: Profile
+}
+
+type BookingStatus =
+  | 'pending'
+  | 'accepted'
+  | 'declined'
+  | 'in_progress'
+  | 'completed'
+  | 'cancelled'
+  | 'paid'
+
+interface CreateBookingParams {
+  freelancer_id: string
+  start_date: Date
+  end_date: Date
+  total_amount: number
+  service_description: string
+  client_message?: string
+}
+```
+
+#### Day 27: Booking UI Components
+
+**Create Components:**
+
+1. [ ] **`BookNowButton.jsx`** - Add to PublicProfileView
+   - Location: `src/components/bookings/BookNowButton.jsx`
+   - Shows hourly/daily rate if available
+   - Opens BookingRequestModal on click
+   - Disabled if viewing own profile
+
+2. [ ] **`BookingRequestModal.jsx`** - Booking creation form
+   - Location: `src/components/bookings/BookingRequestModal.jsx`
+   - Date picker with availability checking (use DatePicker.jsx)
+   - Service description textarea
+   - Optional message to freelancer
+   - Calculate total based on dates + hourly rate
+   - Preview: "X days × $Y/day = $Z total"
+   - "Request Booking" button (NOT "Pay Now" - that's Phase 4B)
+   - Validate dates are available before submission
+   - Show success message after creation
+
+3. [ ] **`BookingCard.jsx`** - Display booking details
+   - Location: `src/components/bookings/BookingCard.jsx`
+   - Show both user profiles (client + freelancer)
+   - Show dates, status badge, total amount
+   - Show service description
+   - Action buttons based on status + role:
+     - Pending + Freelancer: Accept / Decline buttons
+     - Accepted + Anyone: View Details / Cancel buttons
+     - In Progress + Anyone: Complete button (if end_date passed)
+     - Completed: Show "Completed" badge
+   - Responsive card design
+
+4. [ ] **Update `BookingsPage.jsx`** - Remove mock data
+   - Location: `src/components/profile/ProfilePage.jsx` (bookings tab)
+   - Remove lines 52-200 (mock data)
+   - Fetch real bookings via `getBookings(userId, role)`
+   - Separate tabs: "As Client" and "As Freelancer" (if applicable)
+   - Show empty state if no bookings
+   - Use BookingCard component for each booking
+   - Filter by status: All / Pending / Accepted / Completed
+
+5. [ ] **`BookingDetailsModal.jsx`** - Full booking view
+   - Location: `src/components/bookings/BookingDetailsModal.jsx`
+   - Show all booking information
+   - Timeline of status changes
+   - Messages between parties
+   - Action buttons (accept, decline, cancel, complete)
+   - Calendar integration status (dates blocked/released)
+
+**Integration Points:**
+- [ ] Add BookNowButton to PublicProfileView.jsx (below profile header)
+- [ ] Update ProfilePage.jsx bookings tab to use new components
+- [ ] Add booking count badge to navigation (upcoming bookings)
+
+#### Day 28-29: Booking Lifecycle & Status Management
+
+**Status Transitions:**
+- [ ] Accept booking flow
+  - Update UI instantly (optimistic update)
+  - Call `acceptBooking()` API
+  - Show success toast: "Booking accepted! Calendar dates blocked."
+  - Refresh booking list
+
+- [ ] Decline booking flow
+  - Show confirmation modal: "Are you sure? This cannot be undone."
+  - Optional reason textarea
+  - Call `declineBooking()` API
+  - Show toast: "Booking declined. Client has been notified."
+  - Remove from pending list
+
+- [ ] Cancel booking flow
+  - Show confirmation modal with cancellation policy
+  - Require reason (dropdown + optional text)
+  - Call `cancelBooking()` API
+  - Show toast: "Booking cancelled. Calendar dates released."
+  - Update booking status
+
+- [ ] Complete booking flow
+  - Verify end_date has passed
+  - Show completion modal: "Mark this booking as complete?"
+  - Call `completeBooking()` API
+  - Show toast: "Booking completed!"
+  - ⚠️ **Phase 4B:** Show "Payment processing..." then "Payout sent!"
+  - Update booking status
+
+**Status Badges:**
+```jsx
+Pending: Yellow badge
+Accepted: Green badge
+Declined: Red badge
+In Progress: Blue badge
+Completed: Gray badge
+Cancelled: Red badge
+Paid: Green badge with $ icon (Phase 4B)
+```
+
+**Email Notifications (SendGrid):**
+- [ ] Booking request created → Email to freelancer
+- [ ] Booking accepted → Email to client
+- [ ] Booking declined → Email to client with reason
+- [ ] Booking cancelled → Email to other party with reason
+- [ ] Booking completed → Email to both parties
+- [ ] Booking 24 hours away → Reminder email to both parties
+
+#### Day 30: Integration & Testing
+
+**Calendar Integration:**
+- [ ] Test automatic blocking when booking accepted
+  - Create booking, accept it
+  - Verify dates appear as "booking" reason in calendar
+  - Verify blocked dates show on AvailabilityCalendar
+  - Try to create overlapping booking (should fail)
+
+- [ ] Test automatic release when booking cancelled
+  - Cancel booking
+  - Verify dates removed from calendar
+  - Verify dates available again for new bookings
+
+**Dashboard Integration:**
+- [ ] Update Dashboard.jsx with real booking stats
+  - Upcoming bookings count
+  - Total bookings (as client and freelancer)
+  - Pending requests count (badge)
+  - Revenue earned (freelancer) - Phase 4B will show actual payments
+
+**End-to-End Testing:**
+- [ ] Test full booking workflow (no payment):
+  1. Client discovers freelancer via map/discovery
+  2. Client views public profile
+  3. Client clicks "Book Now"
+  4. Client selects available dates
+  5. Client submits booking request
+  6. Freelancer receives email notification
+  7. Freelancer views pending booking
+  8. Freelancer accepts booking
+  9. Calendar dates automatically blocked
+  10. Client receives confirmation email
+  11. Booking appears in both users' bookings tabs
+  12. Complete booking after end_date
+  13. Both parties notified
+
+- [ ] Test cancellation workflow:
+  1. Create and accept booking
+  2. Cancel from client side
+  3. Verify calendar dates released
+  4. Verify status updated
+  5. Verify email sent
+
+- [ ] Test decline workflow:
+  1. Create booking request
+  2. Decline from freelancer side
+  3. Verify client notified
+  4. Verify no calendar dates blocked
+
+**⚠️ Payment Placeholder:**
+- [ ] Add UI message: "Payment processing will be enabled soon"
+- [ ] Booking request shows total amount but no payment step
+- [ ] Acceptance happens without payment (for testing)
+- [ ] "Paid" status not reachable yet (Phase 4B)
+
+---
+
+### 💳 PHASE 4B: STRIPE PAYMENT INTEGRATION (Days 18-24) - DO AFTER STRIPE APPROVED
+
+**Status:** WAITING for Stripe Connect approval (est. late November 2025)
+**Prerequisites:**
+- ✅ Stripe Connect platform approved
+- ✅ Phase 4A completed (booking system working)
+
+**Goal:** Add payment processing to existing booking system
+
+#### Day 18-20: Stripe Connect Setup
+
+- [ ] Verify Stripe Connect platform account approved
+- [ ] Create Stripe Connect database fields:
+  - [ ] Add `stripe_connected_account_id` to profiles table
+  - [ ] Add `stripe_onboarding_completed` boolean to profiles
+  - [ ] Add `stripe_onboarding_link` text (temporary)
+
+- [ ] Create Stripe onboarding flow:
+  - [ ] Create `/src/api/stripe.ts` API layer
+  - [ ] `createStripeConnectAccount(userId)` - Create connected account
+  - [ ] `getStripeOnboardingLink(userId)` - Generate onboarding URL
+  - [ ] `checkStripeAccountStatus(userId)` - Verify account complete
+  - [ ] Handle OAuth redirect from Stripe
+  - [ ] Store `stripe_connected_account_id` in profiles table
+
+- [ ] Create UI components:
+  - [ ] "Connect with Stripe" button in Settings page
+  - [ ] Stripe onboarding status indicator
+  - [ ] Account connection status badge
+  - [ ] "Reconnect" button if account disconnected
+
+- [ ] Create `/settings/stripe-return` page for OAuth redirect
+  - [ ] Show loading state
+  - [ ] Verify account connected
+  - [ ] Show success message: "Stripe account connected!"
+  - [ ] Redirect to settings
+
+- [ ] Test onboarding flow end-to-end
+  - [ ] Create test connected account
+  - [ ] Complete onboarding in Stripe
+  - [ ] Verify account_id stored correctly
+
+**Requirements for Accepting Bookings:**
+- [ ] Show warning on profile if Stripe not connected
+- [ ] Disable "Accept Booking" if freelancer Stripe not connected
+- [ ] Show tooltip: "Connect Stripe to accept paid bookings"
+
+#### Day 21-23: Payment Processing Integration
+
+**Update Booking Flow with Payments:**
+
+- [ ] **Modify `createBooking()` in bookings.ts:**
+  - [ ] Verify freelancer has Stripe connected account
+  - [ ] Calculate commission: 10% for free users, 8% for Pro users
+  - [ ] Create Stripe Payment Intent:
+    ```javascript
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: totalAmount * 100, // Convert to cents
+      currency: 'aud',
+      application_fee_amount: commissionAmount * 100,
+      transfer_data: {
+        destination: freelancerStripeAccountId,
+      },
+      metadata: {
+        booking_id: bookingId,
+        client_id: clientId,
+        freelancer_id: freelancerId
+      }
+    })
+    ```
+  - [ ] Store `payment_intent_id` in booking record
+  - [ ] Return payment_intent.client_secret to frontend
+
+- [ ] **Update `BookingRequestModal.jsx`:**
+  - [ ] Add Stripe Elements checkout form
+  - [ ] Show payment form AFTER date selection
+  - [ ] Steps: 1) Select dates → 2) Enter payment info → 3) Confirm
+  - [ ] Use Stripe's CardElement component
+  - [ ] Show commission breakdown:
+    ```
+    Service cost: $500.00
+    Platform fee: $50.00 (10%)
+    Total: $550.00
+    ```
+  - [ ] "Confirm & Pay" button
+  - [ ] Handle payment submission:
+    ```javascript
+    const result = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: { card: cardElement }
+    })
+    ```
+  - [ ] Show payment processing spinner
+  - [ ] Handle payment errors (card declined, etc.)
+  - [ ] Show success: "Payment successful! Booking request sent."
+
+- [ ] **Test payment flow:**
+  - [ ] Use Stripe test cards (4242 4242 4242 4242)
+  - [ ] Verify payment intent created in Stripe dashboard
+  - [ ] Verify funds held in escrow (not transferred yet)
+  - [ ] Test 3D Secure authentication (4000 0027 6000 3184)
+  - [ ] Test declined card (4000 0000 0000 0002)
+  - [ ] Verify error handling works
+
+**Payment Status in UI:**
+- [ ] Add payment status badge to BookingCard
+- [ ] Show "Payment Held" for accepted bookings
+- [ ] Show "Payment Processing" during payment
+- [ ] Show "Paid Out" after completion
+
+#### Day 24: Webhooks & Payout on Completion
+
+**Stripe Webhooks:**
+
+- [ ] Create webhook endpoint: `/api/webhooks/stripe`
+  - [ ] Verify webhook signature (security)
+  - [ ] Handle events:
+    - `payment_intent.succeeded` - Update booking status, send confirmation
+    - `payment_intent.failed` - Cancel booking, notify user
+    - `account.updated` - Update freelancer's Stripe connection status
+  - [ ] Log all webhook events for debugging
+
+- [ ] Test webhooks locally:
+  - [ ] Install Stripe CLI: `stripe listen --forward-to localhost:5000/api/webhooks/stripe`
+  - [ ] Trigger test events
+  - [ ] Verify webhook handler processes events correctly
+
+- [ ] Configure webhook in Stripe Dashboard (production)
+  - [ ] Add webhook URL: `https://yourdomain.com/api/webhooks/stripe`
+  - [ ] Subscribe to events: payment_intent.*, account.*
+  - [ ] Save webhook signing secret in .env
+
+**Payout on Completion:**
+
+- [ ] **Modify `completeBooking()` in bookings.ts:**
+  - [ ] After status updated to 'completed':
+  - [ ] Verify payment_intent exists
+  - [ ] Check if transfer already processed
+  - [ ] If not, process transfer:
+    ```javascript
+    // Stripe automatically transfers funds when payment intent captured
+    // Just need to capture the payment:
+    await stripe.paymentIntents.capture(paymentIntentId)
+    ```
+  - [ ] Update booking: `payout_status = 'completed'`
+  - [ ] Send email: "Payout processed! Funds will arrive in 2-7 days."
+
+- [ ] **Update completion flow in UI:**
+  - [ ] Show "Processing payout..." message
+  - [ ] Show success: "Booking completed! Payout sent to your Stripe account."
+  - [ ] Display payout amount (total minus commission)
+  - [ ] Link to Stripe dashboard for details
+
+**Commission Tracking:**
+- [ ] Create admin view for commission tracking
+- [ ] Calculate total platform revenue
+- [ ] Export commission reports
+
+**Testing:**
+- [ ] Test full paid workflow end-to-end:
+  1. Client creates booking with payment
+  2. Payment held in escrow
+  3. Freelancer accepts booking
+  4. Calendar blocked
+  5. Booking completes
+  6. Payout triggered automatically
+  7. Freelancer receives funds (verify in Stripe dashboard)
+  8. Platform commission retained
+
+**⚠️ Escrow Period:**
+- [ ] Document escrow period (funds held until completion)
+- [ ] Add refund policy (if booking cancelled before accepted)
+- [ ] Handle dispute resolution (manual for v1)
+
+---
+
+### 🔗 INTEGRATION POINTS: Phase 4A ↔ Phase 4B
+
+**How They Connect:**
+
+1. **Database Schema (Phase 4A)**
+   - Creates `bookings` table with Stripe fields (nullable)
+   - Phase 4B populates: `stripe_payment_intent_id`, `commission_amount`, `payout_status`
+
+2. **Booking Creation (Phase 4A → 4B)**
+   - Phase 4A: Creates booking without payment
+   - Phase 4B: Adds Stripe Payment Intent creation before booking saved
+
+3. **Booking Acceptance (Phase 4A)**
+   - Phase 4A: Updates status, blocks calendar
+   - Phase 4B: Same logic (payment already captured at creation)
+
+4. **Booking Completion (Phase 4A → 4B)**
+   - Phase 4A: Updates status to 'completed'
+   - Phase 4B: Adds payout processing after status update
+
+5. **UI Components (Phase 4A → 4B)**
+   - Phase 4A: BookingRequestModal without payment form
+   - Phase 4B: Adds Stripe Elements payment form between steps
+
+6. **Status Flow:**
+   ```
+   Phase 4A: pending → accepted → in_progress → completed
+   Phase 4B: pending → accepted → in_progress → completed → paid
+   ```
+
+**Migration Path:**
+- [ ] Phase 4A completes with bookings working (no payments)
+- [ ] When Stripe approved, Phase 4B adds payment layer
+- [ ] Existing test bookings remain (no payment_intent)
+- [ ] New bookings require payment
+- [ ] Old bookings can still be completed (skip payout)
+
+---
+
+### ✅ Phase 4 Complete When:
+
+**Phase 4A (Can verify now):**
+- [x] Bookings database exists with all fields
+- [x] All booking API endpoints working
+- [x] Users can create booking requests
+- [x] Freelancers can accept/decline bookings
+- [x] Bookings appear in both users' tabs
+- [x] Calendar dates blocked automatically on acceptance
+- [x] Calendar dates released on cancellation
+- [x] Booking lifecycle works end-to-end
+- [x] Email notifications sent for all events
+- [x] Dashboard shows booking statistics
+
+**Phase 4B (After Stripe approved):**
+- [ ] Stripe Connect account approved
+- [ ] Freelancers can connect Stripe accounts
+- [ ] Payment processing works with test cards
+- [ ] Funds held in escrow (verified in Stripe dashboard)
+- [ ] Commission calculation correct (8% Pro, 10% Free)
+- [ ] Webhooks receiving Stripe events
+- [ ] Payout automatically processed on completion
+- [ ] Full Workflow 1 tested: Discover → Book → Pay → Accept → Complete → Payout
+
+**Combined Success Criteria:**
+- Users can discover freelancers
+- Users can book freelancers with real payment
+- Freelancers receive booking requests
+- Freelancers can accept/decline
+- Payments held securely in escrow
+- Calendar prevents double-booking
+- Completion triggers automatic payout
+- Platform retains commission
+- Both parties receive email notifications at every step
 
 ---
 
