@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import AvailabilityCalendar from '../calendar/AvailabilityCalendar'
+import BookNowButton from '../bookings/BookNowButton'
 import {
   User,
   MapPin,
@@ -27,10 +28,12 @@ import {
   ArrowLeft
 } from 'lucide-react'
 import { getProfile } from '../../api/profiles'
+import { useAuth } from '../../App'
 
 const PublicProfileView = () => {
   const { userId } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [profile, setProfile] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
@@ -132,10 +135,13 @@ const PublicProfileView = () => {
                 <MessageCircle className="w-4 h-4 mr-2" />
                 Message
               </Button>
-              <Button variant="outline">
-                <Briefcase className="w-4 h-4 mr-2" />
-                Book
-              </Button>
+              <BookNowButton
+                freelancerId={profile.id}
+                freelancerName={profile.display_name || profile.full_name}
+                hourlyRate={profile.hourly_rate}
+                dailyRate={profile.daily_rate}
+                isOwnProfile={user?.id === profile.id}
+              />
             </div>
           </div>
         </div>
