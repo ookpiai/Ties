@@ -233,8 +233,7 @@ export async function getBookingById(
           display_name,
           avatar_url,
           role,
-          bio,
-          hourly_rate
+          bio
         )
       `)
       .eq('id', bookingId)
