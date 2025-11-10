@@ -54,6 +54,7 @@ import PublicProfileView from './components/profile/PublicProfileView'
 import ProjectsPage from './components/projects/ProjectsPage'
 import GuidedOnboarding from './components/onboarding/GuidedOnboarding'
 import JobFeedPage from './components/jobs/JobFeedPage'
+import CreateJobPage from './components/jobs/CreateJobPage'
 import { LiveRegionManager, initFocusVisible, createSkipLink } from './utils/accessibility'
 import './styles/accessibility.css'
 import './App.css'
@@ -372,6 +373,11 @@ function App() {
               <AppLayout>
                 <JobFeedPage />
               </AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/jobs/create" element={
+            <ProtectedRoute>
+              <CreateJobPage />
             </ProtectedRoute>
           } />
           <Route path="/profile/:userId" element={

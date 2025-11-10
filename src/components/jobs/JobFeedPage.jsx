@@ -6,10 +6,13 @@ import { Badge } from '../ui/badge'
 import { Calendar, MapPin, DollarSign, Users, Briefcase, Building2, Package } from 'lucide-react'
 import { useAuth } from '../../App'
 import { useNavigate } from 'react-router-dom'
+import JobDetailsModal from './JobDetailsModal'
 
 const JobFeedPage = () => {
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(true)
+  const [selectedJobId, setSelectedJobId] = useState(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const [filters, setFilters] = useState({
     role_type: '',
     location: '',
@@ -17,6 +20,16 @@ const JobFeedPage = () => {
   })
   const { user } = useAuth()
   const navigate = useNavigate()
+
+  const openJobDetails = (jobId) => {
+    setSelectedJobId(jobId)
+    setIsModalOpen(true)
+  }
+
+  const closeJobDetails = () => {
+    setIsModalOpen(false)
+    setSelectedJobId(null)
+  }
 
   useEffect(() => {
     loadJobs()
@@ -79,21 +92,11 @@ const JobFeedPage = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Job Board</h1>
-          <p className="text-gray-600 mt-2">
-            Find opportunities or post jobs for your events
-          </p>
-        </div>
-        {user?.role === 'organiser' && (
-          <Button
-            onClick={() => navigate('/jobs/create')}
-            size="lg"
-          >
-            Post a Job
-          </Button>
-        )}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Job Board</h1>
+        <p className="text-gray-600 mt-2">
+          Browse and apply to available opportunities
+        </p>
       </div>
 
       {/* Filters */}
@@ -171,96 +174,121 @@ const JobFeedPage = () => {
         </div>
       )}
 
-      {/* Job Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Job Feed - Upwork Style */}
+      <div className="max-w-5xl mx-auto space-y-4">
         {jobs.map((job) => (
-          <Card key={job.id} className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="flex justify-between items-start mb-2">
-                <CardTitle className="text-lg">{job.title}</CardTitle>
-                <Badge variant={job.status === 'open' ? 'default' : 'secondary'}>
-                  {job.status}
-                </Badge>
-              </div>
-              <CardDescription className="line-clamp-2">
-                {job.description}
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent>
-              {/* Location */}
-              <div className="flex items-center text-sm text-gray-600 mb-2">
-                <MapPin className="h-4 w-4 mr-2" />
-                {job.location || 'Location TBD'}
-              </div>
-
-              {/* Date */}
-              <div className="flex items-center text-sm text-gray-600 mb-3">
-                <Calendar className="h-4 w-4 mr-2" />
-                {formatDate(job.start_date)}
-                {job.start_date !== job.end_date && ` - ${formatDate(job.end_date)}`}
-              </div>
-
-              {/* Total Budget */}
-              {job.total_budget && (
-                <div className="flex items-center text-sm font-semibold text-green-600 mb-3">
-                  <DollarSign className="h-4 w-4 mr-1" />
-                  {formatCurrency(job.total_budget)} total
-                </div>
-              )}
-
-              {/* Roles */}
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-700">
-                  {job.roles?.length === 1 ? '1 role needed:' : `${job.roles?.length} roles needed:`}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {job.roles?.slice(0, 3).map((role) => (
-                    <Badge
-                      key={role.id}
-                      className={`${getRoleBadgeColor(role.role_type)} flex items-center gap-1`}
-                      variant="secondary"
-                    >
-                      {getRoleIcon(role.role_type)}
-                      {role.role_title}
-                      {role.budget && ` • ${formatCurrency(role.budget)}`}
+          <div
+            key={job.id}
+            className="bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all cursor-pointer"
+            onClick={() => openJobDetails(job.id)}
+          >
+            <div className="p-6">
+              {/* Header Row */}
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-xl font-semibold text-gray-900 hover:text-[#E03131]">
+                      {job.title}
+                    </h3>
+                    <Badge variant={job.status === 'open' ? 'default' : 'secondary'}>
+                      {job.status}
                     </Badge>
-                  ))}
-                  {job.roles?.length > 3 && (
-                    <Badge variant="outline">
-                      +{job.roles.length - 3} more
-                    </Badge>
-                  )}
+                  </div>
+                  <p className="text-gray-600 line-clamp-2 mb-3">
+                    {job.description}
+                  </p>
                 </div>
               </div>
 
-              {/* Posted By */}
-              {job.organiser && (
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <div className="flex items-center text-sm text-gray-600">
+              {/* Info Grid */}
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-600 mb-4">
+                {/* Budget */}
+                {job.total_budget && (
+                  <div className="flex items-center gap-1 font-semibold text-green-600">
+                    <DollarSign className="h-4 w-4" />
+                    <span>{formatCurrency(job.total_budget)}</span>
+                  </div>
+                )}
+
+                {/* Location */}
+                <div className="flex items-center gap-1">
+                  <MapPin className="h-4 w-4" />
+                  <span>{job.location || 'Location TBD'}</span>
+                </div>
+
+                {/* Date */}
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-4 w-4" />
+                  <span>{formatDate(job.start_date)}</span>
+                </div>
+
+                {/* Event Type */}
+                {job.event_type && (
+                  <span className="capitalize text-gray-500">
+                    {job.event_type.replace('_', ' ')}
+                  </span>
+                )}
+              </div>
+
+              {/* Roles Badges */}
+              <div className="flex items-center gap-2 flex-wrap mb-4">
+                <span className="text-sm font-medium text-gray-700">
+                  {job.roles?.length === 1 ? '1 role:' : `${job.roles?.length} roles:`}
+                </span>
+                {job.roles?.slice(0, 4).map((role) => (
+                  <Badge
+                    key={role.id}
+                    className={`${getRoleBadgeColor(role.role_type)} flex items-center gap-1`}
+                    variant="secondary"
+                  >
+                    {getRoleIcon(role.role_type)}
+                    {role.role_title}
+                  </Badge>
+                ))}
+                {job.roles?.length > 4 && (
+                  <Badge variant="outline">
+                    +{job.roles.length - 4} more
+                  </Badge>
+                )}
+              </div>
+
+              {/* Footer Row */}
+              <div className="flex justify-between items-center pt-4 border-t border-gray-100">
+                {/* Posted By */}
+                {job.organiser && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
                     <img
                       src={job.organiser.avatar_url || '/default-avatar.png'}
                       alt={job.organiser.display_name}
-                      className="h-6 w-6 rounded-full mr-2"
+                      className="h-6 w-6 rounded-full"
                     />
-                    Posted by {job.organiser.display_name}
+                    <span>Posted by {job.organiser.display_name}</span>
                   </div>
-                </div>
-              )}
-            </CardContent>
+                )}
 
-            <CardFooter>
-              <Button
-                className="w-full"
-                variant="outline"
-                onClick={() => navigate(`/jobs/${job.id}`)}
-              >
-                View Details
-              </Button>
-            </CardFooter>
-          </Card>
+                {/* View Details Link */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    openJobDetails(job.id)
+                  }}
+                >
+                  View Details
+                </Button>
+              </div>
+            </div>
+          </div>
         ))}
       </div>
+
+      {/* Job Details Modal */}
+      <JobDetailsModal
+        jobId={selectedJobId}
+        isOpen={isModalOpen}
+        onClose={closeJobDetails}
+      />
     </div>
   )
 }
