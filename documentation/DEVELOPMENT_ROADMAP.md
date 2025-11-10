@@ -98,28 +98,37 @@ Auth → Discovery → Calendar → Payments → Workflow 1 → Workflow 2 → L
 ---
 
 ### ⬜ PHASE 4: PAYMENTS & DIRECT BOOKING (Days 18-30)
-**Status:** 🔴 NOT STARTED
-**Sign-off Date:** ___________
-**Signed by:** ___________
+**Status:** 🟡 PARTIALLY COMPLETE (Phase 4A ✅ Complete, Phase 4B ⏸️ Deferred)
+**Sign-off Date:** Phase 4A: November 8, 2025 | Phase 4B: TBD
+**Signed by:** Phase 4A: Claude Code + User | Phase 4B: TBD
 
-**🚨 PREREQUISITE BLOCKER:** Stripe Connect application must be submitted and approved before starting this phase. Application deferred from Day 1 - awaiting team approval. Start application process at least 2 weeks before Phase 4!
+**🚨 PREREQUISITE BLOCKER:** Stripe Connect application must be submitted and approved before starting Phase 4B. Application deferred from Day 1 - awaiting team approval. Start application process at least 2 weeks before Phase 4B!
+
+**📋 PHASE 4 SPLIT:**
+- **Phase 4A (Days 25-30):** ✅ COMPLETE - Booking system without payments
+- **Phase 4B (Days 18-24):** ⏸️ DEFERRED - Two payment approaches documented:
+  - **Option 1:** Simple auto-payout (3-4 hours) - Continue current roadmap
+  - **Option 2:** True escrow with client approval (2-3 days) - See `ESCROW_SYSTEM.md`
+  - **Decision:** Continue with Option 1 when ready, defer Option 2 to v1.1
 
 **Sign-off Checklist (ALL must be ✅ before Phase 5):**
-- [ ] All Day 18-30 tasks checked off below
-- [ ] Stripe Connect account approved
-- [ ] Freelancers can connect Stripe accounts
-- [ ] Payment processing works with test cards
-- [ ] Funds held in escrow (verified in Stripe dashboard)
-- [ ] Commission calculation correct (8% Pro, 10% Free)
-- [ ] Webhooks receiving Stripe events
-- [ ] Full Workflow 1 tested: Discover → Book → Pay → Accept → Complete → Payout
-- [ ] Email notifications sent at each step
-- [ ] Booking appears in both users' "Bookings" tabs
-- [ ] Calendar dates blocked automatically after booking
-- [ ] V1_IMPLEMENTATION_TRACKER.md updated (Bookings: 42% → 90%+, Payments: 0% → 90%+)
-- [ ] Git commit created with all Phase 4 changes
+- [x] Phase 4A complete (booking system without payments) ✅
+- [ ] Phase 4B Option 1 complete (simple payment processing) OR
+- [ ] Decision to skip payments and proceed to Phase 5
+- [ ] Stripe Connect account approved (if doing Phase 4B)
+- [ ] Freelancers can connect Stripe accounts (if doing Phase 4B)
+- [ ] Payment processing works with test cards (if doing Phase 4B)
+- [ ] Funds held correctly (verified in Stripe dashboard) (if doing Phase 4B)
+- [ ] Commission calculation correct (10% platform fee) (if doing Phase 4B)
+- [ ] Webhooks receiving Stripe events (if doing Phase 4B)
+- [ ] Full Workflow 1 tested: Discover → Book → [Pay] → Accept → Complete → [Payout]
+- [ ] Email notifications sent at each step (Phase 6)
+- [x] Booking appears in both users' "Bookings" tabs ✅
+- [x] Calendar dates blocked automatically after booking ✅
+- [ ] V1_IMPLEMENTATION_TRACKER.md updated (Bookings: ✅ 90%+, Payments: TBD)
+- [x] Git commits created with Phase 4A changes ✅
 
-**⚠️ DO NOT PROCEED TO PHASE 5 UNTIL ALL ITEMS ABOVE ARE ✅**
+**⚠️ DECISION POINT:** Decide whether to implement Phase 4B (payments) now or proceed to Phase 5 (job postings) and add payments in v1.1
 
 ---
 
@@ -845,7 +854,28 @@ Paid: Green badge with $ icon (Phase 4B)
 - ✅ Stripe Connect platform approved
 - ✅ Phase 4A completed (booking system working)
 
-**Goal:** Add payment processing to existing booking system
+**⚠️ IMPORTANT: TWO APPROACHES FOR PHASE 4B**
+
+We have identified two different approaches for implementing payment processing:
+
+**Option 1: Simple Auto-Payout** (Current roadmap below - 3-4 hours)
+- Client pays → Funds held → Booking completes → Auto-payout to freelancer
+- No client approval required
+- No dispute resolution system
+- ✅ **Use this approach to continue on current roadmap path**
+
+**Option 2: True Escrow System with Client Approval** (Documented separately - 2-3 days)
+- Client pays → Funds in escrow → Work completes → Client reviews & approves → Payout
+- Requires client approval before freelancer gets paid (like Upwork/Fiverr)
+- Includes dispute resolution, evidence uploads, admin dashboard
+- 7-day auto-approval timeout
+- Full dispute management system
+- 📄 **Complete specification:** `documentation/ESCROW_SYSTEM.md`
+- ⏸️ **Status:** Documented but deferred to v1.1 or separate phase
+
+**Decision:** We are continuing with **Option 1 (Simple Auto-Payout)** for now to stay on track with the original roadmap. The full escrow system (Option 2) has been comprehensively documented and will be implemented in a future phase or v1.1.
+
+**Goal:** Add simple payment processing to existing booking system (auto-payout after completion)
 
 #### Day 18-20: Stripe Connect Setup
 
