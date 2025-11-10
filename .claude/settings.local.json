@@ -5,7 +5,10 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(cat:*)",
-      "WebFetch(domain:docs.stripe.com)"
+      "WebFetch(domain:docs.stripe.com)",
+      "Bash(npm install:*)",
+      "Bash(npx supabase init)",
+      "Bash(npx supabase functions new:*)"
     ],
     "deny": [],
     "ask": []

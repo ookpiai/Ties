@@ -156,6 +156,11 @@ Auth → Discovery → Calendar → Payments → Workflow 1 → Workflow 2 → L
 
 **Sign-off Checklist (ALL must be ✅ before Phase 7):**
 - [ ] All Day 41-45 tasks checked off below
+- [ ] **Email confirmation flow fixed** (signup → check email screen → confirm link → auto-login)
+- [ ] Profile data persists from signup to confirmation
+- [ ] Require hourly/daily rate fields in profile settings
+- [ ] Better error messages and loading states for bookings
+- [ ] Toast notifications (replace alert-based implementation)
 - [ ] Messaging shows REAL messages (no mock data)
 - [ ] Send message works and persists
 - [ ] Message polling/real-time updates working
