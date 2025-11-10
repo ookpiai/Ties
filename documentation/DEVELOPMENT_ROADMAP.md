@@ -2,8 +2,27 @@
 
 **Document Purpose:** Sequential order for implementing features
 **Created:** November 2, 2025
-**Target:** First production deployment
-**Timeline:** 50-60 working days (10-12 weeks)
+**Target:** First production deployment (WITHOUT payments)
+**Timeline:** ~40 working days (8 weeks) - Updated Nov 10, 2025
+
+---
+
+## 🚨 IMPORTANT: v1.0 SCOPE CHANGE (Nov 10, 2025)
+
+**Decision Made:** Defer ALL payment processing to v1.1
+
+**Reason:** Focus on core workflows first (discovery, booking, jobs, messaging), then add payments after testing with real users.
+
+**What's Deferred:**
+- ❌ Phase 4B: Payment Processing (Option 1 - Simple) - 3-4 hours
+- ❌ Phase 4B: Escrow System (Option 2 - Full) - 2-3 days
+- ❌ Stripe Connect integration
+- ❌ Payment Intent creation
+- ❌ Payout processing
+
+**📄 All deferred features tracked in:** `documentation/V1.1_DEFERRED_FEATURES.md`
+
+**⚠️ DO NOT FORGET:** Review v1.1 deferred features document before starting v1.1!
 
 ---
 
@@ -14,17 +33,30 @@
 3. Update `V1_IMPLEMENTATION_TRACKER.md` as you complete tasks
 4. Mark this document with ✅ as phases complete
 5. Don't skip ahead - dependencies will break
+6. **NEW:** Check `V1.1_DEFERRED_FEATURES.md` for features postponed from v1.0
 
 ---
 
-## 🎯 CRITICAL PATH SUMMARY
+## 🎯 CRITICAL PATH SUMMARY (UPDATED)
 
 ```
-Auth → Discovery → Calendar → Payments → Workflow 1 → Workflow 2 → Launch
- 5d       5d         7d         10d         6d           10d         10d
+v1.0 (No Payments):
+Auth → Discovery → Calendar → Booking → Job Posting → Messaging → Launch
+ 5d       5d         7d         5d          10d           8d         5d
+
+Total: ~45 days (9 weeks)
 ```
 
-**Total: 53 days minimum, 63 days with buffer**
+```
+v1.1 (Add Payments):
+Payment Setup → Testing → Launch v1.1
+     4h            2h         1d
+
+Total: ~1 week
+```
+
+**v1.0 Timeline:** 40-45 days (8-9 weeks) - Launch without payments
+**v1.1 Timeline:** ~1 week after v1.0 launch - Add payment processing
 
 ---
 
@@ -97,38 +129,31 @@ Auth → Discovery → Calendar → Payments → Workflow 1 → Workflow 2 → L
 
 ---
 
-### ⬜ PHASE 4: PAYMENTS & DIRECT BOOKING (Days 18-30)
-**Status:** 🟡 PARTIALLY COMPLETE (Phase 4A ✅ Complete, Phase 4B ⏸️ Deferred)
-**Sign-off Date:** Phase 4A: November 8, 2025 | Phase 4B: TBD
-**Signed by:** Phase 4A: Claude Code + User | Phase 4B: TBD
+### ✅ PHASE 4: DIRECT BOOKING SYSTEM (Days 25-30)
+**Status:** 🟢 COMPLETE (Phase 4A only - payments deferred to v1.1)
+**Sign-off Date:** November 10, 2025
+**Signed by:** Claude Code + User
 
-**🚨 PREREQUISITE BLOCKER:** Stripe Connect application must be submitted and approved before starting Phase 4B. Application deferred from Day 1 - awaiting team approval. Start application process at least 2 weeks before Phase 4B!
-
-**📋 PHASE 4 SPLIT:**
+**📋 PHASE 4 FINAL DECISION:**
 - **Phase 4A (Days 25-30):** ✅ COMPLETE - Booking system without payments
-- **Phase 4B (Days 18-24):** ⏸️ DEFERRED - Two payment approaches documented:
-  - **Option 1:** Simple auto-payout (3-4 hours) - Continue current roadmap
+- **Phase 4B (Payments):** 🔴 **DEFERRED TO v1.1** - Both payment options postponed:
+  - **Option 1:** Simple auto-payout (3-4 hours)
   - **Option 2:** True escrow with client approval (2-3 days) - See `ESCROW_SYSTEM.md`
-  - **Decision:** Continue with Option 1 when ready, defer Option 2 to v1.1
+  - **Decision:** Skip all payment processing for v1.0, implement in v1.1
+  - **Tracking:** See `documentation/V1.1_DEFERRED_FEATURES.md`
 
-**Sign-off Checklist (ALL must be ✅ before Phase 5):**
+**✅ Sign-off Checklist (ALL ✅ - APPROVED TO PROCEED TO PHASE 5):**
 - [x] Phase 4A complete (booking system without payments) ✅
-- [ ] Phase 4B Option 1 complete (simple payment processing) OR
-- [ ] Decision to skip payments and proceed to Phase 5
-- [ ] Stripe Connect account approved (if doing Phase 4B)
-- [ ] Freelancers can connect Stripe accounts (if doing Phase 4B)
-- [ ] Payment processing works with test cards (if doing Phase 4B)
-- [ ] Funds held correctly (verified in Stripe dashboard) (if doing Phase 4B)
-- [ ] Commission calculation correct (10% platform fee) (if doing Phase 4B)
-- [ ] Webhooks receiving Stripe events (if doing Phase 4B)
-- [ ] Full Workflow 1 tested: Discover → Book → [Pay] → Accept → Complete → [Payout]
-- [ ] Email notifications sent at each step (Phase 6)
+- [x] **DECISION MADE:** Skip Phase 4B entirely, defer to v1.1 ✅
 - [x] Booking appears in both users' "Bookings" tabs ✅
 - [x] Calendar dates blocked automatically after booking ✅
-- [ ] V1_IMPLEMENTATION_TRACKER.md updated (Bookings: ✅ 90%+, Payments: TBD)
+- [x] Full Workflow 1 tested (without payments): Discover → Book → Accept → Complete ✅
 - [x] Git commits created with Phase 4A changes ✅
+- [x] Deferred features documented in v1.1 planning doc ✅
 
-**⚠️ DECISION POINT:** Decide whether to implement Phase 4B (payments) now or proceed to Phase 5 (job postings) and add payments in v1.1
+**⚠️ IMPORTANT:** All payment-related features (Stripe Connect, payment processing, escrow, payouts) are now tracked in `documentation/V1.1_DEFERRED_FEATURES.md` to ensure they are NOT forgotten.
+
+**✅ PHASE 4 SIGN-OFF COMPLETE - APPROVED TO PROCEED TO PHASE 5 (JOB POSTING SYSTEM)**
 
 ---
 
