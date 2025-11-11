@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../App'
-import { getJobPostings } from '../../api/jobs'
+import { getJobPostings, getExpensesForJob, addExpense, getMessagesForJob, sendMessage, getTeamMembers, getFilesForJob, uploadFile, deleteFile, getTasksForJob, createTask, updateTask, deleteTask } from '../../api/jobs'
 import { 
   Plus,
   Users,
@@ -934,6 +934,41 @@ const FunctionalStudioPage = () => {
   const JobDetail = ({ job }) => {
     if (!job) return null
 
+    // State for expenses
+    const [expenses, setExpenses] = useState([])
+    const [loadingExpenses, setLoadingExpenses] = useState(false)
+    const [showAddExpense, setShowAddExpense] = useState(false)
+    const [newExpense, setNewExpense] = useState({
+      category: '',
+      amount: '',
+      description: ''
+    })
+
+    // State for messages
+    const [messages, setMessages] = useState([])
+    const [loadingMessages, setLoadingMessages] = useState(false)
+    const [activeThread, setActiveThread] = useState('general')
+    const [newMessage, setNewMessage] = useState('')
+    const [teamMembers, setTeamMembers] = useState([])
+
+    // State for files
+    const [files, setFiles] = useState([])
+    const [loadingFiles, setLoadingFiles] = useState(false)
+    const [uploadingFile, setUploadingFile] = useState(false)
+    const [dragActive, setDragActive] = useState(false)
+
+    // State for tasks
+    const [tasks, setTasks] = useState([])
+    const [loadingTasks, setLoadingTasks] = useState(false)
+    const [showAddTask, setShowAddTask] = useState(false)
+    const [newTask, setNewTask] = useState({
+      title: '',
+      description: '',
+      priority: 'medium',
+      assigned_to: '',
+      due_date: ''
+    })
+
     const formatCurrency = (amount) => {
       return new Intl.NumberFormat('en-AU', {
         style: 'currency',
@@ -945,6 +980,245 @@ const FunctionalStudioPage = () => {
     const totalRoles = job.roles?.length || 0
     const filledRoles = job.roles?.filter(r => r.filled_count >= r.quantity).length || 0
     const progress = totalRoles > 0 ? Math.round((filledRoles / totalRoles) * 100) : 0
+
+    // Load expenses when job changes
+    useEffect(() => {
+      if (job?.id) {
+        loadExpenses()
+      }
+    }, [job?.id])
+
+    // Load messages when job or thread changes
+    useEffect(() => {
+      if (job?.id) {
+        loadMessages()
+      }
+    }, [job?.id, activeThread])
+
+    // Load team members when job changes
+    useEffect(() => {
+      if (job?.id) {
+        loadTeamMembers()
+      }
+    }, [job?.id])
+
+    // Load files when job changes
+    useEffect(() => {
+      if (job?.id) {
+        loadFiles()
+      }
+    }, [job?.id])
+
+    // Load tasks when job changes
+    useEffect(() => {
+      if (job?.id) {
+        loadTasks()
+      }
+    }, [job?.id])
+
+    const loadExpenses = async () => {
+      setLoadingExpenses(true)
+      const result = await getExpensesForJob(job.id)
+      if (result.success) {
+        setExpenses(result.data)
+      }
+      setLoadingExpenses(false)
+    }
+
+    const loadMessages = async () => {
+      setLoadingMessages(true)
+      const result = await getMessagesForJob(job.id, activeThread)
+      if (result.success) {
+        setMessages(result.data)
+      }
+      setLoadingMessages(false)
+    }
+
+    const loadTeamMembers = async () => {
+      const result = await getTeamMembers(job.id)
+      if (result.success) {
+        setTeamMembers(result.data)
+      }
+    }
+
+    const handleSendMessage = async () => {
+      if (!newMessage.trim()) return
+
+      const result = await sendMessage(job.id, newMessage, activeThread)
+
+      if (result.success) {
+        setMessages([...messages, result.data])
+        setNewMessage('')
+        loadMessages() // Reload to get fresh data
+      } else {
+        alert('Failed to send message: ' + result.error)
+      }
+    }
+
+    const loadFiles = async () => {
+      setLoadingFiles(true)
+      const result = await getFilesForJob(job.id)
+      if (result.success) {
+        setFiles(result.data)
+      }
+      setLoadingFiles(false)
+    }
+
+    const handleFileUpload = async (fileList) => {
+      if (!fileList || fileList.length === 0) return
+
+      setUploadingFile(true)
+      const file = fileList[0]
+
+      const result = await uploadFile(job.id, file, {
+        category: 'general',
+        description: file.name
+      })
+
+      if (result.success) {
+        setFiles([result.data, ...files])
+        loadFiles() // Reload to get fresh data
+      } else {
+        alert('Failed to upload file: ' + result.error)
+      }
+      setUploadingFile(false)
+    }
+
+    const handleDeleteFile = async (fileId) => {
+      if (!confirm('Are you sure you want to delete this file?')) return
+
+      const result = await deleteFile(fileId)
+      if (result.success) {
+        setFiles(files.filter(f => f.id !== fileId))
+      } else {
+        alert('Failed to delete file: ' + result.error)
+      }
+    }
+
+    const handleDrag = (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (e.type === 'dragenter' || e.type === 'dragover') {
+        setDragActive(true)
+      } else if (e.type === 'dragleave') {
+        setDragActive(false)
+      }
+    }
+
+    const handleDrop = (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      setDragActive(false)
+
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        handleFileUpload(e.dataTransfer.files)
+      }
+    }
+
+    const formatFileSize = (bytes) => {
+      if (bytes === 0) return '0 Bytes'
+      const k = 1024
+      const sizes = ['Bytes', 'KB', 'MB', 'GB']
+      const i = Math.floor(Math.log(bytes) / Math.log(k))
+      return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+    }
+
+    const loadTasks = async () => {
+      setLoadingTasks(true)
+      const result = await getTasksForJob(job.id)
+      if (result.success) {
+        setTasks(result.data)
+      }
+      setLoadingTasks(false)
+    }
+
+    const handleAddTask = async () => {
+      if (!newTask.title) {
+        alert('Please enter a task title')
+        return
+      }
+
+      const result = await createTask(job.id, {
+        title: newTask.title,
+        description: newTask.description,
+        priority: newTask.priority,
+        assigned_to: newTask.assigned_to || undefined,
+        due_date: newTask.due_date || undefined
+      })
+
+      if (result.success) {
+        setTasks([result.data, ...tasks])
+        setNewTask({
+          title: '',
+          description: '',
+          priority: 'medium',
+          assigned_to: '',
+          due_date: ''
+        })
+        setShowAddTask(false)
+        loadTasks()
+      } else {
+        alert('Failed to create task: ' + result.error)
+      }
+    }
+
+    const handleUpdateTaskStatus = async (taskId, newStatus) => {
+      const result = await updateTask(taskId, { status: newStatus })
+      if (result.success) {
+        setTasks(tasks.map(t => t.id === taskId ? result.data : t))
+      } else {
+        alert('Failed to update task: ' + result.error)
+      }
+    }
+
+    const handleDeleteTask = async (taskId) => {
+      if (!confirm('Are you sure you want to delete this task?')) return
+
+      const result = await deleteTask(taskId)
+      if (result.success) {
+        setTasks(tasks.filter(t => t.id !== taskId))
+      } else {
+        alert('Failed to delete task: ' + result.error)
+      }
+    }
+
+    // Calculate total spent from expenses
+    const totalSpent = expenses.reduce((sum, expense) => sum + parseFloat(expense.amount), 0)
+
+    // Group expenses by category (based on job roles)
+    const budgetCategories = job.roles?.map(role => {
+      const roleExpenses = expenses.filter(e => e.job_role_id === role.id)
+      const spent = roleExpenses.reduce((sum, e) => sum + parseFloat(e.amount), 0)
+      return {
+        name: role.role_title,
+        budgeted: parseFloat(role.budget),
+        spent: spent,
+        roleId: role.id
+      }
+    }) || []
+
+    const handleAddExpense = async () => {
+      if (!newExpense.amount || !newExpense.description || !newExpense.category) {
+        alert('Please fill in all fields')
+        return
+      }
+
+      const result = await addExpense(job.id, {
+        category: newExpense.category,
+        amount: parseFloat(newExpense.amount),
+        description: newExpense.description,
+        job_role_id: newExpense.category // Using category as role_id for now
+      })
+
+      if (result.success) {
+        setExpenses([result.data, ...expenses])
+        setNewExpense({ category: '', amount: '', description: '' })
+        setShowAddExpense(false)
+        loadExpenses() // Reload to get fresh data
+      } else {
+        alert('Failed to add expense: ' + result.error)
+      }
+    }
 
     return (
       <div className="space-y-6">
@@ -969,13 +1243,13 @@ const FunctionalStudioPage = () => {
             <div className="font-medium">Applicants</div>
           </button>
           <button
-            onClick={() => setActiveJobTab('roles')}
+            onClick={() => setActiveJobTab('team')}
             className={`p-4 rounded-lg text-left ${
-              activeJobTab === 'roles' ? 'bg-primary text-white' : 'bg-gray-100'
+              activeJobTab === 'team' ? 'bg-primary text-white' : 'bg-gray-100'
             }`}
           >
-            <Briefcase size={20} className="mb-2" />
-            <div className="font-medium">Roles</div>
+            <Users size={20} className="mb-2" />
+            <div className="font-medium">Team</div>
           </button>
           <button
             onClick={() => setActiveJobTab('messages')}
@@ -1008,13 +1282,13 @@ const FunctionalStudioPage = () => {
             <div className="font-medium">Files</div>
           </button>
           <button
-            onClick={() => setActiveJobTab('analytics')}
+            onClick={() => setActiveJobTab('tasks')}
             className={`p-4 rounded-lg text-left ${
-              activeJobTab === 'analytics' ? 'bg-primary text-white' : 'bg-gray-100'
+              activeJobTab === 'tasks' ? 'bg-primary text-white' : 'bg-gray-100'
             }`}
           >
-            <BarChart3 size={20} className="mb-2" />
-            <div className="font-medium">Analytics</div>
+            <CheckCircle size={20} className="mb-2" />
+            <div className="font-medium">Tasks</div>
           </button>
           <button
             onClick={() => setActiveJobTab('settings')}
@@ -1120,102 +1394,815 @@ const FunctionalStudioPage = () => {
             </div>
           )}
 
-          {activeJobTab === 'roles' && (
+          {activeJobTab === 'team' && (
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold mb-4">Roles Breakdown</h3>
-              {job.roles?.map((role) => (
-                <div key={role.id} className="profile-card">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-semibold">{role.role_title}</h4>
-                      <p className="text-sm text-muted-foreground capitalize">{role.role_type}</p>
-                      {role.role_description && (
-                        <p className="text-sm mt-2">{role.role_description}</p>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-primary">{formatCurrency(role.budget)}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {role.filled_count}/{role.quantity} filled
-                      </div>
-                    </div>
+              <h3 className="text-lg font-semibold">Team & Roles</h3>
+
+              {/* Team Members Section */}
+              <div className="profile-card">
+                <h4 className="font-semibold mb-4">Team Members</h4>
+                {teamMembers.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users size={48} className="mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground">No team members yet</p>
+                    <p className="text-sm text-muted-foreground">
+                      Select applicants to build your team
+                    </p>
                   </div>
+                ) : (
+                  <div className="space-y-3">
+                    {teamMembers.map((member) => (
+                      <div
+                        key={member.id}
+                        className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                      >
+                        {/* Avatar */}
+                        {member.avatar_url ? (
+                          <img
+                            src={member.avatar_url}
+                            alt={member.display_name}
+                            className="w-12 h-12 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center text-lg font-bold">
+                            {member.display_name?.charAt(0).toUpperCase() || '?'}
+                          </div>
+                        )}
+
+                        {/* Member Details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h5 className="font-medium truncate">{member.display_name}</h5>
+                            {member.is_organizer && (
+                              <span className="text-xs bg-primary text-white px-2 py-1 rounded">
+                                <Crown size={12} className="inline mr-1" />
+                                Organizer
+                              </span>
+                            )}
+                          </div>
+                          {member.role && (
+                            <p className="text-sm text-muted-foreground capitalize">
+                              {member.role}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Status Badge */}
+                        <div>
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                            Active
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Roles Breakdown Section */}
+              <div className="profile-card">
+                <h4 className="font-semibold mb-4">Roles Breakdown</h4>
+                {!job.roles || job.roles.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Briefcase size={48} className="mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground">No roles defined</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {job.roles.map((role) => (
+                      <div key={role.id} className="p-4 bg-gray-50 rounded-lg">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex-1">
+                            <h5 className="font-semibold">{role.role_title}</h5>
+                            <p className="text-sm text-muted-foreground capitalize">
+                              {role.role_type}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-primary">
+                              {formatCurrency(role.budget)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              per {role.role_type}
+                            </div>
+                          </div>
+                        </div>
+
+                        {role.role_description && (
+                          <p className="text-sm text-muted-foreground mb-3">
+                            {role.role_description}
+                          </p>
+                        )}
+
+                        {/* Progress Bar */}
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Positions Filled</span>
+                            <span className="font-medium">
+                              {role.filled_count || 0} / {role.quantity}
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className={`h-2 rounded-full ${
+                                (role.filled_count || 0) >= role.quantity
+                                  ? 'bg-green-500'
+                                  : 'bg-primary'
+                              }`}
+                              style={{
+                                width: `${Math.min(
+                                  ((role.filled_count || 0) / role.quantity) * 100,
+                                  100
+                                )}%`
+                              }}
+                            ></div>
+                          </div>
+                          {(role.filled_count || 0) >= role.quantity && (
+                            <div className="flex items-center gap-1 text-green-600 text-sm">
+                              <CheckCircle size={14} />
+                              <span>Fully staffed</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Team Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="profile-card">
+                  <div className="text-sm text-muted-foreground">Total Members</div>
+                  <div className="text-2xl font-bold">{teamMembers.length}</div>
                 </div>
-              ))}
+                <div className="profile-card">
+                  <div className="text-sm text-muted-foreground">Total Roles</div>
+                  <div className="text-2xl font-bold">{job.roles?.length || 0}</div>
+                </div>
+                <div className="profile-card">
+                  <div className="text-sm text-muted-foreground">Positions Filled</div>
+                  <div className="text-2xl font-bold text-green-600">{filledRoles}</div>
+                </div>
+                <div className="profile-card">
+                  <div className="text-sm text-muted-foreground">Team Progress</div>
+                  <div className="text-2xl font-bold text-primary">{progress}%</div>
+                </div>
+              </div>
             </div>
           )}
 
           {activeJobTab === 'messages' && (
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Messages</h3>
+              <h3 className="text-lg font-semibold">Team Messages</h3>
+
+              {/* Thread Selector */}
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                <button
+                  onClick={() => setActiveThread('general')}
+                  className={`px-4 py-2 rounded-lg whitespace-nowrap ${
+                    activeThread === 'general' ? 'bg-primary text-white' : 'bg-gray-100'
+                  }`}
+                >
+                  <MessageCircle size={16} className="inline mr-2" />
+                  General
+                </button>
+                {job.roles?.map(role => (
+                  <button
+                    key={role.id}
+                    onClick={() => setActiveThread(role.id)}
+                    className={`px-4 py-2 rounded-lg whitespace-nowrap ${
+                      activeThread === role.id ? 'bg-primary text-white' : 'bg-gray-100'
+                    }`}
+                  >
+                    <Users size={16} className="inline mr-2" />
+                    {role.role_title}
+                  </button>
+                ))}
+              </div>
+
+              {/* Messages Container */}
+              <div className="profile-card h-[500px] flex flex-col">
+                {/* Messages List */}
+                <div className="flex-1 overflow-y-auto space-y-4 p-4 bg-gray-50 rounded-t-lg">
+                  {loadingMessages ? (
+                    <div className="flex justify-center items-center h-full">
+                      <p className="text-muted-foreground">Loading messages...</p>
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <div className="flex flex-col justify-center items-center h-full text-center">
+                      <MessageSquare size={48} className="text-muted-foreground mb-2" />
+                      <p className="text-muted-foreground">No messages yet</p>
+                      <p className="text-sm text-muted-foreground">Start the conversation!</p>
+                    </div>
+                  ) : (
+                    messages.map((msg) => {
+                      const isCurrentUser = msg.sender_id === user?.id
+                      return (
+                        <div
+                          key={msg.id}
+                          className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div className={`max-w-[70%] ${isCurrentUser ? 'order-2' : 'order-1'}`}>
+                            <div className={`p-3 rounded-lg ${
+                              isCurrentUser
+                                ? 'bg-primary text-white'
+                                : 'bg-white border'
+                            }`}>
+                              {!isCurrentUser && (
+                                <div className="text-xs font-semibold mb-1">
+                                  {msg.sender?.display_name || 'Team Member'}
+                                </div>
+                              )}
+                              <p className="text-sm">{msg.message}</p>
+                              <div className={`text-xs mt-1 ${
+                                isCurrentUser ? 'text-white/70' : 'text-muted-foreground'
+                              }`}>
+                                {new Date(msg.created_at).toLocaleString('en-AU', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+
+                {/* Message Input */}
+                <div className="p-4 border-t bg-white rounded-b-lg">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                      placeholder={`Message ${activeThread === 'general' ? 'team' : 'thread'}...`}
+                      className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <button
+                      onClick={handleSendMessage}
+                      disabled={!newMessage.trim()}
+                      className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Send size={16} />
+                      Send
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Active Team Members */}
               <div className="profile-card">
-                <p className="text-muted-foreground">Messaging feature coming soon...</p>
+                <h4 className="font-semibold mb-3">Active Team Members</h4>
+                <div className="flex flex-wrap gap-2">
+                  {teamMembers.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No team members yet</p>
+                  ) : (
+                    teamMembers.map((member) => (
+                      <div
+                        key={member.id}
+                        className="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-lg"
+                      >
+                        {member.avatar_url ? (
+                          <img
+                            src={member.avatar_url}
+                            alt={member.display_name}
+                            className="w-6 h-6 rounded-full"
+                          />
+                        ) : (
+                          <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs">
+                            {member.display_name?.charAt(0).toUpperCase() || '?'}
+                          </div>
+                        )}
+                        <span className="text-sm">{member.display_name}</span>
+                        {member.role && (
+                          <span className="text-xs text-muted-foreground">
+                            ({member.role})
+                          </span>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           )}
 
           {activeJobTab === 'budget' && (
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Budget Breakdown</h3>
-              <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Budget Tracking</h3>
+                <button
+                  onClick={() => setShowAddExpense(true)}
+                  className="btn-primary flex items-center gap-2"
+                >
+                  <Plus size={16} />
+                  Add Expense
+                </button>
+              </div>
+
+              {/* 3 Stat Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="profile-card">
                   <div className="text-sm text-muted-foreground">Total Budget</div>
                   <div className="text-2xl font-bold">{formatCurrency(job.total_budget || 0)}</div>
                 </div>
                 <div className="profile-card">
-                  <div className="text-sm text-muted-foreground">Allocated</div>
-                  <div className="text-2xl font-bold text-blue-600">{formatCurrency(job.total_budget || 0)}</div>
+                  <div className="text-sm text-muted-foreground">Amount Spent</div>
+                  <div className="text-2xl font-bold text-red-600">{formatCurrency(totalSpent)}</div>
                 </div>
                 <div className="profile-card">
                   <div className="text-sm text-muted-foreground">Remaining</div>
-                  <div className="text-2xl font-bold text-green-600">{formatCurrency(0)}</div>
+                  <div className="text-2xl font-bold text-green-600">{formatCurrency((job.total_budget || 0) - totalSpent)}</div>
                 </div>
               </div>
+
+              {/* Category Breakdown with Progress Bars */}
               <div className="profile-card">
-                <h4 className="font-semibold mb-4">Budget by Role</h4>
-                {job.roles?.map((role) => (
-                  <div key={role.id} className="mb-3">
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>{role.role_title}</span>
-                      <span className="font-medium">{formatCurrency(role.budget)}</span>
+                <h4 className="font-semibold mb-4">Category Breakdown</h4>
+                <div className="space-y-3">
+                  {budgetCategories.map((category) => (
+                    <div key={category.roleId} className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>{category.name}</span>
+                        <span>{formatCurrency(category.spent)} / {formatCurrency(category.budgeted)}</span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full ${
+                            category.spent > category.budgeted ? 'bg-red-500' : 'bg-green-500'
+                          }`}
+                          style={{ width: `${Math.min((category.spent / category.budgeted) * 100, 100)}%` }}
+                        ></div>
+                      </div>
                     </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div
-                        className="bg-primary h-2 rounded-full"
-                        style={{ width: `${(role.budget / (job.total_budget || 1)) * 100}%` }}
-                      ></div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Add Expense Modal */}
+              {showAddExpense && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                  <div className="bg-white rounded-lg p-6 w-full max-w-md">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold">Add Expense</h3>
+                      <button onClick={() => setShowAddExpense(false)}>
+                        <X size={20} />
+                      </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Category (Role)</label>
+                        <select
+                          value={newExpense.category}
+                          onChange={(e) => setNewExpense({...newExpense, category: e.target.value})}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        >
+                          <option value="">Select a role...</option>
+                          {job.roles?.map(role => (
+                            <option key={role.id} value={role.id}>{role.role_title}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Amount</label>
+                        <input
+                          type="number"
+                          placeholder="0.00"
+                          value={newExpense.amount}
+                          onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Description</label>
+                        <input
+                          type="text"
+                          placeholder="What was this expense for?"
+                          value={newExpense.description}
+                          onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        />
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleAddExpense}
+                          className="flex-1 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90"
+                        >
+                          Add Expense
+                        </button>
+                        <button
+                          onClick={() => setShowAddExpense(false)}
+                          className="flex-1 bg-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300"
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
             </div>
           )}
 
           {activeJobTab === 'files' && (
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Files</h3>
-              <div className="profile-card">
-                <p className="text-muted-foreground">File management feature coming soon...</p>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Files & Documents</h3>
+                <label className="btn-primary flex items-center gap-2 cursor-pointer">
+                  <Upload size={16} />
+                  Upload File
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => handleFileUpload(e.target.files)}
+                    disabled={uploadingFile}
+                  />
+                </label>
               </div>
+
+              {/* Drag & Drop Upload Zone */}
+              <div
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                  dragActive
+                    ? 'border-primary bg-primary/5'
+                    : 'border-gray-300 bg-gray-50'
+                }`}
+              >
+                <Upload size={48} className="mx-auto mb-4 text-muted-foreground" />
+                <p className="text-lg font-medium mb-2">
+                  {uploadingFile ? 'Uploading...' : 'Drag & drop files here'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  or click the "Upload File" button above
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Max file size: 10MB • Supported: Images, PDFs, Office docs, Text files
+                </p>
+              </div>
+
+              {/* Files List */}
+              <div className="space-y-3">
+                {loadingFiles ? (
+                  <div className="profile-card text-center py-8">
+                    <p className="text-muted-foreground">Loading files...</p>
+                  </div>
+                ) : files.length === 0 ? (
+                  <div className="profile-card text-center py-8">
+                    <FolderOpen size={48} className="mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground">No files uploaded yet</p>
+                    <p className="text-sm text-muted-foreground">
+                      Upload your first file to get started
+                    </p>
+                  </div>
+                ) : (
+                  files.map((file) => (
+                    <div
+                      key={file.id}
+                      className="profile-card flex items-center justify-between hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 flex-1">
+                        {/* File Icon */}
+                        <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                          {file.file_type?.startsWith('image/') ? (
+                            <Image size={24} className="text-primary" />
+                          ) : file.file_type?.includes('pdf') ? (
+                            <FileText size={24} className="text-red-500" />
+                          ) : file.file_type?.includes('video') ? (
+                            <Video size={24} className="text-purple-500" />
+                          ) : (
+                            <File size={24} className="text-gray-500" />
+                          )}
+                        </div>
+
+                        {/* File Details */}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium truncate">{file.file_name}</h4>
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                            <span>{formatFileSize(file.file_size || 0)}</span>
+                            <span>•</span>
+                            <span>
+                              {new Date(file.uploaded_at).toLocaleDateString('en-AU', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}
+                            </span>
+                            <span>•</span>
+                            <span>by {file.uploader?.display_name || 'Unknown'}</span>
+                          </div>
+                          {file.category && file.category !== 'general' && (
+                            <div className="mt-1">
+                              <span className="text-xs bg-gray-200 px-2 py-1 rounded">
+                                {file.category}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={file.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                            title="View/Download"
+                          >
+                            <Download size={18} />
+                          </a>
+                          <button
+                            onClick={() => handleDeleteFile(file.id)}
+                            className="p-2 hover:bg-red-100 text-red-600 rounded-lg transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* File Categories Summary */}
+              {files.length > 0 && (
+                <div className="profile-card">
+                  <h4 className="font-semibold mb-3">Storage Summary</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <div className="text-2xl font-bold text-primary">
+                        {files.length}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Total Files</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-primary">
+                        {formatFileSize(
+                          files.reduce((sum, f) => sum + (f.file_size || 0), 0)
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Total Size</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-primary">
+                        {files.filter(f => f.file_type?.startsWith('image/')).length}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Images</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-primary">
+                        {files.filter(f => f.file_type?.includes('pdf')).length}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Documents</div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          {activeJobTab === 'analytics' && (
+          {activeJobTab === 'tasks' && (
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Analytics</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Task Management</h3>
+                <button
+                  onClick={() => setShowAddTask(true)}
+                  className="btn-primary flex items-center gap-2"
+                >
+                  <Plus size={16} />
+                  Add Task
+                </button>
+              </div>
+
+              {/* Task Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="profile-card">
-                  <div className="text-sm text-muted-foreground">Views</div>
-                  <div className="text-2xl font-bold">-</div>
+                  <div className="text-sm text-muted-foreground">Total Tasks</div>
+                  <div className="text-2xl font-bold">{tasks.length}</div>
                 </div>
                 <div className="profile-card">
-                  <div className="text-sm text-muted-foreground">Application Rate</div>
-                  <div className="text-2xl font-bold">-</div>
+                  <div className="text-sm text-muted-foreground">Pending</div>
+                  <div className="text-2xl font-bold text-gray-600">
+                    {tasks.filter(t => t.status === 'pending').length}
+                  </div>
+                </div>
+                <div className="profile-card">
+                  <div className="text-sm text-muted-foreground">In Progress</div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {tasks.filter(t => t.status === 'in_progress').length}
+                  </div>
+                </div>
+                <div className="profile-card">
+                  <div className="text-sm text-muted-foreground">Completed</div>
+                  <div className="text-2xl font-bold text-green-600">
+                    {tasks.filter(t => t.status === 'completed').length}
+                  </div>
                 </div>
               </div>
-              <div className="profile-card">
-                <p className="text-muted-foreground">Detailed analytics coming soon...</p>
+
+              {/* Tasks List */}
+              <div className="space-y-3">
+                {loadingTasks ? (
+                  <div className="profile-card text-center py-8">
+                    <p className="text-muted-foreground">Loading tasks...</p>
+                  </div>
+                ) : tasks.length === 0 ? (
+                  <div className="profile-card text-center py-8">
+                    <CheckCircle size={48} className="mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground">No tasks yet</p>
+                    <p className="text-sm text-muted-foreground">
+                      Create your first task to start organizing work
+                    </p>
+                  </div>
+                ) : (
+                  tasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="profile-card hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        {/* Task Details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h4 className="font-medium truncate">{task.title}</h4>
+                            {/* Priority Badge */}
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              task.priority === 'urgent' ? 'bg-red-100 text-red-700' :
+                              task.priority === 'high' ? 'bg-orange-100 text-orange-700' :
+                              task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {task.priority}
+                            </span>
+                          </div>
+
+                          {task.description && (
+                            <p className="text-sm text-muted-foreground mb-2">
+                              {task.description}
+                            </p>
+                          )}
+
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            {task.assignee && (
+                              <div className="flex items-center gap-1">
+                                <Users size={14} />
+                                <span>{task.assignee.display_name}</span>
+                              </div>
+                            )}
+                            {task.due_date && (
+                              <div className="flex items-center gap-1">
+                                <Calendar size={14} />
+                                <span>
+                                  {new Date(task.due_date).toLocaleDateString('en-AU', {
+                                    month: 'short',
+                                    day: 'numeric'
+                                  })}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Status Dropdown & Actions */}
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={task.status}
+                            onChange={(e) => handleUpdateTaskStatus(task.id, e.target.value)}
+                            className={`px-3 py-1 text-sm rounded-lg border ${
+                              task.status === 'completed' ? 'bg-green-50 text-green-700 border-green-300' :
+                              task.status === 'in_progress' ? 'bg-blue-50 text-blue-700 border-blue-300' :
+                              task.status === 'cancelled' ? 'bg-red-50 text-red-700 border-red-300' :
+                              'bg-gray-50 text-gray-700 border-gray-300'
+                            }`}
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                          </select>
+
+                          <button
+                            onClick={() => handleDeleteTask(task.id)}
+                            className="p-2 hover:bg-red-100 text-red-600 rounded-lg transition-colors"
+                            title="Delete task"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
+
+              {/* Add Task Modal */}
+              {showAddTask && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                  <div className="bg-white rounded-lg p-6 w-full max-w-md">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold">Add New Task</h3>
+                      <button onClick={() => setShowAddTask(false)}>
+                        <X size={20} />
+                      </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Task Title*</label>
+                        <input
+                          type="text"
+                          placeholder="e.g., Setup lighting equipment"
+                          value={newTask.title}
+                          onChange={(e) => setNewTask({...newTask, title: e.target.value})}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Description</label>
+                        <textarea
+                          placeholder="Task details..."
+                          value={newTask.description}
+                          onChange={(e) => setNewTask({...newTask, description: e.target.value})}
+                          className="w-full px-3 py-2 border rounded-lg"
+                          rows={3}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">Priority</label>
+                          <select
+                            value={newTask.priority}
+                            onChange={(e) => setNewTask({...newTask, priority: e.target.value})}
+                            className="w-full px-3 py-2 border rounded-lg"
+                          >
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="urgent">Urgent</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium mb-1">Due Date</label>
+                          <input
+                            type="date"
+                            value={newTask.due_date}
+                            onChange={(e) => setNewTask({...newTask, due_date: e.target.value})}
+                            className="w-full px-3 py-2 border rounded-lg"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Assign To</label>
+                        <select
+                          value={newTask.assigned_to}
+                          onChange={(e) => setNewTask({...newTask, assigned_to: e.target.value})}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        >
+                          <option value="">Unassigned</option>
+                          {teamMembers.map(member => (
+                            <option key={member.id} value={member.id}>
+                              {member.display_name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          onClick={handleAddTask}
+                          className="btn-primary flex-1"
+                        >
+                          Create Task
+                        </button>
+                        <button
+                          onClick={() => setShowAddTask(false)}
+                          className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
