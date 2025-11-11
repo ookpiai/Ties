@@ -230,21 +230,31 @@ const JobFeedPage = () => {
                 )}
               </div>
 
-              {/* Roles Badges */}
+              {/* Roles Badges with Availability */}
               <div className="flex items-center gap-2 flex-wrap mb-4">
                 <span className="text-sm font-medium text-gray-700">
                   {job.roles?.length === 1 ? '1 role:' : `${job.roles?.length} roles:`}
                 </span>
-                {job.roles?.slice(0, 4).map((role) => (
-                  <Badge
-                    key={role.id}
-                    className={`${getRoleBadgeColor(role.role_type)} flex items-center gap-1`}
-                    variant="secondary"
-                  >
-                    {getRoleIcon(role.role_type)}
-                    {role.role_title}
-                  </Badge>
-                ))}
+                {job.roles?.slice(0, 4).map((role) => {
+                  const filled = role.filled_count || 0
+                  const total = role.quantity || 1
+                  const isFilled = filled >= total
+                  return (
+                    <Badge
+                      key={role.id}
+                      className={`${getRoleBadgeColor(role.role_type)} flex items-center gap-1 ${
+                        isFilled ? 'opacity-60' : ''
+                      }`}
+                      variant="secondary"
+                    >
+                      {getRoleIcon(role.role_type)}
+                      <span>{role.role_title}</span>
+                      <span className="text-xs ml-1">
+                        ({filled}/{total})
+                      </span>
+                    </Badge>
+                  )
+                })}
                 {job.roles?.length > 4 && (
                   <Badge variant="outline">
                     +{job.roles.length - 4} more

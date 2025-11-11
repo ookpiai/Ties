@@ -224,11 +224,18 @@ const JobDetailsModal = ({ jobId, isOpen, onClose }) => {
                           <p className="text-xl font-bold text-green-600">
                             {formatCurrency(role.budget)}
                           </p>
-                          {role.application_count > 0 && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              {role.application_count} {role.application_count === 1 ? 'applicant' : 'applicants'}
-                            </p>
-                          )}
+                          <div className="flex items-center gap-2 mt-1 text-xs text-gray-600">
+                            {role.application_count > 0 && (
+                              <span>
+                                {role.application_count} {role.application_count === 1 ? 'applicant' : 'applicants'}
+                              </span>
+                            )}
+                            <span className={`font-medium ${
+                              role.filled_count >= role.quantity ? 'text-red-600' : 'text-green-600'
+                            }`}>
+                              {role.filled_count || 0}/{role.quantity} filled
+                            </span>
+                          </div>
                         </div>
                       </div>
 
