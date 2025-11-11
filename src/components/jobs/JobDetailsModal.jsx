@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { X, MapPin, Calendar, DollarSign, Users, Building2, Package, Clock, User as UserIcon } from 'lucide-react'
 import { getJobPostingById } from '../../api/jobs'
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
 import { useAuth } from '../../App'
+import ApplyToRoleModal from './ApplyToRoleModal'
 
 const JobDetailsModal = ({ jobId, isOpen, onClose }) => {
+  const navigate = useNavigate()
   const [job, setJob] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [applyingToRole, setApplyingToRole] = useState(null)
   const { user } = useAuth()
 
   useEffect(() => {
@@ -72,8 +76,11 @@ const JobDetailsModal = ({ jobId, isOpen, onClose }) => {
   }
 
   const canApplyToRole = (role) => {
-    // Check if user's role matches the role type
+    // Check if user exists
     if (!user) return false
+
+    // Prevent organiser from applying to their own job
+    if (job?.organiser_id === user.id) return false
 
     // Freelancers can apply to freelancer roles
     if (role.role_type === 'freelancer' && (user.role === 'freelancer' || user.role === 'Artist')) {
@@ -236,10 +243,7 @@ const JobDetailsModal = ({ jobId, isOpen, onClose }) => {
                             <Button
                               size="sm"
                               className="w-full"
-                              onClick={() => {
-                                // TODO: Open apply modal
-                                alert('Application flow coming soon!')
-                              }}
+                              onClick={() => setApplyingToRole(role)}
                             >
                               Apply for this role
                             </Button>
@@ -295,12 +299,29 @@ const JobDetailsModal = ({ jobId, isOpen, onClose }) => {
             Close
           </Button>
           {job?.organiser?.id === user?.id && (
-            <Button variant="outline">
+            <Button
+              variant="outline"
+              onClick={() => {
+                onClose()
+                navigate(`/jobs/${jobId}/applicants`)
+              }}
+            >
               View Applicants
             </Button>
           )}
         </div>
       </div>
+
+      {/* Apply To Role Modal */}
+      <ApplyToRoleModal
+        isOpen={!!applyingToRole}
+        onClose={() => setApplyingToRole(null)}
+        job={job}
+        role={applyingToRole}
+        onApplicationSubmitted={() => {
+          loadJobDetails() // Reload to get updated application count
+        }}
+      />
     </div>
   )
 }

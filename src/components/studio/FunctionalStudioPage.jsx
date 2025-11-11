@@ -1,5 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../App'
+import { getJobPostings } from '../../api/jobs'
 import { 
   Plus,
   Users,
@@ -55,11 +57,16 @@ import {
 
 const FunctionalStudioPage = () => {
   const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState('workspaces')
+  const navigate = useNavigate()
+  const [activeTab, setActiveTab] = useState('jobs')
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('All Status')
   const [selectedWorkspace, setSelectedWorkspace] = useState(null)
   const [showCreateWorkspace, setShowCreateWorkspace] = useState(false)
+  const [jobs, setJobs] = useState([])
+  const [loadingJobs, setLoadingJobs] = useState(true)
+  const [selectedJob, setSelectedJob] = useState(null)
+  const [activeJobTab, setActiveJobTab] = useState('overview')
   const [showTaskModal, setShowTaskModal] = useState(false)
   const [showFileUpload, setShowFileUpload] = useState(false)
   const [showMessaging, setShowMessaging] = useState(false)
@@ -67,6 +74,22 @@ const FunctionalStudioPage = () => {
   const [showTeamManagement, setShowTeamManagement] = useState(false)
   const [showClientDashboard, setShowClientDashboard] = useState(false)
   const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('overview')
+
+  // Load jobs on component mount
+  useEffect(() => {
+    loadJobs()
+  }, [])
+
+  const loadJobs = async () => {
+    setLoadingJobs(true)
+    const result = await getJobPostings()
+    if (result.success) {
+      // Filter only jobs created by this user
+      const myJobs = result.data.filter(job => job.organiser_id === user?.id)
+      setJobs(myJobs)
+    }
+    setLoadingJobs(false)
+  }
 
   // State for functional features
   const [tasks, setTasks] = useState([
@@ -908,6 +931,337 @@ const FunctionalStudioPage = () => {
     )
   }
 
+  const JobDetail = ({ job }) => {
+    if (!job) return null
+
+    const formatCurrency = (amount) => {
+      return new Intl.NumberFormat('en-AU', {
+        style: 'currency',
+        currency: 'AUD',
+        minimumFractionDigits: 0
+      }).format(amount)
+    }
+
+    const totalRoles = job.roles?.length || 0
+    const filledRoles = job.roles?.filter(r => r.filled_count >= r.quantity).length || 0
+    const progress = totalRoles > 0 ? Math.round((filledRoles / totalRoles) * 100) : 0
+
+    return (
+      <div className="space-y-6">
+        {/* Tab Buttons - Same 8-tab layout as Workspace */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <button
+            onClick={() => setActiveJobTab('overview')}
+            className={`p-4 rounded-lg text-left ${
+              activeJobTab === 'overview' ? 'bg-primary text-white' : 'bg-gray-100'
+            }`}
+          >
+            <Eye size={20} className="mb-2" />
+            <div className="font-medium">Overview</div>
+          </button>
+          <button
+            onClick={() => setActiveJobTab('applicants')}
+            className={`p-4 rounded-lg text-left ${
+              activeJobTab === 'applicants' ? 'bg-primary text-white' : 'bg-gray-100'
+            }`}
+          >
+            <Users size={20} className="mb-2" />
+            <div className="font-medium">Applicants</div>
+          </button>
+          <button
+            onClick={() => setActiveJobTab('roles')}
+            className={`p-4 rounded-lg text-left ${
+              activeJobTab === 'roles' ? 'bg-primary text-white' : 'bg-gray-100'
+            }`}
+          >
+            <Briefcase size={20} className="mb-2" />
+            <div className="font-medium">Roles</div>
+          </button>
+          <button
+            onClick={() => setActiveJobTab('messages')}
+            className={`p-4 rounded-lg text-left ${
+              activeJobTab === 'messages' ? 'bg-primary text-white' : 'bg-gray-100'
+            }`}
+          >
+            <MessageSquare size={20} className="mb-2" />
+            <div className="font-medium">Messages</div>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <button
+            onClick={() => setActiveJobTab('budget')}
+            className={`p-4 rounded-lg text-left ${
+              activeJobTab === 'budget' ? 'bg-primary text-white' : 'bg-gray-100'
+            }`}
+          >
+            <DollarSign size={20} className="mb-2" />
+            <div className="font-medium">Budget</div>
+          </button>
+          <button
+            onClick={() => setActiveJobTab('files')}
+            className={`p-4 rounded-lg text-left ${
+              activeJobTab === 'files' ? 'bg-primary text-white' : 'bg-gray-100'
+            }`}
+          >
+            <FileText size={20} className="mb-2" />
+            <div className="font-medium">Files</div>
+          </button>
+          <button
+            onClick={() => setActiveJobTab('analytics')}
+            className={`p-4 rounded-lg text-left ${
+              activeJobTab === 'analytics' ? 'bg-primary text-white' : 'bg-gray-100'
+            }`}
+          >
+            <BarChart3 size={20} className="mb-2" />
+            <div className="font-medium">Analytics</div>
+          </button>
+          <button
+            onClick={() => setActiveJobTab('settings')}
+            className={`p-4 rounded-lg text-left ${
+              activeJobTab === 'settings' ? 'bg-primary text-white' : 'bg-gray-100'
+            }`}
+          >
+            <Settings size={20} className="mb-2" />
+            <div className="font-medium">Settings</div>
+          </button>
+        </div>
+
+        {/* Tab Content */}
+        <div className="bg-white rounded-lg">
+          {activeJobTab === 'overview' && (
+            <div className="space-y-4">
+              <h3 className="text-xl font-semibold">{job.title}</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="profile-card">
+                  <div className="text-sm text-muted-foreground">Roles Filled</div>
+                  <div className="text-2xl font-bold">{progress}%</div>
+                  <div className="w-full bg-muted rounded-full h-2 mt-2">
+                    <div
+                      className="bg-primary h-2 rounded-full"
+                      style={{ width: `${progress}%` }}
+                    ></div>
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    {filledRoles}/{totalRoles} roles filled
+                  </div>
+                </div>
+                <div className="profile-card">
+                  <div className="text-sm text-muted-foreground">Total Budget</div>
+                  <div className="text-2xl font-bold">{formatCurrency(job.total_budget || 0)}</div>
+                  <div className="text-sm text-muted-foreground">for {totalRoles} roles</div>
+                </div>
+                <div className="profile-card">
+                  <div className="text-sm text-muted-foreground">Applications</div>
+                  <div className="text-2xl font-bold">{job.application_count || 0}</div>
+                  <div className="text-sm text-muted-foreground">total received</div>
+                </div>
+              </div>
+
+              {/* Job Details Section */}
+              <div className="profile-card">
+                <h4 className="font-semibold mb-3">Job Details</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Location:</span>
+                    <span className="ml-2 font-medium">{job.location || 'TBD'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Event Type:</span>
+                    <span className="ml-2 font-medium capitalize">{job.event_type?.replace('_', ' ')}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Start Date:</span>
+                    <span className="ml-2 font-medium">{new Date(job.start_date).toLocaleDateString('en-AU')}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Status:</span>
+                    <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
+                      job.status === 'open' ? 'bg-green-100 text-green-800' :
+                      job.status === 'filled' ? 'bg-purple-100 text-purple-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {job.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="profile-card">
+                <h4 className="font-semibold mb-2">Description</h4>
+                <p className="text-sm text-muted-foreground">{job.description}</p>
+              </div>
+            </div>
+          )}
+
+          {activeJobTab === 'applicants' && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">Applicants</h3>
+                <button
+                  onClick={() => navigate(`/jobs/${job.id}/applicants`)}
+                  className="btn-primary text-sm"
+                >
+                  View Full Applicant Page
+                </button>
+              </div>
+              <div className="profile-card">
+                <p className="text-muted-foreground">
+                  You have <span className="font-semibold text-primary">{job.application_count || 0}</span> applications for this job.
+                </p>
+                <button
+                  onClick={() => navigate(`/jobs/${job.id}/applicants`)}
+                  className="btn-secondary mt-4"
+                >
+                  Review All Applicants →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {activeJobTab === 'roles' && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold mb-4">Roles Breakdown</h3>
+              {job.roles?.map((role) => (
+                <div key={role.id} className="profile-card">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-semibold">{role.role_title}</h4>
+                      <p className="text-sm text-muted-foreground capitalize">{role.role_type}</p>
+                      {role.role_description && (
+                        <p className="text-sm mt-2">{role.role_description}</p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-primary">{formatCurrency(role.budget)}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {role.filled_count}/{role.quantity} filled
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {activeJobTab === 'messages' && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Messages</h3>
+              <div className="profile-card">
+                <p className="text-muted-foreground">Messaging feature coming soon...</p>
+              </div>
+            </div>
+          )}
+
+          {activeJobTab === 'budget' && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Budget Breakdown</h3>
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="profile-card">
+                  <div className="text-sm text-muted-foreground">Total Budget</div>
+                  <div className="text-2xl font-bold">{formatCurrency(job.total_budget || 0)}</div>
+                </div>
+                <div className="profile-card">
+                  <div className="text-sm text-muted-foreground">Allocated</div>
+                  <div className="text-2xl font-bold text-blue-600">{formatCurrency(job.total_budget || 0)}</div>
+                </div>
+                <div className="profile-card">
+                  <div className="text-sm text-muted-foreground">Remaining</div>
+                  <div className="text-2xl font-bold text-green-600">{formatCurrency(0)}</div>
+                </div>
+              </div>
+              <div className="profile-card">
+                <h4 className="font-semibold mb-4">Budget by Role</h4>
+                {job.roles?.map((role) => (
+                  <div key={role.id} className="mb-3">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>{role.role_title}</span>
+                      <span className="font-medium">{formatCurrency(role.budget)}</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div
+                        className="bg-primary h-2 rounded-full"
+                        style={{ width: `${(role.budget / (job.total_budget || 1)) * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeJobTab === 'files' && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Files</h3>
+              <div className="profile-card">
+                <p className="text-muted-foreground">File management feature coming soon...</p>
+              </div>
+            </div>
+          )}
+
+          {activeJobTab === 'analytics' && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Analytics</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="profile-card">
+                  <div className="text-sm text-muted-foreground">Views</div>
+                  <div className="text-2xl font-bold">-</div>
+                </div>
+                <div className="profile-card">
+                  <div className="text-sm text-muted-foreground">Application Rate</div>
+                  <div className="text-2xl font-bold">-</div>
+                </div>
+              </div>
+              <div className="profile-card">
+                <p className="text-muted-foreground">Detailed analytics coming soon...</p>
+              </div>
+            </div>
+          )}
+
+          {activeJobTab === 'settings' && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Job Settings</h3>
+              <div className="profile-card">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Job Title</label>
+                    <input
+                      type="text"
+                      value={job.title}
+                      className="w-full px-3 py-2 border rounded-lg"
+                      readOnly
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Status</label>
+                    <input
+                      type="text"
+                      value={job.status}
+                      className="w-full px-3 py-2 border rounded-lg"
+                      readOnly
+                    />
+                  </div>
+                  <div className="flex items-center justify-between pt-4 border-t">
+                    <div>
+                      <div className="font-medium">Cancel Job Posting</div>
+                      <div className="text-sm text-muted-foreground">
+                        Cancel this job if you no longer need to fill these roles
+                      </div>
+                    </div>
+                    <button className="btn-secondary text-red-600">
+                      Cancel Job
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   const WorkspaceDetail = ({ workspace }) => {
     if (!workspace) return null
 
@@ -1079,6 +1433,130 @@ const FunctionalStudioPage = () => {
     return matchesSearch && matchesStatus
   })
 
+  const JobCard = ({ job }) => {
+    const formatCurrency = (amount) => {
+      return new Intl.NumberFormat('en-AU', {
+        style: 'currency',
+        currency: 'AUD',
+        minimumFractionDigits: 0
+      }).format(amount)
+    }
+
+    const formatDate = (dateString) => {
+      return new Date(dateString).toLocaleDateString('en-AU', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      })
+    }
+
+    const getStatusColor = (status) => {
+      switch (status) {
+        case 'open':
+          return 'bg-green-100 text-green-800'
+        case 'in_progress':
+          return 'bg-blue-100 text-blue-800'
+        case 'filled':
+          return 'bg-purple-100 text-purple-800'
+        case 'cancelled':
+          return 'bg-red-100 text-red-800'
+        default:
+          return 'bg-gray-100 text-gray-800'
+      }
+    }
+
+    const totalRoles = job.roles?.length || 0
+    const filledRoles = job.roles?.filter(r => r.filled_count >= r.quantity).length || 0
+    const progress = totalRoles > 0 ? Math.round((filledRoles / totalRoles) * 100) : 0
+
+    return (
+      <div
+        className="profile-card hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-primary"
+        onClick={() => setSelectedJob(job)}
+      >
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1">
+            <h3 className="card-title mb-2">{job.title}</h3>
+            <div className="flex items-center gap-2 mb-2">
+              <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(job.status)}`}>
+                {job.status}
+              </span>
+              {job.event_type && (
+                <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded capitalize">
+                  {job.event_type.replace('_', ' ')}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+              <div className="flex items-center gap-1">
+                <Calendar size={14} />
+                <span>{formatDate(job.start_date)}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <MapPin size={14} />
+                <span>{job.location || 'TBD'}</span>
+              </div>
+            </div>
+          </div>
+          <button
+            className="p-2 hover:bg-muted rounded-lg"
+            onClick={(e) => {
+              e.stopPropagation()
+              // Could add dropdown menu here
+            }}
+          >
+            <MoreHorizontal size={16} />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <div className="text-sm text-muted-foreground mb-1">Roles Filled</div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-muted rounded-full h-2">
+                <div
+                  className="bg-primary h-2 rounded-full transition-all"
+                  style={{ width: `${progress}%` }}
+                ></div>
+              </div>
+              <span className="text-sm font-medium">
+                {filledRoles}/{totalRoles}
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <div className="text-sm text-muted-foreground mb-1">Budget</div>
+            <div className="text-sm font-medium">
+              {formatCurrency(job.total_budget || 0)}
+            </div>
+            {job.application_count > 0 && (
+              <div className="text-xs text-blue-600 mt-1">
+                {job.application_count} {job.application_count === 1 ? 'application' : 'applications'}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Users size={14} />
+            <span>{totalRoles} {totalRoles === 1 ? 'role' : 'roles'}</span>
+          </div>
+          <button
+            className="btn-secondary text-sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              navigate(`/jobs/${job.id}/applicants`)
+            }}
+          >
+            View Applicants
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   const WorkspaceCard = ({ workspace }) => (
     <div 
       className="profile-card hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-primary"
@@ -1190,46 +1668,161 @@ const FunctionalStudioPage = () => {
           </div>
         ) : (
           <div>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="section-header dark:text-white">My Studio Workspaces</h2>
-              <button 
-                onClick={() => setShowCreateWorkspace(true)}
-                className="btn-primary flex items-center gap-2"
+            {/* Tabs */}
+            <div className="flex items-center gap-4 mb-6">
+              <button
+                onClick={() => setActiveTab('jobs')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  activeTab === 'jobs'
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
               >
-                <Plus size={16} />
-                Create New Workspace
+                <Briefcase className="inline mr-2" size={16} />
+                Job Postings
+              </button>
+              <button
+                onClick={() => setActiveTab('workspaces')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  activeTab === 'workspaces'
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <FolderOpen className="inline mr-2" size={16} />
+                Workspaces
               </button>
             </div>
 
-            {/* Search and Filter */}
-            <div className="flex items-center gap-4 mb-6">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
-                <input
-                  type="text"
-                  placeholder="Search workspaces, events, or locations..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                <option>All Status</option>
-                <option>In Progress</option>
-                <option>Planning</option>
-                <option>Completed</option>
-              </select>
-            </div>
+            {activeTab === 'jobs' ? (
+              selectedJob ? (
+                <div>
+                  <div className="flex items-center gap-4 mb-6">
+                    <button
+                      onClick={() => setSelectedJob(null)}
+                      className="btn-secondary flex items-center gap-2"
+                    >
+                      ← Back to Jobs
+                    </button>
+                    <h2 className="text-xl font-semibold dark:text-white">{selectedJob.title}</h2>
+                  </div>
+                  <JobDetail job={selectedJob} />
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="section-header dark:text-white">My Job Postings</h2>
+                    <button
+                      onClick={() => navigate('/create')}
+                      className="btn-primary flex items-center gap-2"
+                    >
+                      <Plus size={16} />
+                      Post New Job
+                    </button>
+                  </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredWorkspaces.map((workspace) => (
-                <WorkspaceCard key={workspace.id} workspace={workspace} />
-              ))}
-            </div>
+                  {/* Search and Filter */}
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="flex-1 relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
+                      <input
+                        type="text"
+                        placeholder="Search jobs..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option>All Status</option>
+                      <option value="open">Open</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="filled">Filled</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
+
+                  {loadingJobs ? (
+                    <div className="text-center py-12">
+                      <p className="text-muted-foreground">Loading your jobs...</p>
+                    </div>
+                  ) : jobs.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Briefcase className="mx-auto mb-4 text-gray-400" size={48} />
+                      <h3 className="text-lg font-semibold mb-2">No jobs posted yet</h3>
+                      <p className="text-muted-foreground mb-4">Start by posting your first job</p>
+                      <button
+                        onClick={() => navigate('/create')}
+                        className="btn-primary flex items-center gap-2 mx-auto"
+                      >
+                        <Plus size={16} />
+                        Post Your First Job
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                      {jobs
+                        .filter(job => {
+                          const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                              job.location?.toLowerCase().includes(searchTerm.toLowerCase())
+                          const matchesStatus = statusFilter === 'All Status' || job.status === statusFilter
+                          return matchesSearch && matchesStatus
+                        })
+                        .map((job) => (
+                          <JobCard key={job.id} job={job} />
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )
+            ) : (
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="section-header dark:text-white">My Studio Workspaces</h2>
+                  <button
+                    onClick={() => setShowCreateWorkspace(true)}
+                    className="btn-primary flex items-center gap-2"
+                  >
+                    <Plus size={16} />
+                    Create New Workspace
+                  </button>
+                </div>
+
+                {/* Search and Filter */}
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
+                    <input
+                      type="text"
+                      placeholder="Search workspaces, events, or locations..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  >
+                    <option>All Status</option>
+                    <option>In Progress</option>
+                    <option>Planning</option>
+                    <option>Completed</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {filteredWorkspaces.map((workspace) => (
+                    <WorkspaceCard key={workspace.id} workspace={workspace} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

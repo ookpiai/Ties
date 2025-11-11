@@ -311,6 +311,19 @@ export async function applyToJobRole(
   try {
     const userId = await getCurrentUserId()
 
+    // Check if user is the organiser of this job
+    const { data: job, error: jobError } = await supabase
+      .from('job_postings')
+      .select('organiser_id')
+      .eq('id', jobId)
+      .single()
+
+    if (jobError) throw jobError
+
+    if (job.organiser_id === userId) {
+      throw new Error('You cannot apply to your own job posting')
+    }
+
     const { data, error } = await supabase
       .from('job_applications')
       .insert({
@@ -496,20 +509,18 @@ export async function selectApplicant(applicationId: string) {
 
     // 5. Create booking (using Phase 4A booking system)
     const { createBooking } = await import('./bookings')
-    const bookingResult = await createBooking({
+    const booking = await createBooking({
       freelancer_id: application.applicant_id,
-      start_date: application.job.start_date,
-      end_date: application.job.end_date,
+      start_date: new Date(application.job.start_date),
+      end_date: new Date(application.job.end_date),
       total_amount: application.proposed_rate || application.role.budget,
       service_description: `${application.role.role_title} for ${application.job.title}`,
       client_message: `Selected from job posting: ${application.job.title}`
     })
 
-    if (!bookingResult.success || !bookingResult.data) {
-      throw new Error('Failed to create booking: ' + bookingResult.error)
+    if (!booking) {
+      throw new Error('Failed to create booking')
     }
-
-    const booking = bookingResult.data
 
     // 6. Create selection record
     const { data: selection, error: selectionError } = await supabase
@@ -612,6 +623,743 @@ export async function checkAllRolesFilled(jobId: string) {
   }
 }
 
+// ============================================
+// PHASE 5B: WORKSPACE FEATURES
+// ============================================
+
+// ============================================
+// TASK MANAGEMENT
+// ============================================
+
+export interface JobTask {
+  id?: string
+  job_id: string
+  title: string
+  description?: string
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled'
+  priority: 'low' | 'medium' | 'high' | 'urgent'
+  assigned_to?: string
+  created_by?: string
+  due_date?: string
+  completed_at?: string
+  created_at?: string
+  updated_at?: string
+  assignee?: any // Joined profile data
+  creator?: any // Joined profile data
+}
+
+/**
+ * Create a new task for a job
+ */
+export async function createTask(
+  jobId: string,
+  taskData: Omit<JobTask, 'id' | 'job_id' | 'created_at' | 'updated_at' | 'created_by'>
+) {
+  try {
+    const userId = await getCurrentUserId()
+
+    const { data, error } = await supabase
+      .from('job_tasks')
+      .insert({
+        job_id: jobId,
+        ...taskData,
+        created_by: userId
+      })
+      .select(`
+        *,
+        assignee:profiles!assigned_to(id, display_name, avatar_url, role),
+        creator:profiles!created_by(id, display_name, avatar_url)
+      `)
+      .single()
+
+    if (error) throw error
+
+    return {
+      success: true,
+      data
+    }
+  } catch (error: any) {
+    console.error('Error creating task:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to create task'
+    }
+  }
+}
+
+/**
+ * Get all tasks for a job
+ */
+export async function getTasksForJob(jobId: string) {
+  try {
+    const { data, error} = await supabase
+      .from('job_tasks')
+      .select(`
+        *,
+        assignee:profiles!assigned_to(id, display_name, avatar_url, role),
+        creator:profiles!created_by(id, display_name, avatar_url)
+      `)
+      .eq('job_id', jobId)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    return {
+      success: true,
+      data: data || []
+    }
+  } catch (error: any) {
+    console.error('Error fetching tasks:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch tasks',
+      data: []
+    }
+  }
+}
+
+/**
+ * Update a task
+ */
+export async function updateTask(
+  taskId: string,
+  updates: Partial<JobTask>
+) {
+  try {
+    const { data, error } = await supabase
+      .from('job_tasks')
+      .update(updates)
+      .eq('id', taskId)
+      .select(`
+        *,
+        assignee:profiles!assigned_to(id, display_name, avatar_url, role),
+        creator:profiles!created_by(id, display_name, avatar_url)
+      `)
+      .single()
+
+    if (error) throw error
+
+    return {
+      success: true,
+      data
+    }
+  } catch (error: any) {
+    console.error('Error updating task:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to update task'
+    }
+  }
+}
+
+/**
+ * Delete a task
+ */
+export async function deleteTask(taskId: string) {
+  try {
+    const { error } = await supabase
+      .from('job_tasks')
+      .delete()
+      .eq('id', taskId)
+
+    if (error) throw error
+
+    return {
+      success: true
+    }
+  } catch (error: any) {
+    console.error('Error deleting task:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to delete task'
+    }
+  }
+}
+
+// ============================================
+// FILE MANAGEMENT
+// ============================================
+
+export interface JobFile {
+  id?: string
+  job_id: string
+  file_name: string
+  file_url: string
+  file_type?: string
+  file_size?: number
+  category?: string
+  description?: string
+  uploaded_by?: string
+  uploaded_at?: string
+  uploader?: any // Joined profile data
+}
+
+/**
+ * Upload a file for a job (stores in Supabase Storage)
+ */
+export async function uploadFile(
+  jobId: string,
+  file: File,
+  category: string = 'general',
+  description?: string
+) {
+  try {
+    const userId = await getCurrentUserId()
+
+    // 1. Upload file to Supabase Storage
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
+    const filePath = `job_files/${jobId}/${fileName}`
+
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('job-files')
+      .upload(filePath, file)
+
+    if (uploadError) throw uploadError
+
+    // 2. Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('job-files')
+      .getPublicUrl(filePath)
+
+    // 3. Create database record
+    const { data, error } = await supabase
+      .from('job_files')
+      .insert({
+        job_id: jobId,
+        file_name: file.name,
+        file_url: publicUrl,
+        file_type: file.type,
+        file_size: file.size,
+        category,
+        description,
+        uploaded_by: userId
+      })
+      .select(`
+        *,
+        uploader:profiles!uploaded_by(id, display_name, avatar_url)
+      `)
+      .single()
+
+    if (error) throw error
+
+    return {
+      success: true,
+      data
+    }
+  } catch (error: any) {
+    console.error('Error uploading file:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to upload file'
+    }
+  }
+}
+
+/**
+ * Get all files for a job
+ */
+export async function getFilesForJob(jobId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('job_files')
+      .select(`
+        *,
+        uploader:profiles!uploaded_by(id, display_name, avatar_url)
+      `)
+      .eq('job_id', jobId)
+      .order('uploaded_at', { ascending: false })
+
+    if (error) throw error
+
+    return {
+      success: true,
+      data: data || []
+    }
+  } catch (error: any) {
+    console.error('Error fetching files:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch files',
+      data: []
+    }
+  }
+}
+
+/**
+ * Delete a file
+ */
+export async function deleteFile(fileId: string) {
+  try {
+    // 1. Get file info to delete from storage
+    const { data: file, error: fetchError } = await supabase
+      .from('job_files')
+      .select('file_url')
+      .eq('id', fileId)
+      .single()
+
+    if (fetchError) throw fetchError
+
+    // 2. Extract storage path from URL
+    const url = new URL(file.file_url)
+    const pathParts = url.pathname.split('/job-files/')
+    if (pathParts.length > 1) {
+      const storagePath = pathParts[1]
+
+      // 3. Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from('job-files')
+        .remove([storagePath])
+
+      if (storageError) console.error('Storage deletion error:', storageError)
+    }
+
+    // 4. Delete database record
+    const { error } = await supabase
+      .from('job_files')
+      .delete()
+      .eq('id', fileId)
+
+    if (error) throw error
+
+    return {
+      success: true
+    }
+  } catch (error: any) {
+    console.error('Error deleting file:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to delete file'
+    }
+  }
+}
+
+// ============================================
+// MESSAGING
+// ============================================
+
+export interface JobMessage {
+  id?: string
+  job_id: string
+  sender_id?: string
+  message: string
+  thread?: string
+  reply_to?: string
+  attachment_url?: string
+  attachment_type?: string
+  created_at?: string
+  updated_at?: string
+  edited?: boolean
+  sender?: any // Joined profile data
+}
+
+/**
+ * Send a message in a job workspace
+ */
+export async function sendMessage(
+  jobId: string,
+  message: string,
+  thread: string = 'general',
+  replyTo?: string
+) {
+  try {
+    const userId = await getCurrentUserId()
+
+    const { data, error } = await supabase
+      .from('job_messages')
+      .insert({
+        job_id: jobId,
+        sender_id: userId,
+        message,
+        thread,
+        reply_to: replyTo || null
+      })
+      .select(`
+        *,
+        sender:profiles!sender_id(id, display_name, avatar_url, role)
+      `)
+      .single()
+
+    if (error) throw error
+
+    return {
+      success: true,
+      data
+    }
+  } catch (error: any) {
+    console.error('Error sending message:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to send message'
+    }
+  }
+}
+
+/**
+ * Get all messages for a job (optionally filtered by thread)
+ */
+export async function getMessagesForJob(jobId: string, thread?: string) {
+  try {
+    let query = supabase
+      .from('job_messages')
+      .select(`
+        *,
+        sender:profiles!sender_id(id, display_name, avatar_url, role)
+      `)
+      .eq('job_id', jobId)
+      .order('created_at', { ascending: true })
+
+    if (thread) {
+      query = query.eq('thread', thread)
+    }
+
+    const { data, error } = await query
+
+    if (error) throw error
+
+    return {
+      success: true,
+      data: data || []
+    }
+  } catch (error: any) {
+    console.error('Error fetching messages:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch messages',
+      data: []
+    }
+  }
+}
+
+/**
+ * Update a message (for editing)
+ */
+export async function updateMessage(
+  messageId: string,
+  newMessage: string
+) {
+  try {
+    const { data, error } = await supabase
+      .from('job_messages')
+      .update({
+        message: newMessage,
+        edited: true
+      })
+      .eq('id', messageId)
+      .select(`
+        *,
+        sender:profiles!sender_id(id, display_name, avatar_url, role)
+      `)
+      .single()
+
+    if (error) throw error
+
+    return {
+      success: true,
+      data
+    }
+  } catch (error: any) {
+    console.error('Error updating message:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to update message'
+    }
+  }
+}
+
+/**
+ * Delete a message
+ */
+export async function deleteMessage(messageId: string) {
+  try {
+    const { error } = await supabase
+      .from('job_messages')
+      .delete()
+      .eq('id', messageId)
+
+    if (error) throw error
+
+    return {
+      success: true
+    }
+  } catch (error: any) {
+    console.error('Error deleting message:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to delete message'
+    }
+  }
+}
+
+// ============================================
+// EXPENSE TRACKING
+// ============================================
+
+export interface JobExpense {
+  id?: string
+  job_id: string
+  job_role_id?: string
+  category: string
+  amount: number
+  description: string
+  paid_to?: string
+  payment_method?: string
+  paid_at?: string
+  receipt_url?: string
+  created_by?: string
+  created_at?: string
+  updated_at?: string
+  recipient?: any // Joined profile data
+  role?: any // Joined role data
+}
+
+/**
+ * Add an expense to a job
+ */
+export async function addExpense(
+  jobId: string,
+  expenseData: Omit<JobExpense, 'id' | 'job_id' | 'created_by' | 'created_at' | 'updated_at'>
+) {
+  try {
+    const userId = await getCurrentUserId()
+
+    const { data, error } = await supabase
+      .from('job_expenses')
+      .insert({
+        job_id: jobId,
+        ...expenseData,
+        created_by: userId
+      })
+      .select(`
+        *,
+        recipient:profiles!paid_to(id, display_name, avatar_url),
+        role:job_roles!job_role_id(id, role_title, role_type)
+      `)
+      .single()
+
+    if (error) throw error
+
+    return {
+      success: true,
+      data
+    }
+  } catch (error: any) {
+    console.error('Error adding expense:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to add expense'
+    }
+  }
+}
+
+/**
+ * Get all expenses for a job
+ */
+export async function getExpensesForJob(jobId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('job_expenses')
+      .select(`
+        *,
+        recipient:profiles!paid_to(id, display_name, avatar_url),
+        role:job_roles!job_role_id(id, role_title, role_type)
+      `)
+      .eq('job_id', jobId)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    return {
+      success: true,
+      data: data || []
+    }
+  } catch (error: any) {
+    console.error('Error fetching expenses:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch expenses',
+      data: []
+    }
+  }
+}
+
+/**
+ * Update an expense
+ */
+export async function updateExpense(
+  expenseId: string,
+  updates: Partial<JobExpense>
+) {
+  try {
+    const { data, error } = await supabase
+      .from('job_expenses')
+      .update(updates)
+      .eq('id', expenseId)
+      .select(`
+        *,
+        recipient:profiles!paid_to(id, display_name, avatar_url),
+        role:job_roles!job_role_id(id, role_title, role_type)
+      `)
+      .single()
+
+    if (error) throw error
+
+    return {
+      success: true,
+      data
+    }
+  } catch (error: any) {
+    console.error('Error updating expense:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to update expense'
+    }
+  }
+}
+
+/**
+ * Delete an expense
+ */
+export async function deleteExpense(expenseId: string) {
+  try {
+    const { error } = await supabase
+      .from('job_expenses')
+      .delete()
+      .eq('id', expenseId)
+
+    if (error) throw error
+
+    return {
+      success: true
+    }
+  } catch (error: any) {
+    console.error('Error deleting expense:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to delete expense'
+    }
+  }
+}
+
+// ============================================
+// TEAM MANAGEMENT
+// ============================================
+
+/**
+ * Get all team members for a job
+ * (Organizer + all selected applicants)
+ */
+export async function getTeamMembers(jobId: string) {
+  try {
+    // Get organizer
+    const { data: job, error: jobError } = await supabase
+      .from('job_postings')
+      .select('organiser_id, organiser:profiles!organiser_id(id, display_name, avatar_url, role, email)')
+      .eq('id', jobId)
+      .single()
+
+    if (jobError) throw jobError
+
+    // Get selected team members
+    const { data: selections, error: selectionsError } = await supabase
+      .from('job_selections')
+      .select(`
+        *,
+        applicant:profiles!applicant_id(id, display_name, avatar_url, role, email),
+        role:job_roles!job_role_id(id, role_title, role_type)
+      `)
+      .eq('job_id', jobId)
+
+    if (selectionsError) throw selectionsError
+
+    // Combine organizer and team members
+    const teamMembers = [
+      {
+        id: job.organiser.id,
+        ...job.organiser,
+        team_role: 'organizer',
+        job_role: null,
+        permissions: 'admin'
+      },
+      ...(selections || []).map(s => ({
+        id: s.applicant.id,
+        ...s.applicant,
+        team_role: 'member',
+        job_role: s.role,
+        permissions: 'editor'
+      }))
+    ]
+
+    return {
+      success: true,
+      data: teamMembers
+    }
+  } catch (error: any) {
+    console.error('Error fetching team members:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch team members',
+      data: []
+    }
+  }
+}
+
+/**
+ * Calculate workspace statistics for a job
+ */
+export async function getWorkspaceStats(jobId: string) {
+  try {
+    // Get task stats
+    const { data: tasks } = await supabase
+      .from('job_tasks')
+      .select('status')
+      .eq('job_id', jobId)
+
+    const taskStats = {
+      total: tasks?.length || 0,
+      pending: tasks?.filter(t => t.status === 'pending').length || 0,
+      in_progress: tasks?.filter(t => t.status === 'in_progress').length || 0,
+      completed: tasks?.filter(t => t.status === 'completed').length || 0
+    }
+
+    // Get expense stats
+    const { data: expenses } = await supabase
+      .from('job_expenses')
+      .select('amount')
+      .eq('job_id', jobId)
+
+    const totalSpent = expenses?.reduce((sum, e) => sum + parseFloat(e.amount.toString()), 0) || 0
+
+    // Get file count
+    const { count: fileCount } = await supabase
+      .from('job_files')
+      .select('id', { count: 'exact', head: true })
+      .eq('job_id', jobId)
+
+    // Get message count
+    const { count: messageCount } = await supabase
+      .from('job_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('job_id', jobId)
+
+    return {
+      success: true,
+      data: {
+        tasks: taskStats,
+        totalSpent,
+        fileCount: fileCount || 0,
+        messageCount: messageCount || 0
+      }
+    }
+  } catch (error: any) {
+    console.error('Error fetching workspace stats:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch workspace stats'
+    }
+  }
+}
+
 // Export all functions
 export default {
   createJobPosting,
@@ -624,5 +1372,23 @@ export default {
   getMyApplications,
   withdrawApplication,
   selectApplicant,
-  checkAllRolesFilled
+  checkAllRolesFilled,
+  // Phase 5B: Workspace Features
+  createTask,
+  getTasksForJob,
+  updateTask,
+  deleteTask,
+  uploadFile,
+  getFilesForJob,
+  deleteFile,
+  sendMessage,
+  getMessagesForJob,
+  updateMessage,
+  deleteMessage,
+  addExpense,
+  getExpensesForJob,
+  updateExpense,
+  deleteExpense,
+  getTeamMembers,
+  getWorkspaceStats
 }

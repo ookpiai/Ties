@@ -8,7 +8,10 @@
       "WebFetch(domain:docs.stripe.com)",
       "Bash(npm install:*)",
       "Bash(npx supabase init)",
-      "Bash(npx supabase functions new:*)"
+      "Bash(npx supabase functions new:*)",
+      "Bash(npx supabase db execute:*)",
+      "Bash(git push:*)",
+      "Bash(supabase db reset:*)"
     ],
     "deny": [],
     "ask": []

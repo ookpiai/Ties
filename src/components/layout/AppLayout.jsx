@@ -70,6 +70,8 @@ const AppLayout = ({ children }) => {
   ]
 
   const moreItems = [
+    { path: '/jobs/my-applications', label: 'My Applications', icon: Briefcase },
+    { path: '/jobs/my-jobs', label: 'My Job Postings', icon: Layers },
     { path: '/settings', label: 'Settings', icon: Settings },
     { path: '/report', label: 'Report Problem', icon: Bug },
   ]
