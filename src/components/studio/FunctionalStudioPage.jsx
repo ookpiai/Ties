@@ -1207,7 +1207,17 @@ const FunctionalStudioPage = () => {
 
     // Phase 5C: Job editing functions
     const handleSaveJobEdits = async () => {
-      const result = await updateJobPosting(job.id, editedJob)
+      // Filter out empty strings to avoid timestamp errors
+      const updates = {}
+      Object.keys(editedJob).forEach(key => {
+        const value = editedJob[key]
+        // Only include non-empty values
+        if (value !== '' && value !== null && value !== undefined) {
+          updates[key] = value
+        }
+      })
+
+      const result = await updateJobPosting(job.id, updates)
       if (result.success) {
         setIsEditingJob(false)
         loadJobs() // Reload jobs to get fresh data
