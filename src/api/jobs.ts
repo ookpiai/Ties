@@ -1360,6 +1360,178 @@ export async function getWorkspaceStats(jobId: string) {
   }
 }
 
+// ============================================
+// PHASE 5C: JOB EDITING - ROLE MANAGEMENT
+// ============================================
+
+/**
+ * Add a new role to an existing job
+ */
+export async function addRoleToJob(
+  jobId: string,
+  roleData: Omit<JobRole, 'id' | 'job_id' | 'created_at' | 'filled_count'>
+) {
+  try {
+    const userId = await getCurrentUserId()
+
+    // Verify user is the job organizer
+    const { data: job, error: jobError } = await supabase
+      .from('job_postings')
+      .select('organiser_id, total_budget')
+      .eq('id', jobId)
+      .single()
+
+    if (jobError) throw jobError
+    if (job.organiser_id !== userId) {
+      throw new Error('Only the job organizer can add roles')
+    }
+
+    // Insert the new role
+    const { data, error } = await supabase
+      .from('job_roles')
+      .insert({
+        job_id: jobId,
+        ...roleData,
+        filled_count: 0
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    // Update job total_budget
+    const newTotalBudget = (job.total_budget || 0) + roleData.budget
+    await supabase
+      .from('job_postings')
+      .update({ total_budget: newTotalBudget })
+      .eq('id', jobId)
+
+    return { success: true, data }
+  } catch (error: any) {
+    console.error('Error adding role to job:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to add role to job'
+    }
+  }
+}
+
+/**
+ * Update an existing role
+ */
+export async function updateJobRole(
+  roleId: string,
+  updates: Partial<Omit<JobRole, 'id' | 'job_id' | 'created_at'>>
+) {
+  try {
+    const userId = await getCurrentUserId()
+
+    // Get the role and verify permissions
+    const { data: role, error: roleError } = await supabase
+      .from('job_roles')
+      .select('*, job:job_postings!inner(organiser_id, total_budget)')
+      .eq('id', roleId)
+      .single()
+
+    if (roleError) throw roleError
+    if (role.job.organiser_id !== userId) {
+      throw new Error('Only the job organizer can update roles')
+    }
+
+    // Check if quantity is being reduced below filled_count
+    if (updates.quantity !== undefined && updates.quantity < (role.filled_count || 0)) {
+      throw new Error(`Cannot reduce quantity below filled positions (${role.filled_count})`)
+    }
+
+    // Calculate budget difference if budget is being updated
+    let budgetDiff = 0
+    if (updates.budget !== undefined) {
+      budgetDiff = updates.budget - role.budget
+    }
+
+    // Update the role
+    const { data, error } = await supabase
+      .from('job_roles')
+      .update(updates)
+      .eq('id', roleId)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    // Update job total_budget if budget changed
+    if (budgetDiff !== 0) {
+      const newTotalBudget = (role.job.total_budget || 0) + budgetDiff
+      await supabase
+        .from('job_postings')
+        .update({ total_budget: newTotalBudget })
+        .eq('id', role.job_id)
+    }
+
+    return { success: true, data }
+  } catch (error: any) {
+    console.error('Error updating job role:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to update job role'
+    }
+  }
+}
+
+/**
+ * Delete a role from a job
+ */
+export async function deleteJobRole(roleId: string) {
+  try {
+    const userId = await getCurrentUserId()
+
+    // Get the role and check permissions
+    const { data: role, error: roleError } = await supabase
+      .from('job_roles')
+      .select('*, job:job_postings!inner(organiser_id, total_budget)')
+      .eq('id', roleId)
+      .single()
+
+    if (roleError) throw roleError
+    if (role.job.organiser_id !== userId) {
+      throw new Error('Only the job organizer can delete roles')
+    }
+
+    // Check if role has applicants
+    const { count: applicantCount } = await supabase
+      .from('job_applications')
+      .select('id', { count: 'exact', head: true })
+      .eq('job_role_id', roleId)
+
+    if (applicantCount && applicantCount > 0) {
+      throw new Error(`Cannot delete role with ${applicantCount} applicant(s). Please withdraw or reject all applications first.`)
+    }
+
+    // Delete the role
+    const { error } = await supabase
+      .from('job_roles')
+      .delete()
+      .eq('id', roleId)
+
+    if (error) throw error
+
+    // Update job total_budget
+    const newTotalBudget = (role.job.total_budget || 0) - role.budget
+    await supabase
+      .from('job_postings')
+      .update({ total_budget: Math.max(0, newTotalBudget) })
+      .eq('id', role.job_id)
+
+    return { success: true }
+  } catch (error: any) {
+    console.error('Error deleting job role:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to delete job role'
+    }
+  }
+}
+
 // Export all functions
 export default {
   createJobPosting,
@@ -1390,5 +1562,9 @@ export default {
   updateExpense,
   deleteExpense,
   getTeamMembers,
-  getWorkspaceStats
+  getWorkspaceStats,
+  // Phase 5C: Job Editing
+  addRoleToJob,
+  updateJobRole,
+  deleteJobRole
 }

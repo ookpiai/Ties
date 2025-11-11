@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../App'
-import { getJobPostings, getExpensesForJob, addExpense, getMessagesForJob, sendMessage, getTeamMembers, getFilesForJob, uploadFile, deleteFile, getTasksForJob, createTask, updateTask, deleteTask } from '../../api/jobs'
+import { getJobPostings, getExpensesForJob, addExpense, getMessagesForJob, sendMessage, getTeamMembers, getFilesForJob, uploadFile, deleteFile, getTasksForJob, createTask, updateTask, deleteTask, updateJobPosting, addRoleToJob, updateJobRole, deleteJobRole } from '../../api/jobs'
 import { 
   Plus,
   Users,
@@ -969,6 +969,29 @@ const FunctionalStudioPage = () => {
       due_date: ''
     })
 
+    // State for job editing (Phase 5C)
+    const [isEditingJob, setIsEditingJob] = useState(false)
+    const [editedJob, setEditedJob] = useState({
+      title: job.title || '',
+      description: job.description || '',
+      location: job.location || '',
+      event_type: job.event_type || '',
+      start_date: job.start_date || '',
+      end_date: job.end_date || '',
+      application_deadline: job.application_deadline || ''
+    })
+
+    // State for role management (Phase 5C)
+    const [showAddRole, setShowAddRole] = useState(false)
+    const [editingRoleId, setEditingRoleId] = useState(null)
+    const [roleForm, setRoleForm] = useState({
+      role_type: 'freelancer',
+      role_title: '',
+      role_description: '',
+      budget: '',
+      quantity: 1
+    })
+
     const formatCurrency = (amount) => {
       return new Intl.NumberFormat('en-AU', {
         style: 'currency',
@@ -1179,6 +1202,82 @@ const FunctionalStudioPage = () => {
         setTasks(tasks.filter(t => t.id !== taskId))
       } else {
         alert('Failed to delete task: ' + result.error)
+      }
+    }
+
+    // Phase 5C: Job editing functions
+    const handleSaveJobEdits = async () => {
+      const result = await updateJobPosting(job.id, editedJob)
+      if (result.success) {
+        setIsEditingJob(false)
+        loadJobs() // Reload jobs to get fresh data
+        alert('Job updated successfully!')
+      } else {
+        alert('Failed to update job: ' + result.error)
+      }
+    }
+
+    const handleCancelEdit = () => {
+      setEditedJob({
+        title: job.title || '',
+        description: job.description || '',
+        location: job.location || '',
+        event_type: job.event_type || '',
+        start_date: job.start_date || '',
+        end_date: job.end_date || '',
+        application_deadline: job.application_deadline || ''
+      })
+      setIsEditingJob(false)
+    }
+
+    // Phase 5C: Role management functions
+    const handleAddRole = async () => {
+      if (!roleForm.role_title || !roleForm.budget) {
+        alert('Please fill in role title and budget')
+        return
+      }
+
+      const result = await addRoleToJob(job.id, {
+        role_type: roleForm.role_type,
+        role_title: roleForm.role_title,
+        role_description: roleForm.role_description,
+        budget: parseFloat(roleForm.budget),
+        quantity: parseInt(roleForm.quantity)
+      })
+
+      if (result.success) {
+        setShowAddRole(false)
+        setRoleForm({
+          role_type: 'freelancer',
+          role_title: '',
+          role_description: '',
+          budget: '',
+          quantity: 1
+        })
+        loadJobs() // Reload to get updated roles
+        alert('Role added successfully!')
+      } else {
+        alert('Failed to add role: ' + result.error)
+      }
+    }
+
+    const handleUpdateRole = async (roleId, updates) => {
+      const result = await updateJobRole(roleId, updates)
+      if (result.success) {
+        loadJobs() // Reload to get updated data
+        setEditingRoleId(null)
+      } else {
+        alert('Failed to update role: ' + result.error)
+      }
+    }
+
+    const handleDeleteRole = async (roleId) => {
+      const result = await deleteJobRole(roleId)
+      if (result.success) {
+        loadJobs() // Reload to get updated data
+        alert('Role deleted successfully!')
+      } else {
+        alert('Failed to delete role: ' + result.error)
       }
     }
 
@@ -1396,7 +1495,16 @@ const FunctionalStudioPage = () => {
 
           {activeJobTab === 'team' && (
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Team & Roles</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Team & Roles</h3>
+                <button
+                  onClick={() => setShowAddRole(true)}
+                  className="btn-primary flex items-center gap-2"
+                >
+                  <Plus size={16} />
+                  Add Role
+                </button>
+              </div>
 
               {/* Team Members Section */}
               <div className="profile-card">
@@ -1473,7 +1581,16 @@ const FunctionalStudioPage = () => {
                       <div key={role.id} className="p-4 bg-gray-50 rounded-lg">
                         <div className="flex justify-between items-start mb-2">
                           <div className="flex-1">
-                            <h5 className="font-semibold">{role.role_title}</h5>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h5 className="font-semibold">{role.role_title}</h5>
+                              <button
+                                onClick={() => handleDeleteRole(role.id)}
+                                className="p-1 hover:bg-red-100 text-red-600 rounded transition-colors"
+                                title="Delete role"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
                             <p className="text-sm text-muted-foreground capitalize">
                               {role.role_type}
                             </p>
@@ -1549,6 +1666,96 @@ const FunctionalStudioPage = () => {
                   <div className="text-2xl font-bold text-primary">{progress}%</div>
                 </div>
               </div>
+
+              {/* Add Role Modal */}
+              {showAddRole && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                  <div className="bg-white rounded-lg p-6 w-full max-w-md">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold">Add New Role</h3>
+                      <button onClick={() => setShowAddRole(false)}>
+                        <X size={20} />
+                      </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Role Type*</label>
+                        <select
+                          value={roleForm.role_type}
+                          onChange={(e) => setRoleForm({...roleForm, role_type: e.target.value})}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        >
+                          <option value="freelancer">Freelancer</option>
+                          <option value="venue">Venue</option>
+                          <option value="vendor">Vendor</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Role Title*</label>
+                        <input
+                          type="text"
+                          placeholder="e.g., Sound Engineer"
+                          value={roleForm.role_title}
+                          onChange={(e) => setRoleForm({...roleForm, role_title: e.target.value})}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Description</label>
+                        <textarea
+                          placeholder="Role responsibilities and requirements..."
+                          value={roleForm.role_description}
+                          onChange={(e) => setRoleForm({...roleForm, role_description: e.target.value})}
+                          className="w-full px-3 py-2 border rounded-lg"
+                          rows={3}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">Budget (AUD)*</label>
+                          <input
+                            type="number"
+                            placeholder="0"
+                            value={roleForm.budget}
+                            onChange={(e) => setRoleForm({...roleForm, budget: e.target.value})}
+                            className="w-full px-3 py-2 border rounded-lg"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium mb-1">Quantity*</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={roleForm.quantity}
+                            onChange={(e) => setRoleForm({...roleForm, quantity: e.target.value})}
+                            className="w-full px-3 py-2 border rounded-lg"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          onClick={handleAddRole}
+                          className="btn-primary flex-1"
+                        >
+                          Add Role
+                        </button>
+                        <button
+                          onClick={() => setShowAddRole(false)}
+                          className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -2208,38 +2415,150 @@ const FunctionalStudioPage = () => {
 
           {activeJobTab === 'settings' && (
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Job Settings</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Job Settings</h3>
+                {!isEditingJob ? (
+                  <button
+                    onClick={() => setIsEditingJob(true)}
+                    className="btn-primary flex items-center gap-2"
+                  >
+                    <Edit size={16} />
+                    Edit Job
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveJobEdits}
+                      className="btn-primary flex items-center gap-2"
+                    >
+                      <Save size={16} />
+                      Save Changes
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <div className="profile-card">
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Job Title</label>
+                    <label className="block text-sm font-medium mb-1">Job Title*</label>
                     <input
                       type="text"
-                      value={job.title}
+                      value={isEditingJob ? editedJob.title : job.title}
+                      onChange={(e) => setEditedJob({...editedJob, title: e.target.value})}
                       className="w-full px-3 py-2 border rounded-lg"
-                      readOnly
+                      disabled={!isEditingJob}
                     />
                   </div>
+
                   <div>
-                    <label className="block text-sm font-medium mb-1">Status</label>
-                    <input
-                      type="text"
-                      value={job.status}
+                    <label className="block text-sm font-medium mb-1">Description*</label>
+                    <textarea
+                      value={isEditingJob ? editedJob.description : job.description}
+                      onChange={(e) => setEditedJob({...editedJob, description: e.target.value})}
                       className="w-full px-3 py-2 border rounded-lg"
-                      readOnly
+                      rows={4}
+                      disabled={!isEditingJob}
                     />
                   </div>
-                  <div className="flex items-center justify-between pt-4 border-t">
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <div className="font-medium">Cancel Job Posting</div>
-                      <div className="text-sm text-muted-foreground">
-                        Cancel this job if you no longer need to fill these roles
-                      </div>
+                      <label className="block text-sm font-medium mb-1">Location</label>
+                      <input
+                        type="text"
+                        value={isEditingJob ? editedJob.location : job.location || ''}
+                        onChange={(e) => setEditedJob({...editedJob, location: e.target.value})}
+                        className="w-full px-3 py-2 border rounded-lg"
+                        disabled={!isEditingJob}
+                        placeholder="e.g., Sydney, Australia"
+                      />
                     </div>
-                    <button className="btn-secondary text-red-600">
-                      Cancel Job
-                    </button>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Event Type</label>
+                      <input
+                        type="text"
+                        value={isEditingJob ? editedJob.event_type : job.event_type || ''}
+                        onChange={(e) => setEditedJob({...editedJob, event_type: e.target.value})}
+                        className="w-full px-3 py-2 border rounded-lg"
+                        disabled={!isEditingJob}
+                        placeholder="e.g., Corporate Event"
+                      />
+                    </div>
                   </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Start Date*</label>
+                      <input
+                        type="date"
+                        value={isEditingJob ? editedJob.start_date : job.start_date}
+                        onChange={(e) => setEditedJob({...editedJob, start_date: e.target.value})}
+                        className="w-full px-3 py-2 border rounded-lg"
+                        disabled={!isEditingJob}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1">End Date*</label>
+                      <input
+                        type="date"
+                        value={isEditingJob ? editedJob.end_date : job.end_date}
+                        onChange={(e) => setEditedJob({...editedJob, end_date: e.target.value})}
+                        className="w-full px-3 py-2 border rounded-lg"
+                        disabled={!isEditingJob}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Application Deadline</label>
+                    <input
+                      type="date"
+                      value={isEditingJob ? editedJob.application_deadline : job.application_deadline || ''}
+                      onChange={(e) => setEditedJob({...editedJob, application_deadline: e.target.value})}
+                      className="w-full px-3 py-2 border rounded-lg"
+                      disabled={!isEditingJob}
+                    />
+                  </div>
+
+                  <div className="pt-4 border-t">
+                    <label className="block text-sm font-medium mb-1">Status</label>
+                    <div className="text-sm">
+                      <span className={`px-3 py-1 rounded-full ${
+                        job.status === 'open' ? 'bg-green-100 text-green-700' :
+                        job.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                        job.status === 'filled' ? 'bg-purple-100 text-purple-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {job.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Status updates automatically when roles are filled
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="profile-card bg-red-50 border border-red-200">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="font-medium text-red-900">Danger Zone</div>
+                    <div className="text-sm text-red-700 mt-1">
+                      Cancel this job if you no longer need to fill these roles. This action cannot be undone.
+                    </div>
+                  </div>
+                  <button className="btn-secondary text-red-600 border-red-300 hover:bg-red-100">
+                    Cancel Job
+                  </button>
                 </div>
               </div>
             </div>
