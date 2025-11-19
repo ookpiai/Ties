@@ -11,7 +11,11 @@
       "Bash(npx supabase functions new:*)",
       "Bash(npx supabase db execute:*)",
       "Bash(git push:*)",
-      "Bash(supabase db reset:*)"
+      "Bash(supabase db reset:*)",
+      "Bash(git checkout:*)",
+      "Bash(find:*)",
+      "WebFetch(domain:supabase.com)",
+      "Bash(npx supabase db push)"
     ],
     "deny": [],
     "ask": []

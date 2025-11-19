@@ -2,6 +2,11 @@
 // Phase 5: Multi-Role Job Posting System
 
 import { supabase } from '../lib/supabase'
+import {
+  sendApplicationReceivedEmail,
+  sendApplicationSelectedEmail,
+  sendApplicationRejectedEmail
+} from './emails'
 
 // ============================================
 // TYPES
@@ -341,6 +346,51 @@ export async function applyToJobRole(
         throw new Error('You have already applied to this role')
       }
       throw error
+    }
+
+    // Send email notification to organiser
+    try {
+      const { data: organiserProfile } = await supabase
+        .from('profiles')
+        .select('display_name, email')
+        .eq('id', job.organiser_id)
+        .single()
+
+      const { data: applicantProfile } = await supabase
+        .from('profiles')
+        .select('display_name')
+        .eq('id', userId)
+        .single()
+
+      const { data: jobDetails } = await supabase
+        .from('job_postings')
+        .select('title')
+        .eq('id', jobId)
+        .single()
+
+      const { data: roleDetails } = await supabase
+        .from('job_roles')
+        .select('role_title')
+        .eq('id', roleId)
+        .single()
+
+      if (organiserProfile && applicantProfile && jobDetails && roleDetails) {
+        await sendApplicationReceivedEmail({
+          organiserEmail: organiserProfile.email,
+          organiserName: organiserProfile.display_name,
+          applicantName: applicantProfile.display_name,
+          jobTitle: jobDetails.title,
+          roleName: roleDetails.role_title,
+          appliedDate: new Date().toLocaleDateString('en-AU', {
+            month: 'long', day: 'numeric', year: 'numeric'
+          }),
+          applicationUrl: `${window.location.origin}/jobs/${jobId}/applicants`
+        })
+        console.log('✅ Application received email sent to organiser')
+      }
+    } catch (emailError) {
+      console.error('⚠️ Failed to send application received email:', emailError)
+      // Don't throw - application is still submitted
     }
 
     return {

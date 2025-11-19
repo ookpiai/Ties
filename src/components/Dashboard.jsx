@@ -2,11 +2,11 @@ import { useAuth } from '../App'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Users, 
-  Calendar, 
-  MessageCircle, 
-  Search, 
+import {
+  Users,
+  Calendar,
+  MessageCircle,
+  Search,
   FolderOpen,
   TrendingUp,
   Star,
@@ -14,9 +14,66 @@ import {
   Plus
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { getBookings } from '../api/bookings'
+import { getMyConversations } from '../api/messages'
+import { getJobPostings, getMyApplications } from '../api/jobs'
 
 const Dashboard = () => {
   const { user } = useAuth()
+
+  // Real data states
+  const [bookings, setBookings] = useState([])
+  const [conversations, setConversations] = useState([])
+  const [jobs, setJobs] = useState([])
+  const [applications, setApplications] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  // Load real data on mount
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      if (!user?.id) {
+        console.log('Dashboard: No user ID, skipping data load')
+        setLoading(false)
+        return
+      }
+
+      try {
+        console.log('Dashboard: Loading data for user:', user.id, 'role:', user.role)
+        setLoading(true)
+
+        // Load bookings (both as client and freelancer)
+        const bookingsData = await getBookings()
+        console.log('Dashboard: Loaded bookings:', bookingsData?.length || 0)
+        setBookings(bookingsData || [])
+
+        // Load conversations
+        const conversationsData = await getMyConversations()
+        console.log('Dashboard: Loaded conversations:', conversationsData?.length || 0)
+        setConversations(conversationsData || [])
+
+        // Load jobs based on role
+        if (user.role === 'Organiser') {
+          const jobsData = await getJobPostings({ organiser_id: user.id })
+          console.log('Dashboard: Loaded jobs:', jobsData?.length || 0)
+          setJobs(jobsData || [])
+        } else {
+          // For other roles, get applications
+          const applicationsData = await getMyApplications()
+          console.log('Dashboard: Loaded applications:', applicationsData?.length || 0)
+          setApplications(applicationsData || [])
+        }
+
+        console.log('Dashboard: Data loading complete')
+      } catch (error) {
+        console.error('Dashboard: Error loading data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadDashboardData()
+  }, [user?.id, user?.role])
 
   const quickActions = [
     {
@@ -49,102 +106,175 @@ const Dashboard = () => {
     }
   ]
 
+  // Calculate real stats from loaded data
+  const activeBookingsCount = bookings.filter(b =>
+    ['pending', 'accepted', 'in_progress'].includes(b?.status)
+  ).length
+
+  const unreadMessagesCount = conversations.reduce((total, conv) =>
+    total + (conv?.unreadCount || 0), 0
+  )
+
+  const totalConversations = conversations.length
+
+  // Calculate projects/applications based on role
+  const projectsCount = user?.role === 'Organiser'
+    ? jobs.length
+    : applications.length
+
+  const activeProjectsCount = user?.role === 'Organiser'
+    ? jobs.filter(j => j?.status === 'open' || j?.status === 'in_progress').length
+    : applications.filter(a => a?.status === 'pending' || a?.status === 'selected').length
+
   const stats = [
     {
       title: 'Active Bookings',
-      value: '3',
-      change: '+2 this week',
+      value: loading ? '...' : String(activeBookingsCount),
+      change: loading ? 'Loading...' : `${bookings.length} total`,
       icon: Calendar
     },
     {
       title: 'Messages',
-      value: '12',
-      change: '5 unread',
+      value: loading ? '...' : String(totalConversations),
+      change: loading ? 'Loading...' : (unreadMessagesCount > 0 ? `${unreadMessagesCount} unread` : 'All read'),
       icon: MessageCircle
     },
     {
-      title: 'Projects',
-      value: '2',
-      change: '1 in progress',
+      title: user?.role === 'Organiser' ? 'Job Posts' : 'Applications',
+      value: loading ? '...' : String(projectsCount),
+      change: loading ? 'Loading...' : `${activeProjectsCount} active`,
       icon: FolderOpen
     },
     {
       title: 'Profile Views',
-      value: '47',
-      change: '+12 this week',
+      value: '—',
+      change: 'Coming soon',
       icon: TrendingUp
     }
   ]
 
-  const recentActivity = [
-    {
-      type: 'booking',
-      title: 'New booking request from Sarah Chen',
-      time: '2 hours ago',
-      status: 'pending'
-    },
-    {
-      type: 'message',
-      title: 'Message from Alex Rodriguez',
-      time: '4 hours ago',
-      status: 'unread'
-    },
-    {
-      type: 'project',
-      title: 'Task completed in "Summer Festival 2024"',
-      time: '1 day ago',
-      status: 'completed'
-    },
-    {
-      type: 'profile',
-      title: 'Profile viewed by 3 new users',
-      time: '2 days ago',
-      status: 'info'
+  // Generate real recent activity from data
+  const generateRecentActivity = () => {
+    const activities = []
+
+    // Add recent bookings
+    bookings
+      .forEach(booking => {
+        if (!booking || !user?.id) return
+
+        const isFreelancer = booking.freelancer_id === user.id
+        const otherParty = isFreelancer ? booking.client : booking.freelancer
+        const otherPartyName = otherParty?.display_name || 'Unknown user'
+
+        activities.push({
+          type: 'booking',
+          title: isFreelancer
+            ? `Booking request from ${otherPartyName}`
+            : `Booking with ${otherPartyName}`,
+          timestamp: booking.created_at,
+          timeDisplay: getTimeAgo(booking.created_at),
+          status: booking.status,
+          link: `/bookings/${booking.id}`
+        })
+      })
+
+    // Add recent messages (show all conversations, not just unread)
+    conversations
+      .forEach(conv => {
+        if (!conv || !conv.lastMessage || !conv.otherUser) return
+
+        activities.push({
+          type: 'message',
+          title: conv.unreadCount > 0
+            ? `${conv.unreadCount} message${conv.unreadCount > 1 ? 's' : ''} from ${conv.otherUser.display_name}`
+            : `Message from ${conv.otherUser.display_name}`,
+          timestamp: conv.lastMessage.created_at,
+          timeDisplay: getTimeAgo(conv.lastMessage.created_at),
+          status: conv.unreadCount > 0 ? 'unread' : 'read',
+          link: '/messages'
+        })
+      })
+
+    // Add recent jobs/applications
+    if (user?.role === 'Organiser') {
+      jobs.forEach(job => {
+        if (!job) return
+
+        activities.push({
+          type: 'project',
+          title: `Job: ${job.title || 'Untitled Job'}`,
+          timestamp: job.created_at,
+          timeDisplay: getTimeAgo(job.created_at),
+          status: job.status || 'open',
+          link: `/jobs/${job.id}`
+        })
+      })
+    } else {
+      applications.forEach(app => {
+        if (!app) return
+
+        activities.push({
+          type: 'project',
+          title: `Application: ${app.job?.title || 'Job'}`,
+          timestamp: app.created_at,
+          timeDisplay: getTimeAgo(app.created_at),
+          status: app.status || 'pending',
+          link: `/jobs/${app.job_id}`
+        })
+      })
     }
-  ]
+
+    // Sort by timestamp (most recent first) and limit to 6 items
+    return activities
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, 6)
+  }
+
+  const recentActivity = loading ? [] : generateRecentActivity()
+
+  // Helper function to format time ago
+  function getTimeAgo(dateString) {
+    if (!dateString) return 'Just now'
+    const date = new Date(dateString)
+    const now = new Date()
+    const seconds = Math.floor((now - date) / 1000)
+
+    if (seconds < 60) return 'Just now'
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)} days ago`
+    return date.toLocaleDateString()
+  }
 
   const getRoleSpecificContent = () => {
-    switch (user.role) {
-      case 'freelancer':
+    switch (user?.role) {
+      case 'Artist':
+      case 'Crew':
         return {
-          title: 'Welcome back, Creative!',
+          title: `Welcome back, ${user.role}!`,
           subtitle: 'Manage your bookings, showcase your work, and connect with clients.',
           primaryAction: 'Update Portfolio',
           primaryHref: '/profile'
         }
-      case 'organiser':
+      case 'Organiser':
         return {
           title: 'Welcome back, Organiser!',
           subtitle: 'Find talent, manage projects, and bring your creative vision to life.',
-          primaryAction: 'Create Project',
-          primaryHref: '/projects'
+          primaryAction: 'Post a Job',
+          primaryHref: '/jobs/new'
         }
-      case 'venue':
+      case 'Venue':
         return {
           title: 'Welcome back, Venue Partner!',
           subtitle: 'Manage your space listings and connect with event organisers.',
           primaryAction: 'Update Venue Info',
           primaryHref: '/profile'
         }
-      case 'vendor':
-        return {
-          title: 'Welcome back, Service Provider!',
-          subtitle: 'Showcase your services and connect with creative professionals.',
-          primaryAction: 'Update Services',
-          primaryHref: '/profile'
-        }
-      case 'collective':
-        return {
-          title: 'Welcome back, Creative Collective!',
-          subtitle: 'Manage your team, collaborate on projects, and grow your network.',
-          primaryAction: 'Manage Team',
-          primaryHref: '/profile'
-        }
       default:
         return {
-          title: 'Welcome to TIES Together!',
+          title: `Welcome to TIES Together!`,
           subtitle: 'Your creative collaboration platform.',
-          primaryAction: 'Get Started',
+          primaryAction: 'Complete Profile',
           primaryHref: '/profile'
         }
     }
@@ -167,7 +297,7 @@ const Dashboard = () => {
               </p>
             </div>
             <div className="flex items-center space-x-4">
-              {user.subscription_type === 'pro' && (
+              {user?.subscription_type === 'pro' && (
                 <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
                   <Star className="w-3 h-3 mr-1" />
                   PRO
@@ -261,32 +391,55 @@ const Dashboard = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {recentActivity.map((activity, index) => (
-                    <div key={index} className="flex items-start space-x-3">
-                      <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-900 dark:text-white">
-                          {activity.title}
-                        </p>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <Clock className="w-3 h-3 text-slate-400 dark:text-white/60" />
-                          <p className="text-xs text-slate-500 dark:text-white/60">
-                            {activity.time}
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : recentActivity.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-slate-500 dark:text-white/60 text-sm">
+                      No recent activity yet
+                    </p>
+                    <p className="text-xs text-slate-400 dark:text-white/40 mt-1">
+                      Start by exploring talent or checking your bookings
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {recentActivity.map((activity, index) => (
+                      <Link
+                        key={index}
+                        to={activity.link || '#'}
+                        className="flex items-start space-x-3 hover:bg-slate-50 dark:hover:bg-slate-800 p-2 -m-2 rounded-lg transition-colors"
+                      >
+                        <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-900 dark:text-white">
+                            {activity.title}
                           </p>
-                          <Badge 
-                            variant={activity.status === 'pending' ? 'default' : 'secondary'}
-                            className="text-xs"
-                          >
-                            {activity.status}
-                          </Badge>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <Clock className="w-3 h-3 text-slate-400 dark:text-white/60" />
+                            <p className="text-xs text-slate-500 dark:text-white/60">
+                              {activity.timeDisplay}
+                            </p>
+                            <Badge
+                              variant={
+                                activity.status === 'pending' || activity.status === 'unread'
+                                  ? 'default'
+                                  : 'secondary'
+                              }
+                              className="text-xs"
+                            >
+                              {activity.status}
+                            </Badge>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
                 <div className="mt-4 pt-4 border-t border-app">
-                  <Link to="/messages">
+                  <Link to="/bookings">
                     <Button variant="outline" size="sm" className="w-full">
                       View All Activity
                     </Button>
@@ -298,7 +451,7 @@ const Dashboard = () => {
         </div>
 
         {/* Getting Started Section for New Users */}
-        {!user.bio && (
+        {!user?.bio && (
           <Card className="mt-8 bg-surface border border-app text-app rounded-2xl">
             <CardContent className="p-6">
               <div className="flex items-start space-x-4">

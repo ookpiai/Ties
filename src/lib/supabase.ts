@@ -24,6 +24,8 @@ export type Profile = {
   avatar_url: string | null
   bio: string | null
   city: string | null
+  hourly_rate: number | null
+  daily_rate: number | null
   created_at: string
 }
 
@@ -52,6 +54,8 @@ export type Message = {
   from_id: string | null
   to_id: string | null
   body: string
+  read: boolean
+  read_at: string | null
   created_at: string
 }
 

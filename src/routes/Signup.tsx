@@ -46,15 +46,18 @@ export function Signup() {
 
     try {
       await withLoader(async () => {
-        const { error: signUpError } = await supabase.auth.signUp({
+        const { data, error: signUpError } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`
+          }
         })
 
         if (signUpError) throw signUpError
 
-        showToast('Account created! Please complete your profile.', 'success')
-        navigate('/profile/setup')
+        // Redirect to "Check Your Email" page
+        navigate(`/confirm-email?email=${encodeURIComponent(formData.email)}`)
       })
     } catch (err: any) {
       setError(err.message || 'Signup failed')

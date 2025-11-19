@@ -28,6 +28,7 @@ import {
   ArrowLeft
 } from 'lucide-react'
 import { getProfile } from '../../api/profiles'
+import { sendMessage } from '../../api/messages'
 import { useAuth } from '../../App'
 
 const PublicProfileView = () => {
@@ -37,6 +38,7 @@ const PublicProfileView = () => {
   const [profile, setProfile] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [isMessaging, setIsMessaging] = useState(false)
 
   // Load profile data
   useEffect(() => {
@@ -77,6 +79,11 @@ const PublicProfileView = () => {
       'Organiser': Calendar
     }
     return roleMap[role] || User
+  }
+
+  const handleMessageClick = () => {
+    // Navigate to messages page with this user pre-selected
+    navigate('/messages', { state: { openConversationWithUserId: userId } })
   }
 
   if (isLoading) {
@@ -131,10 +138,12 @@ const PublicProfileView = () => {
               </div>
             </div>
             <div className="flex space-x-2">
-              <Button>
-                <MessageCircle className="w-4 h-4 mr-2" />
-                Message
-              </Button>
+              {user?.id !== profile.id && (
+                <Button onClick={handleMessageClick}>
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Message
+                </Button>
+              )}
               <BookNowButton
                 freelancerId={profile.id}
                 freelancerName={profile.display_name || profile.full_name}

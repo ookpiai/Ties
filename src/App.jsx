@@ -5,6 +5,9 @@ import AppLayout from './components/layout/AppLayout'
 import LandingPage from './components/LandingPage'
 import LoginPage from './components/auth/LoginPage'
 import RegisterPage from './components/auth/RegisterPage'
+import { ConfirmEmail } from './routes/ConfirmEmail'
+import { AuthCallback } from './routes/AuthCallback'
+import { EmailNotConfirmed } from './routes/EmailNotConfirmed'
 
 // ErrorBoundary Component
 class ErrorBoundary extends Component {
@@ -322,6 +325,11 @@ function App() {
               <RegisterPage />
             </PublicRoute>
           } />
+
+          {/* Email Confirmation Routes */}
+          <Route path="/confirm-email" element={<ConfirmEmail />} />
+          <Route path="/email-not-confirmed" element={<EmailNotConfirmed />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
 
           {/* Onboarding Route */}
           <Route path="/onboarding" element={<OnboardingWrapper />} />

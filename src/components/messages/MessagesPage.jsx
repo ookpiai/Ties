@@ -1,682 +1,476 @@
 import { useState, useEffect, useRef } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useLocation } from 'react-router-dom'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { useAuth } from '../../App'
-import { 
-  MessageCircle, 
-  Send, 
-  Search, 
-  Plus, 
-  MoreVertical,
-  Phone,
-  Video,
-  Paperclip,
-  Smile,
+import {
+  getMyConversations,
+  getConversation,
+  sendMessage,
+  markConversationAsRead,
+  subscribeToConversation,
+  subscribeToAllMessages,
+  searchUsers
+} from '../../api/messages'
+import { getProfile } from '../../api/profiles'
+import {
+  MessageCircle,
+  Send,
+  Search,
+  Plus,
+  ArrowLeft,
   Check,
   CheckCheck,
-  Clock,
-  Star,
-  Archive,
-  Trash2,
-  Flag,
-  Users,
-  Calendar,
-  FileText,
-  Image as ImageIcon,
-  Download,
   X
 } from 'lucide-react'
 
 const MessagesPage = () => {
-  // Check for Supabase configuration
-  const hasSupabaseConfig = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY
-  
-  // Safely get user with fallback
-  let user = null
-  try {
-    const auth = useAuth()
-    user = auth?.user
-  } catch (error) {
-    console.error('Auth error:', error)
-  }
-  
-  // Mock user for development if no user is logged in
-  const currentUser = user || {
-    id: 1,
-    first_name: 'Developer',
-    last_name: 'User',
-    role: 'freelancer'
-  }
-  
+  const { user } = useAuth()
+  const location = useLocation()
+  const [conversations, setConversations] = useState([])
   const [selectedConversation, setSelectedConversation] = useState(null)
+  const [messages, setMessages] = useState([])
   const [messageText, setMessageText] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [sending, setSending] = useState(false)
   const [showNewMessage, setShowNewMessage] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState(null)
+  const [userSearch, setUserSearch] = useState('')
+  const [searchResults, setSearchResults] = useState([])
   const messagesEndRef = useRef(null)
+  const subscriptionRef = useRef(null)
+  const allMessagesSubscriptionRef = useRef(null)
 
-  // Show configuration warning if Supabase is not configured
-  if (!hasSupabaseConfig) {
+  // Scroll to bottom of messages
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  // Load conversations on mount
+  useEffect(() => {
+    if (user) {
+      loadConversations()
+      // Subscribe to all messages for conversation list updates
+      allMessagesSubscriptionRef.current = subscribeToAllMessages(() => {
+        loadConversations()
+      })
+    }
+
+    return () => {
+      if (allMessagesSubscriptionRef.current) {
+        allMessagesSubscriptionRef.current.unsubscribe()
+      }
+    }
+  }, [user])
+
+  // Load conversation messages when selected
+  useEffect(() => {
+    if (selectedConversation) {
+      loadConversationMessages(selectedConversation.otherUser.id)
+      markConversationAsRead(selectedConversation.otherUser.id)
+
+      // Subscribe to new messages in this conversation
+      subscriptionRef.current = subscribeToConversation(
+        selectedConversation.otherUser.id,
+        (newMessage) => {
+          setMessages(prev => [...prev, newMessage])
+          scrollToBottom()
+        }
+      )
+    }
+
+    return () => {
+      if (subscriptionRef.current) {
+        subscriptionRef.current.unsubscribe()
+      }
+    }
+  }, [selectedConversation])
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
+
+  // Handle opening a conversation from profile page
+  useEffect(() => {
+    const openConversationWithUserId = location.state?.openConversationWithUserId
+    if (openConversationWithUserId && conversations.length > 0) {
+      // Check if conversation already exists
+      const existing = conversations.find(c => c.otherUser.id === openConversationWithUserId)
+
+      if (existing) {
+        setSelectedConversation(existing)
+      } else {
+        // Load user profile and create new conversation
+        const loadUserAndStartConversation = async () => {
+          try {
+            const profile = await getProfile(openConversationWithUserId)
+            const otherUser = {
+              id: profile.id,
+              display_name: profile.display_name,
+              avatar_url: profile.avatar_url,
+              role: profile.role
+            }
+            handleStartNewConversation(otherUser)
+          } catch (error) {
+            console.error('Failed to load user profile:', error)
+          }
+        }
+        loadUserAndStartConversation()
+      }
+
+      // Clear the state so it doesn't trigger again
+      window.history.replaceState({}, document.title)
+    }
+  }, [location.state, conversations])
+
+  const loadConversations = async () => {
+    setLoading(true)
+    const result = await getMyConversations()
+    if (result.success) {
+      setConversations(result.data)
+    }
+    setLoading(false)
+  }
+
+  const loadConversationMessages = async (otherUserId) => {
+    const result = await getConversation(otherUserId)
+    if (result.success) {
+      setMessages(result.data)
+    }
+  }
+
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !selectedConversation) return
+
+    setSending(true)
+    const result = await sendMessage(selectedConversation.otherUser.id, messageText)
+
+    if (result.success) {
+      setMessages([...messages, result.data])
+      setMessageText('')
+      scrollToBottom()
+    }
+
+    setSending(false)
+  }
+
+  const handleStartNewConversation = async (otherUser) => {
+    // Check if conversation already exists
+    const existing = conversations.find(c => c.otherUser.id === otherUser.id)
+
+    if (existing) {
+      setSelectedConversation(existing)
+    } else {
+      // Create new conversation preview
+      setSelectedConversation({
+        otherUser,
+        lastMessage: null,
+        unreadCount: 0
+      })
+      setMessages([])
+    }
+
+    setShowNewMessage(false)
+    setUserSearch('')
+    setSearchResults([])
+  }
+
+  const handleUserSearch = async (query) => {
+    setUserSearch(query)
+    if (query.trim().length > 0) {
+      const result = await searchUsers(query)
+      if (result.success) {
+        setSearchResults(result.data)
+      }
+    } else {
+      setSearchResults([])
+    }
+  }
+
+  const formatTime = (timestamp) => {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diff = now - date
+
+    if (diff < 60000) return 'Just now'
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
+    if (diff < 86400000) return date.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
+    if (diff < 604800000) return date.toLocaleDateString('en-AU', { weekday: 'short' })
+    return date.toLocaleDateString('en-AU', { month: 'short', day: 'numeric' })
+  }
+
+  const getRoleColor = (role) => {
+    const colors = {
+      freelancer: 'bg-purple-100 text-purple-800',
+      venue: 'bg-green-100 text-green-800',
+      vendor: 'bg-orange-100 text-orange-800',
+      organiser: 'bg-blue-100 text-blue-800'
+    }
+    return colors[role] || 'bg-gray-100 text-gray-800'
+  }
+
+  if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen p-6">
-        <div className="max-w-md text-center">
-          <MessageCircle className="w-16 h-16 mx-auto mb-4 text-yellow-500" />
-          <h2 className="text-2xl font-bold mb-2">Configuration Required</h2>
-          <p className="text-gray-600 mb-4">
-            Supabase environment variables are missing. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.
-          </p>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Please log in to view messages</p>
       </div>
     )
   }
 
-  // Mock conversations data
-  const [conversations, setConversations] = useState([
-    {
-      id: 1,
-      participants: [
-        { id: 2, name: 'Sarah Chen', avatar: null, role: 'freelancer', online: true },
-        { id: 1, name: currentUser.first_name + ' ' + currentUser.last_name, avatar: null, role: currentUser.role }
-      ],
-      lastMessage: {
-        id: 15,
-        senderId: 2,
-        text: 'Perfect! I\'ll send over the initial concepts by Friday. Looking forward to working together!',
-        timestamp: '2024-01-20T14:30:00Z',
-        read: false,
-        type: 'text'
-      },
-      unreadCount: 2,
-      starred: false,
-      archived: false,
-      projectId: 101,
-      projectTitle: 'Brand Identity Design'
-    },
-    {
-      id: 2,
-      participants: [
-        { id: 3, name: 'Marcus Rodriguez', avatar: null, role: 'freelancer', online: false },
-        { id: 1, name: currentUser.first_name + ' ' + currentUser.last_name, avatar: null, role: currentUser.role }
-      ],
-      lastMessage: {
-        id: 28,
-        senderId: 1,
-        text: 'Thanks for the video samples. When can we schedule a call to discuss the project timeline?',
-        timestamp: '2024-01-20T11:15:00Z',
-        read: true,
-        type: 'text'
-      },
-      unreadCount: 0,
-      starred: true,
-      archived: false,
-      projectId: 102,
-      projectTitle: 'Product Launch Video'
-    },
-    {
-      id: 3,
-      participants: [
-        { id: 4, name: 'The Creative Collective', avatar: null, role: 'collective', online: true },
-        { id: 1, name: currentUser.first_name + ' ' + currentUser.last_name, avatar: null, role: currentUser.role }
-      ],
-      lastMessage: {
-        id: 42,
-        senderId: 4,
-        text: 'We have availability next week for the photoshoot. Shall we book Tuesday afternoon?',
-        timestamp: '2024-01-19T16:45:00Z',
-        read: false,
-        type: 'text'
-      },
-      unreadCount: 1,
-      starred: false,
-      archived: false,
-      projectId: null,
-      projectTitle: null
-    },
-    {
-      id: 4,
-      participants: [
-        { id: 5, name: 'Emma Thompson', avatar: null, role: 'organiser', online: false },
-        { id: 1, name: user?.first_name + ' ' + user?.last_name, avatar: null, role: user?.role }
-      ],
-      lastMessage: {
-        id: 55,
-        senderId: 5,
-        text: 'Event planning document attached. Please review and let me know your thoughts.',
-        timestamp: '2024-01-19T09:20:00Z',
-        read: true,
-        type: 'file'
-      },
-      unreadCount: 0,
-      starred: false,
-      archived: false,
-      projectId: 103,
-      projectTitle: 'Creative Conference 2024'
-    }
-  ])
-
-  // Mock messages for selected conversation
-  const [messages, setMessages] = useState({
-    1: [
-      {
-        id: 1,
-        senderId: 1,
-        text: 'Hi Sarah! I saw your portfolio and I\'m really impressed with your design work. I have a brand identity project that might be perfect for you.',
-        timestamp: '2024-01-20T10:00:00Z',
-        read: true,
-        type: 'text'
-      },
-      {
-        id: 2,
-        senderId: 2,
-        text: 'Thank you so much! I\'d love to hear more about the project. What kind of brand are you working on?',
-        timestamp: '2024-01-20T10:15:00Z',
-        read: true,
-        type: 'text'
-      },
-      {
-        id: 3,
-        senderId: 1,
-        text: 'It\'s for a sustainable fashion startup. They need a complete brand identity including logo, color palette, and brand guidelines. The budget is £3,500.',
-        timestamp: '2024-01-20T10:30:00Z',
-        read: true,
-        type: 'text'
-      },
-      {
-        id: 4,
-        senderId: 2,
-        text: 'That sounds fantastic! Sustainable fashion is something I\'m really passionate about. I\'d love to take this on.',
-        timestamp: '2024-01-20T11:00:00Z',
-        read: true,
-        type: 'text'
-      },
-      {
-        id: 5,
-        senderId: 1,
-        text: 'Excellent! I\'ll send over the project brief and we can discuss the timeline. When would you be available to start?',
-        timestamp: '2024-01-20T11:15:00Z',
-        read: true,
-        type: 'text'
-      },
-      {
-        id: 6,
-        senderId: 2,
-        text: 'I can start next week. My usual process is 2-3 weeks for a complete brand identity project.',
-        timestamp: '2024-01-20T14:00:00Z',
-        read: true,
-        type: 'text'
-      },
-      {
-        id: 15,
-        senderId: 2,
-        text: 'Perfect! I\'ll send over the initial concepts by Friday. Looking forward to working together!',
-        timestamp: '2024-01-20T14:30:00Z',
-        read: false,
-        type: 'text'
-      }
-    ],
-    2: [
-      {
-        id: 20,
-        senderId: 1,
-        text: 'Hi Marcus! I need a product launch video for our new app. Are you available for a project?',
-        timestamp: '2024-01-20T09:00:00Z',
-        read: true,
-        type: 'text'
-      },
-      {
-        id: 21,
-        senderId: 3,
-        text: 'Absolutely! I specialize in product launch videos. What\'s the scope and timeline?',
-        timestamp: '2024-01-20T09:30:00Z',
-        read: true,
-        type: 'text'
-      },
-      {
-        id: 22,
-        senderId: 1,
-        text: 'We need a 60-90 second video showcasing the app features. Launch is in 6 weeks.',
-        timestamp: '2024-01-20T10:00:00Z',
-        read: true,
-        type: 'text'
-      },
-      {
-        id: 23,
-        senderId: 3,
-        text: 'Perfect timing! Here are some samples of my recent work:',
-        timestamp: '2024-01-20T10:15:00Z',
-        read: true,
-        type: 'text'
-      },
-      {
-        id: 24,
-        senderId: 3,
-        text: 'video_sample_1.mp4',
-        timestamp: '2024-01-20T10:16:00Z',
-        read: true,
-        type: 'file',
-        fileName: 'video_sample_1.mp4',
-        fileSize: '15.2 MB'
-      },
-      {
-        id: 25,
-        senderId: 3,
-        text: 'video_sample_2.mp4',
-        timestamp: '2024-01-20T10:17:00Z',
-        read: true,
-        type: 'file',
-        fileName: 'video_sample_2.mp4',
-        fileSize: '22.8 MB'
-      },
-      {
-        id: 28,
-        senderId: 1,
-        text: 'Thanks for the video samples. When can we schedule a call to discuss the project timeline?',
-        timestamp: '2024-01-20T11:15:00Z',
-        read: true,
-        type: 'text'
-      }
-    ]
-  })
-
-  // Filter conversations based on search
-  const filteredConversations = conversations.filter(conv => {
-    const otherParticipant = conv.participants.find(p => p.id !== user?.id)
-    return otherParticipant?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           conv.lastMessage.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           conv.projectTitle?.toLowerCase().includes(searchQuery.toLowerCase())
-  })
-
-  // Get other participant in conversation
-  const getOtherParticipant = (conversation) => {
-    return conversation.participants.find(p => p.id !== user?.id)
-  }
-
-  // Get initials for avatar
-  const getInitials = (name) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase()
-  }
-
-  // Format timestamp
-  const formatTime = (timestamp) => {
-    const date = new Date(timestamp)
-    const now = new Date()
-    const diffInHours = (now - date) / (1000 * 60 * 60)
-    
-    if (diffInHours < 24) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    } else if (diffInHours < 168) { // 7 days
-      return date.toLocaleDateString([], { weekday: 'short' })
-    } else {
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric' })
-    }
-  }
-
-  // Send message
-  const sendMessage = () => {
-    if (!messageText.trim() || !selectedConversation) return
-
-    const newMessage = {
-      id: Date.now(),
-      senderId: user.id,
-      text: messageText,
-      timestamp: new Date().toISOString(),
-      read: true,
-      type: 'text'
-    }
-
-    // Add message to conversation
-    setMessages(prev => ({
-      ...prev,
-      [selectedConversation.id]: [...(prev[selectedConversation.id] || []), newMessage]
-    }))
-
-    // Update last message in conversation
-    setConversations(prev => prev.map(conv => 
-      conv.id === selectedConversation.id 
-        ? { ...conv, lastMessage: newMessage }
-        : conv
-    ))
-
-    setMessageText('')
-  }
-
-  // Mark conversation as read
-  const markAsRead = (conversationId) => {
-    setConversations(prev => prev.map(conv => 
-      conv.id === conversationId 
-        ? { ...conv, unreadCount: 0, lastMessage: { ...conv.lastMessage, read: true } }
-        : conv
-    ))
-  }
-
-  // Toggle star
-  const toggleStar = (conversationId) => {
-    setConversations(prev => prev.map(conv => 
-      conv.id === conversationId 
-        ? { ...conv, starred: !conv.starred }
-        : conv
-    ))
-  }
-
-  // Scroll to bottom of messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, selectedConversation])
-
-  // Select first conversation by default
-  useEffect(() => {
-    if (conversations.length > 0 && !selectedConversation) {
-      setSelectedConversation(conversations[0])
-      markAsRead(conversations[0].id)
-    }
-  }, [conversations])
-
-  const selectedMessages = selectedConversation ? messages[selectedConversation.id] || [] : []
-  const otherParticipant = selectedConversation ? getOtherParticipant(selectedConversation) : null
-
   return (
-    <div className="min-h-screen bg-app text-app transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="h-screen flex bg-gray-50">
+      {/* Conversations List */}
+      <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-96 bg-white border-r`}>
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Messages</h1>
-          <p className="text-slate-600 dark:text-slate-300 mt-1">
-            Communicate with creative professionals and manage your projects
-          </p>
+        <div className="p-4 border-b">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-2xl font-bold">Messages</h1>
+            <Button
+              onClick={() => setShowNewMessage(true)}
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Plus size={16} />
+              New
+            </Button>
+          </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
-          {/* Conversations List */}
-          <div className="lg:col-span-1">
-            <Card className="h-full flex flex-col bg-white dark:bg-[#0F1218] border-slate-200 dark:border-slate-700">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center space-x-2">
-                    <MessageCircle className="w-5 h-5" />
-                    <span>Conversations</span>
-                  </CardTitle>
-                  <Button size="sm" onClick={() => setShowNewMessage(true)}>
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-                
-                {/* Search */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search conversations..."
-                    className="pl-9"
-                  />
-                </div>
-              </CardHeader>
+        {/* Conversations */}
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="flex justify-center items-center h-32">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : conversations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+              <MessageCircle size={48} className="text-gray-400 mb-4" />
+              <p className="text-gray-600 font-medium">No messages yet</p>
+              <p className="text-sm text-gray-500 mt-2">Start a conversation to connect with others</p>
+              <Button
+                onClick={() => setShowNewMessage(true)}
+                className="mt-4"
+                size="sm"
+              >
+                <Plus size={16} className="mr-2" />
+                New Message
+              </Button>
+            </div>
+          ) : (
+            conversations.map((conv) => (
+              <div
+                key={conv.otherUser.id}
+                onClick={() => setSelectedConversation(conv)}
+                className={`p-4 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
+                  selectedConversation?.otherUser.id === conv.otherUser.id ? 'bg-gray-100' : ''
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={conv.otherUser.avatar_url} />
+                    <AvatarFallback>
+                      {conv.otherUser.display_name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
 
-              <CardContent className="flex-1 overflow-y-auto p-0">
-                <div className="space-y-1">
-                  {filteredConversations.map((conversation) => {
-                    const participant = getOtherParticipant(conversation)
-                    const isSelected = selectedConversation?.id === conversation.id
-                    
-                    return (
-                      <div
-                        key={conversation.id}
-                        onClick={() => {
-                          setSelectedConversation(conversation)
-                          markAsRead(conversation.id)
-                        }}
-                        className={`p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 border-l-4 transition-colors ${
-                          isSelected 
-                            ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-500 dark:border-blue-400' 
-                            : conversation.unreadCount > 0
-                            ? 'border-blue-200 dark:border-blue-800'
-                            : 'border-transparent'
-                        }`}
-                      >
-                        <div className="flex items-start space-x-3">
-                          <div className="relative">
-                            <Avatar className="w-12 h-12">
-                              <AvatarImage src={participant.avatar} />
-                              <AvatarFallback>
-                                {getInitials(participant.name)}
-                              </AvatarFallback>
-                            </Avatar>
-                            {participant.online && (
-                              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
-                            )}
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <h3 className={`text-sm font-medium truncate ${
-                                conversation.unreadCount > 0 ? 'text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-300'
-                              }`}>
-                                {participant.name}
-                              </h3>
-                              <div className="flex items-center space-x-1">
-                                {conversation.starred && (
-                                  <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                                )}
-                                <span className="text-xs text-slate-500 dark:text-slate-400">
-                                  {formatTime(conversation.lastMessage.timestamp)}
-                                </span>
-                              </div>
-                            </div>
-
-                            {conversation.projectTitle && (
-                              <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">
-                                {conversation.projectTitle}
-                              </p>
-                            )}
-
-                            <div className="flex items-center justify-between">
-                              <p className={`text-sm truncate ${
-                                conversation.unreadCount > 0 ? 'font-medium text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-300'
-                              }`}>
-                                {conversation.lastMessage.type === 'file' ? (
-                                  <span className="flex items-center">
-                                    <Paperclip className="w-3 h-3 mr-1" />
-                                    File attachment
-                                  </span>
-                                ) : (
-                                  conversation.lastMessage.text
-                                )}
-                              </p>
-                              {conversation.unreadCount > 0 && (
-                                <Badge className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
-                                  {conversation.unreadCount}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Chat Area */}
-          <div className="lg:col-span-2">
-            {selectedConversation ? (
-              <Card className="h-full flex flex-col bg-white dark:bg-[#0F1218] border-slate-200 dark:border-slate-700">
-                {/* Chat Header */}
-                <CardHeader className="pb-4 border-b">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="relative">
-                        <Avatar className="w-10 h-10">
-                          <AvatarImage src={otherParticipant.avatar} />
-                          <AvatarFallback>
-                            {getInitials(otherParticipant.name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        {otherParticipant.online && (
-                          <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
-                        )}
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-slate-900 dark:text-white">{otherParticipant.name}</h3>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 capitalize">
-                          {otherParticipant.role} • {otherParticipant.online ? 'Online' : 'Offline'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <Button variant="outline" size="sm">
-                        <Phone className="w-4 h-4" />
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Video className="w-4 h-4" />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => toggleStar(selectedConversation.id)}
-                      >
-                        <Star className={`w-4 h-4 ${selectedConversation.starred ? 'text-yellow-500 fill-current' : ''}`} />
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {selectedConversation.projectTitle && (
-                    <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                        <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                          Project: {selectedConversation.projectTitle}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="font-semibold truncate">{conv.otherUser.display_name}</p>
+                      {conv.lastMessage && (
+                        <span className="text-xs text-gray-500">
+                          {formatTime(conv.lastMessage.created_at)}
                         </span>
-                      </div>
+                      )}
                     </div>
-                  )}
-                </CardHeader>
 
-                {/* Messages */}
-                <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {selectedMessages.map((message) => {
-                    const isOwn = message.senderId === user.id
-                    const sender = selectedConversation.participants.find(p => p.id === message.senderId)
-                    
-                    return (
-                      <div
-                        key={message.id}
-                        className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div className={`max-w-xs lg:max-w-md ${isOwn ? 'order-2' : 'order-1'}`}>
-                          {!isOwn && (
-                            <div className="flex items-center space-x-2 mb-1">
-                              <Avatar className="w-6 h-6">
-                                <AvatarImage src={sender.avatar} />
-                                <AvatarFallback className="text-xs">
-                                  {getInitials(sender.name)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-xs text-slate-500 dark:text-slate-400">{sender.name}</span>
-                            </div>
-                          )}
-                          
-                          <div className={`rounded-lg px-4 py-2 ${
-                            isOwn 
-                              ? 'bg-blue-500 text-white' 
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white'
-                          }`}>
-                            {message.type === 'file' ? (
-                              <div className="flex items-center space-x-2">
-                                <Paperclip className="w-4 h-4" />
-                                <div>
-                                  <p className="text-sm font-medium">{message.fileName}</p>
-                                  <p className="text-xs opacity-75">{message.fileSize}</p>
-                                </div>
-                                <Button size="sm" variant={isOwn ? "secondary" : "outline"}>
-                                  <Download className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <p className="text-sm">{message.text}</p>
-                            )}
-                          </div>
-                          
-                          <div className={`flex items-center space-x-1 mt-1 ${
-                            isOwn ? 'justify-end' : 'justify-start'
-                          }`}>
-                            <span className="text-xs text-gray-500">
-                              {formatTime(message.timestamp)}
-                            </span>
-                            {isOwn && (
-                              <div className="text-gray-500">
-                                {message.read ? (
-                                  <CheckCheck className="w-3 h-3" />
-                                ) : (
-                                  <Check className="w-3 h-3" />
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                  <div ref={messagesEndRef} />
-                </CardContent>
-
-                {/* Message Input */}
-                <div className="p-4 border-t">
-                  <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm">
-                      <Paperclip className="w-4 h-4" />
-                    </Button>
-                    <div className="flex-1 relative">
-                      <Input
-                        value={messageText}
-                        onChange={(e) => setMessageText(e.target.value)}
-                        placeholder="Type a message..."
-                        onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                        className="pr-10"
-                      />
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="absolute right-1 top-1/2 transform -translate-y-1/2"
-                      >
-                        <Smile className="w-4 h-4" />
-                      </Button>
+                    <div className="flex items-center justify-between">
+                      <p className={`text-sm truncate ${conv.unreadCount > 0 ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
+                        {conv.lastMessage ? conv.lastMessage.body : 'No messages yet'}
+                      </p>
+                      {conv.unreadCount > 0 && (
+                        <Badge variant="default" className="ml-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                          {conv.unreadCount}
+                        </Badge>
+                      )}
                     </div>
-                    <Button onClick={sendMessage} disabled={!messageText.trim()}>
-                      <Send className="w-4 h-4" />
-                    </Button>
                   </div>
                 </div>
-              </Card>
-            ) : (
-              <Card className="h-full flex items-center justify-center">
-                <div className="text-center">
-                  <MessageCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    Select a conversation
-                  </h3>
-                  <p className="text-gray-600">
-                    Choose a conversation from the list to start messaging
-                  </p>
-                </div>
-              </Card>
-            )}
-          </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
+
+      {/* Messages View */}
+      {selectedConversation ? (
+        <div className="flex-1 flex flex-col">
+          {/* Conversation Header */}
+          <div className="p-4 border-b bg-white flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="md:hidden"
+              onClick={() => setSelectedConversation(null)}
+            >
+              <ArrowLeft size={20} />
+            </Button>
+
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={selectedConversation.otherUser.avatar_url} />
+              <AvatarFallback>
+                {selectedConversation.otherUser.display_name.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+
+            <div>
+              <p className="font-semibold">{selectedConversation.otherUser.display_name}</p>
+              <Badge variant="outline" className={getRoleColor(selectedConversation.otherUser.role)}>
+                {selectedConversation.otherUser.role}
+              </Badge>
+            </div>
+          </div>
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+            {messages.length === 0 ? (
+              <div className="flex justify-center items-center h-full">
+                <p className="text-gray-500">No messages yet. Start the conversation!</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {messages.map((msg) => {
+                  const isMe = msg.from_id === user.id
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div className={`max-w-[70%] ${isMe ? 'order-2' : 'order-1'}`}>
+                        <div
+                          className={`px-4 py-2 rounded-lg ${
+                            isMe
+                              ? 'bg-primary text-white'
+                              : 'bg-white border'
+                          }`}
+                        >
+                          <p className="text-sm break-words">{msg.body}</p>
+                          <div className={`flex items-center gap-1 mt-1 text-xs ${
+                            isMe ? 'text-white/70 justify-end' : 'text-gray-500'
+                          }`}>
+                            <span>{formatTime(msg.created_at)}</span>
+                            {isMe && (
+                              msg.read ? <CheckCheck size={14} /> : <Check size={14} />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+                <div ref={messagesEndRef} />
+              </div>
+            )}
+          </div>
+
+          {/* Message Input */}
+          <div className="p-4 border-t bg-white">
+            <div className="flex gap-2">
+              <Input
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                placeholder="Type a message..."
+                className="flex-1"
+                disabled={sending}
+              />
+              <Button
+                onClick={handleSendMessage}
+                disabled={!messageText.trim() || sending}
+              >
+                <Send size={16} />
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="hidden md:flex flex-1 items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <MessageCircle size={64} className="mx-auto text-gray-400 mb-4" />
+            <p className="text-gray-600 font-medium">Select a conversation</p>
+            <p className="text-sm text-gray-500 mt-2">Choose from your conversations or start a new one</p>
+          </div>
+        </div>
+      )}
+
+      {/* New Message Modal */}
+      {showNewMessage && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h2 className="text-lg font-semibold">New Message</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowNewMessage(false)
+                  setUserSearch('')
+                  setSearchResults([])
+                }}
+              >
+                <X size={20} />
+              </Button>
+            </div>
+
+            <CardContent className="p-4">
+              <div className="mb-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                  <Input
+                    value={userSearch}
+                    onChange={(e) => handleUserSearch(e.target.value)}
+                    placeholder="Search users..."
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {searchResults.length === 0 ? (
+                  <p className="text-center text-gray-500 py-8">
+                    {userSearch ? 'No users found' : 'Search for users to start a conversation'}
+                  </p>
+                ) : (
+                  searchResults.map((searchUser) => (
+                    <div
+                      key={searchUser.id}
+                      onClick={() => handleStartNewConversation(searchUser)}
+                      className="flex items-center gap-3 p-3 hover:bg-gray-100 rounded-lg cursor-pointer transition-colors"
+                    >
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={searchUser.avatar_url} />
+                        <AvatarFallback>
+                          {searchUser.display_name.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium">{searchUser.display_name}</p>
+                        <Badge variant="outline" className={getRoleColor(searchUser.role)}>
+                          {searchUser.role}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
 
 export default MessagesPage
-

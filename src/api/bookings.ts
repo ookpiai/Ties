@@ -8,6 +8,13 @@
 
 import { supabase } from '../lib/supabase'
 import { blockDatesForBooking, releaseDatesForBooking } from './availability'
+import {
+  sendBookingRequestEmail,
+  sendBookingAcceptedEmail,
+  sendBookingDeclinedEmail,
+  sendBookingCancelledEmail,
+  sendBookingCompletedEmail
+} from './emails'
 
 // =====================================================
 // TYPESCRIPT INTERFACES
@@ -139,8 +146,40 @@ export async function createBooking(
       throw error
     }
 
-    // TODO: Send email notification to freelancer (Phase 6)
-    console.log('Booking created:', data.id, '- Email notification pending')
+    // Send email notification to freelancer
+    try {
+      const { data: freelancerProfile } = await supabase
+        .from('profiles')
+        .select('display_name, email')
+        .eq('id', params.freelancer_id)
+        .single()
+
+      const { data: clientProfile } = await supabase
+        .from('profiles')
+        .select('display_name')
+        .eq('id', user.id)
+        .single()
+
+      if (freelancerProfile && clientProfile) {
+        await sendBookingRequestEmail({
+          freelancerEmail: freelancerProfile.email,
+          freelancerName: freelancerProfile.display_name,
+          clientName: clientProfile.display_name,
+          startDate: new Date(data.start_date).toLocaleDateString('en-AU', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+          }),
+          endDate: new Date(data.end_date).toLocaleDateString('en-AU', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+          }),
+          rate: `$${params.total_amount.toFixed(2)}`,
+          bookingUrl: `${window.location.origin}/bookings/${data.id}`
+        })
+        console.log('✅ Booking request email sent to freelancer')
+      }
+    } catch (emailError) {
+      console.error('⚠️ Failed to send booking request email:', emailError)
+      // Don't throw - booking is still created
+    }
 
     return data as Booking
   } catch (error) {
@@ -315,8 +354,39 @@ export async function acceptBooking(
       // Could add a flag to retry later
     }
 
-    // TODO: Send email notification to client (Phase 6)
-    console.log('Booking accepted:', bookingId, '- Email notification pending')
+    // Send email notification to client
+    try {
+      const { data: clientProfile } = await supabase
+        .from('profiles')
+        .select('display_name, email')
+        .eq('id', booking.client_id)
+        .single()
+
+      const { data: freelancerProfile } = await supabase
+        .from('profiles')
+        .select('display_name')
+        .eq('id', userId)
+        .single()
+
+      if (clientProfile && freelancerProfile) {
+        await sendBookingAcceptedEmail({
+          clientEmail: clientProfile.email,
+          clientName: clientProfile.display_name,
+          freelancerName: freelancerProfile.display_name,
+          startDate: new Date(booking.start_date).toLocaleDateString('en-AU', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+          }),
+          endDate: new Date(booking.end_date).toLocaleDateString('en-AU', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+          }),
+          bookingUrl: `${window.location.origin}/bookings/${bookingId}`
+        })
+        console.log('✅ Booking accepted email sent to client')
+      }
+    } catch (emailError) {
+      console.error('⚠️ Failed to send booking accepted email:', emailError)
+      // Don't throw - booking is still accepted
+    }
 
     return data as Booking
   } catch (error) {
@@ -367,8 +437,33 @@ export async function declineBooking(
       throw error
     }
 
-    // TODO: Send email notification to client (Phase 6)
-    console.log('Booking declined:', bookingId, '- Email notification pending')
+    // Send email notification to client
+    try {
+      const { data: clientProfile } = await supabase
+        .from('profiles')
+        .select('display_name, email')
+        .eq('id', booking.client_id)
+        .single()
+
+      const { data: freelancerProfile } = await supabase
+        .from('profiles')
+        .select('display_name')
+        .eq('id', userId)
+        .single()
+
+      if (clientProfile && freelancerProfile) {
+        await sendBookingDeclinedEmail({
+          clientEmail: clientProfile.email,
+          clientName: clientProfile.display_name,
+          freelancerName: freelancerProfile.display_name,
+          discoverUrl: `${window.location.origin}/discover`
+        })
+        console.log('✅ Booking declined email sent to client')
+      }
+    } catch (emailError) {
+      console.error('⚠️ Failed to send booking declined email:', emailError)
+      // Don't throw - booking is still declined
+    }
 
     return data as Booking
   } catch (error) {
@@ -432,8 +527,40 @@ export async function cancelBooking(
       }
     }
 
-    // TODO: Send email notification to other party (Phase 6)
-    console.log('Booking cancelled:', bookingId, '- Email notification pending')
+    // Send email notification to the other party
+    try {
+      const otherPartyId = userId === booking.client_id ? booking.freelancer_id : booking.client_id
+      const { data: otherPartyProfile } = await supabase
+        .from('profiles')
+        .select('display_name, email')
+        .eq('id', otherPartyId)
+        .single()
+
+      const { data: cancellerProfile } = await supabase
+        .from('profiles')
+        .select('display_name')
+        .eq('id', userId)
+        .single()
+
+      if (otherPartyProfile && cancellerProfile) {
+        await sendBookingCancelledEmail({
+          recipientEmail: otherPartyProfile.email,
+          recipientName: otherPartyProfile.display_name,
+          cancelledBy: cancellerProfile.display_name,
+          startDate: new Date(booking.start_date).toLocaleDateString('en-AU', {
+            month: 'short', day: 'numeric', year: 'numeric'
+          }),
+          endDate: new Date(booking.end_date).toLocaleDateString('en-AU', {
+            month: 'short', day: 'numeric', year: 'numeric'
+          }),
+          bookingUrl: `${window.location.origin}/bookings/${bookingId}`
+        })
+        console.log('✅ Booking cancelled email sent to other party')
+      }
+    } catch (emailError) {
+      console.error('⚠️ Failed to send booking cancelled email:', emailError)
+      // Don't throw - booking is still cancelled
+    }
 
     return data as Booking
   } catch (error) {
@@ -495,8 +622,44 @@ export async function completeBooking(
     // ⚠️ Phase 4B: Trigger payout processing here
     // await processPayoutForBooking(bookingId, booking.stripe_payment_intent_id)
 
-    // TODO: Send email notification to both parties (Phase 6)
-    console.log('Booking completed:', bookingId, '- Email notification pending')
+    // Send email notifications to both parties
+    try {
+      const { data: clientProfile } = await supabase
+        .from('profiles')
+        .select('display_name, email')
+        .eq('id', booking.client_id)
+        .single()
+
+      const { data: freelancerProfile } = await supabase
+        .from('profiles')
+        .select('display_name, email')
+        .eq('id', booking.freelancer_id)
+        .single()
+
+      if (clientProfile && freelancerProfile) {
+        // Email to client
+        await sendBookingCompletedEmail({
+          recipientEmail: clientProfile.email,
+          recipientName: clientProfile.display_name,
+          otherPartyName: freelancerProfile.display_name,
+          reviewUrl: `${window.location.origin}/bookings/${bookingId}?review=true`
+        })
+
+        // Email to freelancer
+        await sendBookingCompletedEmail({
+          recipientEmail: freelancerProfile.email,
+          recipientName: freelancerProfile.display_name,
+          otherPartyName: clientProfile.display_name,
+          reviewUrl: `${window.location.origin}/bookings/${bookingId}?review=true`
+        })
+
+        console.log('✅ Booking completed emails sent to both parties')
+      }
+    } catch (emailError) {
+      console.error('⚠️ Failed to send booking completed emails:', emailError)
+      // Don't throw - booking is still completed
+    }
+
     console.log('⚠️ Phase 4B: Payout processing not yet implemented')
 
     return data as Booking

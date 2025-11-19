@@ -26,6 +26,11 @@ const BookNowButton = ({
     return null
   }
 
+  // Don't show button if no rates are set
+  if (!hourlyRate && !dailyRate) {
+    return null
+  }
+
   const handleClick = () => {
     setIsModalOpen(true)
   }

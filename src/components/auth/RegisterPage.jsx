@@ -145,7 +145,8 @@ const RegisterPage = () => {
         email: formData.email,
         password: formData.password,
         options: {
-          data: profileMetadata
+          data: profileMetadata,
+          emailRedirectTo: `${window.location.origin}/auth/callback`
         }
       })
 
@@ -153,16 +154,8 @@ const RegisterPage = () => {
 
       console.log('Registration response:', data)
 
-      // Profile is automatically created by database trigger
-      // If email confirmation is required, show message
-      if (data?.user?.identities?.length === 0) {
-        setError('Please check your email to confirm your account before logging in.')
-        setLoading(false)
-        return
-      }
-
-      // Success! Navigate to dashboard
-      navigate('/dashboard')
+      // Redirect to "Check Your Email" page
+      navigate(`/confirm-email?email=${encodeURIComponent(formData.email)}`)
     } catch (err) {
       setError(err.message || 'Registration failed. Please try again.')
     } finally {

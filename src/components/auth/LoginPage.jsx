@@ -46,7 +46,16 @@ const LoginPage = () => {
         password: formData.password,
       })
 
-      if (signInError) throw signInError
+      if (signInError) {
+        // Check if error is due to unconfirmed email
+        if (signInError.message.toLowerCase().includes('email') &&
+            signInError.message.toLowerCase().includes('confirm')) {
+          // Redirect to email not confirmed page
+          navigate(`/email-not-confirmed?email=${encodeURIComponent(formData.email)}`)
+          return
+        }
+        throw signInError
+      }
 
       // Check if profile exists
       const { data: profile } = await supabase

@@ -58,6 +58,7 @@ const ProfilePage = () => {
     twitter: '',
     linkedin: '',
     hourly_rate: '',
+    daily_rate: '',
     availability: 'available',
     skills: [],
     portfolio_items: [],
@@ -93,7 +94,9 @@ const ProfilePage = () => {
           last_name: nameParts.slice(1).join(' ') || '',
           bio: profile.bio || '',
           location: profile.city || '',
-          avatar_url: profile.avatar_url || ''
+          avatar_url: profile.avatar_url || '',
+          hourly_rate: profile.hourly_rate || '',
+          daily_rate: profile.daily_rate || ''
         }))
       } catch (error) {
         console.error('Failed to load profile:', error)
@@ -127,6 +130,22 @@ const ProfilePage = () => {
     setSaveSuccess(false)
 
     try {
+      // Get user's role to check if rates are required
+      const profile = await getProfile(user.id)
+      const requiresRates = profile.role === 'Artist' || profile.role === 'Crew'
+
+      // Validate rates for Artist/Crew roles
+      if (requiresRates) {
+        const hourly = parseFloat(profileData.hourly_rate) || 0
+        const daily = parseFloat(profileData.daily_rate) || 0
+
+        if (hourly === 0 && daily === 0) {
+          setSaveError('Please set at least one rate (hourly or daily) to allow bookings')
+          setIsSaving(false)
+          return
+        }
+      }
+
       let avatarUrl = profileData.avatar_url
 
       // Upload avatar if a new file was selected
@@ -142,7 +161,9 @@ const ProfilePage = () => {
         display_name,
         bio: profileData.bio,
         city: profileData.location,
-        avatar_url: avatarUrl
+        avatar_url: avatarUrl,
+        hourly_rate: parseFloat(profileData.hourly_rate) || null,
+        daily_rate: parseFloat(profileData.daily_rate) || null
       })
 
       setSaveSuccess(true)
@@ -697,15 +718,36 @@ const ProfilePage = () => {
                         />
                       </div>
                     </div>
-                    
+
                     <div>
-                      <Label htmlFor="availability">Availability</Label>
-                      <select
-                        id="availability"
-                        value={profileData.availability}
-                        onChange={(e) => setProfileData({
-                          ...profileData,
-                          availability: e.target.value
+                      <Label htmlFor="daily_rate">Daily Rate</Label>
+                      <div className="mt-1 relative">
+                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <Input
+                          id="daily_rate"
+                          type="number"
+                          value={profileData.daily_rate}
+                          onChange={(e) => setProfileData({
+                            ...profileData,
+                            daily_rate: e.target.value
+                          })}
+                          placeholder="0"
+                          className="pl-10"
+                          disabled={!isEditing}
+                        />
+                      </div>
+                      <p className="text-sm text-gray-500 mt-1">At least one rate required</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="availability">Availability</Label>
+                    <select
+                      id="availability"
+                      value={profileData.availability}
+                      onChange={(e) => setProfileData({
+                        ...profileData,
+                        availability: e.target.value
                         })}
                         className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                         disabled={!isEditing}
@@ -715,7 +757,6 @@ const ProfilePage = () => {
                         <option value="unavailable">Unavailable</option>
                       </select>
                     </div>
-                  </div>
 
                   <div className="p-4 bg-blue-50 rounded-lg">
                     <h4 className="font-medium text-blue-900 mb-2">Pricing Tips</h4>
