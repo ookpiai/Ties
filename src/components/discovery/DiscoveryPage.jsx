@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import VenueMapView from './VenueMapView'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { 
-  Search, 
-  Filter, 
-  MapPin, 
-  Star, 
-  Heart, 
-  Eye, 
+import {
+  Search,
+  Filter,
+  MapPin,
+  Star,
+  Heart,
+  Eye,
   DollarSign,
   Users,
   Briefcase,
@@ -27,10 +29,14 @@ import {
   SlidersHorizontal,
   Grid3X3,
   List,
-  X
+  Map,
+  X,
+  Loader2
 } from 'lucide-react'
+import { searchProfiles } from '../../api/profiles'
 
 const DiscoveryPage = () => {
+  const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedRole, setSelectedRole] = useState('all')
   const [selectedLocation, setSelectedLocation] = useState('')
@@ -40,120 +46,94 @@ const DiscoveryPage = () => {
   const [viewMode, setViewMode] = useState('grid')
   const [showFilters, setShowFilters] = useState(false)
   const [favorites, setFavorites] = useState([])
+  const [professionals, setProfessionals] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  // Mock data for creative professionals
-  const [professionals, setProfessionals] = useState([
-    {
-      id: 1,
-      name: 'Sarah Chen',
-      role: 'freelancer',
-      title: 'UI/UX Designer & Illustrator',
-      location: 'London, UK',
-      avatar: null,
-      rating: 4.9,
-      reviewCount: 47,
-      hourlyRate: 85,
-      skills: ['UI Design', 'Illustration', 'Figma', 'Adobe Creative Suite'],
-      bio: 'Award-winning designer with 8+ years creating beautiful digital experiences.',
-      portfolio: ['Brand identity for tech startups', 'Mobile app designs', 'Digital illustrations'],
-      availability: 'available',
-      featured: true,
-      profileViews: 234,
-      completedProjects: 89
-    },
-    {
-      id: 2,
-      name: 'Marcus Rodriguez',
-      role: 'freelancer',
-      title: 'Video Producer & Editor',
-      location: 'Manchester, UK',
-      avatar: null,
-      rating: 4.8,
-      reviewCount: 32,
-      hourlyRate: 75,
-      skills: ['Video Production', 'After Effects', 'Premiere Pro', 'Motion Graphics'],
-      bio: 'Creative video producer specializing in brand storytelling and social media content.',
-      portfolio: ['Corporate videos', 'Social media campaigns', 'Event documentation'],
-      availability: 'busy',
-      featured: false,
-      profileViews: 156,
-      completedProjects: 45
-    },
-    {
-      id: 3,
-      name: 'The Creative Collective',
-      role: 'collective',
-      title: 'Full-Service Creative Agency',
-      location: 'Birmingham, UK',
-      avatar: null,
-      rating: 4.7,
-      reviewCount: 28,
-      hourlyRate: 120,
-      skills: ['Branding', 'Web Development', 'Photography', 'Marketing'],
-      bio: 'A diverse team of creatives offering end-to-end brand and digital solutions.',
-      portfolio: ['Complete brand overhauls', 'E-commerce websites', 'Marketing campaigns'],
-      availability: 'available',
-      featured: true,
-      profileViews: 189,
-      completedProjects: 67
-    },
-    {
-      id: 4,
-      name: 'Riverside Studios',
-      role: 'venue',
-      title: 'Photography & Event Space',
-      location: 'Leeds, UK',
-      avatar: null,
-      rating: 4.6,
-      reviewCount: 15,
-      hourlyRate: 200,
-      skills: ['Photography Studio', 'Event Space', 'Equipment Rental', 'Catering'],
-      bio: 'Modern studio space perfect for photoshoots, events, and creative workshops.',
-      portfolio: ['Fashion photoshoots', 'Corporate events', 'Art exhibitions'],
-      availability: 'available',
-      featured: false,
-      profileViews: 98,
-      completedProjects: 23
-    },
-    {
-      id: 5,
-      name: 'TechSound Pro',
-      role: 'vendor',
-      title: 'Audio Equipment & Services',
-      location: 'Liverpool, UK',
-      avatar: null,
-      rating: 4.9,
-      reviewCount: 41,
-      hourlyRate: 150,
-      skills: ['Audio Equipment', 'Sound Engineering', 'Live Events', 'Recording'],
-      bio: 'Professional audio equipment rental and sound engineering services.',
-      portfolio: ['Concert sound systems', 'Corporate AV', 'Recording sessions'],
-      availability: 'available',
-      featured: false,
-      profileViews: 145,
-      completedProjects: 78
-    },
-    {
-      id: 6,
-      name: 'Emma Thompson',
-      role: 'organiser',
-      title: 'Event Producer & Coordinator',
-      location: 'Edinburgh, UK',
-      avatar: null,
-      rating: 4.8,
-      reviewCount: 36,
-      hourlyRate: 95,
-      skills: ['Event Planning', 'Project Management', 'Vendor Coordination', 'Budget Management'],
-      bio: 'Experienced event producer specializing in creative industry gatherings and launches.',
-      portfolio: ['Art gallery openings', 'Fashion shows', 'Creative conferences'],
-      availability: 'available',
-      featured: true,
-      profileViews: 167,
-      completedProjects: 52
+  // Map Supabase roles to component roles
+  const mapSupabaseRoleToComponentRole = (supabaseRole) => {
+    const roleMap = {
+      'Artist': 'freelancer',
+      'Crew': 'freelancer',
+      'Venue': 'venue',
+      'Organiser': 'organiser'
     }
-  ])
+    return roleMap[supabaseRole] || 'freelancer'
+  }
 
-  const [filteredProfessionals, setFilteredProfessionals] = useState(professionals)
+  // Map component roles to Supabase roles for filtering
+  const mapComponentRoleToSupabaseRole = (componentRole) => {
+    const roleMap = {
+      'freelancer': ['Artist', 'Crew'],
+      'venue': ['Venue'],
+      'organiser': ['Organiser'],
+      'all': null
+    }
+    return roleMap[componentRole] || null
+  }
+
+  // Load profiles from Supabase on mount and when filters change
+  useEffect(() => {
+    const loadProfiles = async () => {
+      setIsLoading(true)
+      setError('')
+
+      try {
+        // Convert component role to Supabase role for filtering
+        const supabaseRole = mapComponentRoleToSupabaseRole(selectedRole)
+
+        // For multiple roles (like freelancer), we need to fetch all and filter
+        const profiles = await searchProfiles({
+          query: searchQuery,
+          role: selectedRole === 'all' || selectedRole === 'freelancer' ? undefined : supabaseRole?.[0],
+          location: selectedLocation
+        })
+
+        // Filter for freelancer role locally (since it maps to multiple Supabase roles)
+        let filteredProfiles = profiles
+        if (selectedRole === 'freelancer') {
+          filteredProfiles = profiles.filter(p => p.role === 'Artist' || p.role === 'Crew')
+        }
+
+        // Transform Supabase profiles to match component's expected format
+        const transformedProfiles = filteredProfiles.map(profile => ({
+          id: profile.id,
+          name: profile.display_name || 'Anonymous',
+          role: mapSupabaseRoleToComponentRole(profile.role),
+          title: profile.role || 'Creative Professional',
+          location: profile.city || 'Location not specified',
+          avatar: profile.avatar_url,
+          rating: 0, // TODO: Add ratings in future phase
+          reviewCount: 0,
+          hourlyRate: 0, // TODO: Add rates in future phase
+          skills: [], // TODO: Add skills in future phase
+          bio: profile.bio || 'No bio available',
+          portfolio: [],
+          availability: 'available',
+          featured: false,
+          profileViews: 0,
+          completedProjects: 0
+        }))
+
+        setProfessionals(transformedProfiles)
+      } catch (err) {
+        console.error('Failed to load profiles:', err)
+        setError('Failed to load profiles. Please try again.')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadProfiles()
+  }, [searchQuery, selectedRole, selectedLocation])
+
+  // Sync filteredProfessionals with professionals when data loads
+  useEffect(() => {
+    setFilteredProfessionals(professionals)
+  }, [professionals])
+
+  // filteredProfessionals now uses real data from professionals state
+  const [filteredProfessionals, setFilteredProfessionals] = useState([])
 
   const roleOptions = [
     { value: 'all', label: 'All Roles', icon: Users },
@@ -178,54 +158,8 @@ const DiscoveryPage = () => {
     { value: 'recent', label: 'Recently Active' }
   ]
 
-  // Filter and search logic
-  useEffect(() => {
-    let filtered = professionals.filter(professional => {
-      // Text search
-      const matchesSearch = searchQuery === '' || 
-        professional.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        professional.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        professional.skills.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase()))
-
-      // Role filter
-      const matchesRole = selectedRole === 'all' || professional.role === selectedRole
-
-      // Location filter
-      const matchesLocation = selectedLocation === '' || 
-        professional.location.toLowerCase().includes(selectedLocation.toLowerCase())
-
-      // Skills filter
-      const matchesSkills = selectedSkills.length === 0 || 
-        selectedSkills.some(skill => professional.skills.includes(skill))
-
-      // Price range filter
-      const matchesPrice = professional.hourlyRate >= priceRange[0] && 
-        professional.hourlyRate <= priceRange[1]
-
-      return matchesSearch && matchesRole && matchesLocation && matchesSkills && matchesPrice
-    })
-
-    // Sort results
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'rating':
-          return b.rating - a.rating
-        case 'price_low':
-          return a.hourlyRate - b.hourlyRate
-        case 'price_high':
-          return b.hourlyRate - a.hourlyRate
-        case 'recent':
-          return b.profileViews - a.profileViews
-        default:
-          // Relevance: featured first, then by rating
-          if (a.featured && !b.featured) return -1
-          if (!a.featured && b.featured) return 1
-          return b.rating - a.rating
-      }
-    })
-
-    setFilteredProfessionals(filtered)
-  }, [searchQuery, selectedRole, selectedLocation, selectedSkills, priceRange, sortBy, professionals])
+  // Filtering now happens via Supabase searchProfiles() API
+  // No need for local filtering since data is pre-filtered from database
 
   const toggleFavorite = (professionalId) => {
     setFavorites(prev => 
@@ -331,6 +265,13 @@ const DiscoveryPage = () => {
                 onClick={() => setViewMode('list')}
               >
                 <List className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'map' ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode('map')}
+              >
+                <Map className="w-4 h-4" />
               </Button>
             </div>
           </div>
@@ -458,12 +399,44 @@ const DiscoveryPage = () => {
           </p>
         </div>
 
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <span className="ml-2 text-gray-600">Loading profiles...</span>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !isLoading && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+            {error}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!isLoading && !error && filteredProfessionals.length === 0 && viewMode !== 'map' && (
+          <div className="text-center py-12">
+            <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No profiles found</h3>
+            <p className="text-gray-600">Try adjusting your search filters</p>
+          </div>
+        )}
+
+        {/* Map View */}
+        {viewMode === 'map' && (
+          <div className="h-[600px] rounded-lg overflow-hidden border border-gray-200">
+            <VenueMapView />
+          </div>
+        )}
+
         {/* Professionals Grid/List */}
-        <div className={viewMode === 'grid' 
-          ? "grid md:grid-cols-2 lg:grid-cols-3 gap-6" 
-          : "space-y-4"
-        }>
-          {filteredProfessionals.map((professional) => {
+        {!isLoading && !error && filteredProfessionals.length > 0 && viewMode !== 'map' && (
+          <div className={viewMode === 'grid'
+            ? "grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+            : "space-y-4"
+          }>
+            {filteredProfessionals.map((professional) => {
             const Icon = getRoleIcon(professional.role)
             const isFavorite = favorites.includes(professional.id)
 
@@ -548,7 +521,11 @@ const DiscoveryPage = () => {
                           <span className="text-gray-500 text-sm">/hour</span>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Button size="sm" variant="outline">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => navigate(`/profile/${professional.id}`)}
+                          >
                             <Eye className="w-4 h-4 mr-1" />
                             View
                           </Button>
@@ -583,21 +560,6 @@ const DiscoveryPage = () => {
               </Card>
             )
           })}
-        </div>
-
-        {/* Empty State */}
-        {filteredProfessionals.length === 0 && (
-          <div className="text-center py-12">
-            <Search className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No results found
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Try adjusting your search criteria or filters to find what you're looking for.
-            </p>
-            <Button onClick={clearAllFilters}>
-              Clear All Filters
-            </Button>
           </div>
         )}
       </div>

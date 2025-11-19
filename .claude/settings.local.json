@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(cat:*)",
+      "WebFetch(domain:docs.stripe.com)",
+      "Bash(npm install:*)",
+      "Bash(npx supabase init)",
+      "Bash(npx supabase functions new:*)",
+      "Bash(npx supabase db execute:*)",
+      "Bash(git push:*)",
+      "Bash(supabase db reset:*)",
+      "Bash(git checkout:*)",
+      "Bash(find:*)",
+      "WebFetch(domain:supabase.com)",
+      "Bash(npx supabase db push)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

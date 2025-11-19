@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../App'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import AvailabilityCalendar from '../calendar/AvailabilityCalendar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -8,16 +9,17 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { 
-  User, 
-  Settings, 
-  Camera, 
-  MapPin, 
-  Mail, 
-  Phone, 
-  Globe, 
-  Instagram, 
-  Twitter, 
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  User,
+  Settings,
+  Camera,
+  MapPin,
+  Mail,
+  Phone,
+  Globe,
+  Instagram,
+  Twitter,
   Linkedin,
   Plus,
   Edit,
@@ -29,23 +31,34 @@ import {
   Users,
   Briefcase,
   Award,
-  Eye
+  Eye,
+  Loader2
 } from 'lucide-react'
+import { updateProfile, getProfile } from '../../api/profiles'
+import { uploadAvatar } from '../../api/storage'
 
 const ProfilePage = () => {
   const { user } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [avatarFile, setAvatarFile] = useState(null)
+  const fileInputRef = useRef(null)
+
   const [profileData, setProfileData] = useState({
     first_name: user?.first_name || '',
     last_name: user?.last_name || '',
     bio: user?.bio || '',
     location: user?.location || '',
+    avatar_url: user?.avatar_url || '',
     website: '',
     phone: '',
     instagram: '',
     twitter: '',
     linkedin: '',
     hourly_rate: '',
+    daily_rate: '',
     availability: 'available',
     skills: [],
     portfolio_items: [],
@@ -66,10 +79,105 @@ const ProfilePage = () => {
     project_url: ''
   })
 
+  // Load profile data from Supabase on mount
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!user?.id) return
+
+      try {
+        const profile = await getProfile(user.id)
+        // Parse display_name into first_name and last_name
+        const nameParts = (profile.display_name || '').split(' ')
+        setProfileData(prev => ({
+          ...prev,
+          first_name: nameParts[0] || '',
+          last_name: nameParts.slice(1).join(' ') || '',
+          bio: profile.bio || '',
+          location: profile.city || '',
+          avatar_url: profile.avatar_url || '',
+          hourly_rate: profile.hourly_rate || '',
+          daily_rate: profile.daily_rate || ''
+        }))
+      } catch (error) {
+        console.error('Failed to load profile:', error)
+      }
+    }
+
+    loadProfile()
+  }, [user?.id])
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setAvatarFile(file)
+      // Preview the image
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setProfileData(prev => ({
+          ...prev,
+          avatar_url: reader.result
+        }))
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
   const handleSave = async () => {
-    // TODO: Save to backend
-    console.log('Saving profile:', profileData)
-    setIsEditing(false)
+    if (!user?.id) return
+
+    setIsSaving(true)
+    setSaveError('')
+    setSaveSuccess(false)
+
+    try {
+      // Get user's role to check if rates are required
+      const profile = await getProfile(user.id)
+      const requiresRates = profile.role === 'Artist' || profile.role === 'Crew'
+
+      // Validate rates for Artist/Crew roles
+      if (requiresRates) {
+        const hourly = parseFloat(profileData.hourly_rate) || 0
+        const daily = parseFloat(profileData.daily_rate) || 0
+
+        if (hourly === 0 && daily === 0) {
+          setSaveError('Please set at least one rate (hourly or daily) to allow bookings')
+          setIsSaving(false)
+          return
+        }
+      }
+
+      let avatarUrl = profileData.avatar_url
+
+      // Upload avatar if a new file was selected
+      if (avatarFile) {
+        avatarUrl = await uploadAvatar(avatarFile, user.id)
+      }
+
+      // Combine first_name and last_name into display_name for the Profile type
+      const display_name = `${profileData.first_name} ${profileData.last_name}`.trim()
+
+      // Update profile with fields that exist in the Profile type
+      await updateProfile(user.id, {
+        display_name,
+        bio: profileData.bio,
+        city: profileData.location,
+        avatar_url: avatarUrl,
+        hourly_rate: parseFloat(profileData.hourly_rate) || null,
+        daily_rate: parseFloat(profileData.daily_rate) || null
+      })
+
+      setSaveSuccess(true)
+      setIsEditing(false)
+      setAvatarFile(null)
+
+      // Hide success message after 3 seconds
+      setTimeout(() => setSaveSuccess(false), 3000)
+    } catch (error) {
+      console.error('Failed to save profile:', error)
+      setSaveError(error.message || 'Failed to save profile. Please try again.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const addSkill = () => {
@@ -123,37 +231,37 @@ const ProfilePage = () => {
         return {
           title: 'Freelancer Profile',
           subtitle: 'Showcase your skills and attract clients',
-          tabs: ['overview', 'portfolio', 'skills', 'rates']
+          tabs: ['overview', 'portfolio', 'skills', 'rates', 'availability']
         }
       case 'organiser':
         return {
           title: 'Organiser Profile',
           subtitle: 'Manage your events and projects',
-          tabs: ['overview', 'projects', 'team', 'preferences']
+          tabs: ['overview', 'projects', 'team', 'preferences', 'availability']
         }
       case 'venue':
         return {
           title: 'Venue Profile',
           subtitle: 'Showcase your space and amenities',
-          tabs: ['overview', 'space', 'amenities', 'booking']
+          tabs: ['overview', 'space', 'amenities', 'booking', 'availability']
         }
       case 'vendor':
         return {
           title: 'Vendor Profile',
           subtitle: 'List your services and equipment',
-          tabs: ['overview', 'services', 'equipment', 'rates']
+          tabs: ['overview', 'services', 'equipment', 'rates', 'availability']
         }
       case 'collective':
         return {
           title: 'Collective Profile',
           subtitle: 'Represent your creative group',
-          tabs: ['overview', 'members', 'projects', 'services']
+          tabs: ['overview', 'members', 'projects', 'services', 'availability']
         }
       default:
         return {
           title: 'Profile',
           subtitle: 'Manage your account',
-          tabs: ['overview', 'settings']
+          tabs: ['overview', 'settings', 'availability']
         }
     }
   }
@@ -183,14 +291,24 @@ const ProfilePage = () => {
               )}
               {isEditing ? (
                 <div className="flex space-x-2">
-                  <Button onClick={handleSave} size="sm">
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Changes
+                  <Button onClick={handleSave} size="sm" disabled={isSaving}>
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" />
+                        Save Changes
+                      </>
+                    )}
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setIsEditing(false)} 
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsEditing(false)}
                     size="sm"
+                    disabled={isSaving}
                   >
                     <X className="w-4 h-4 mr-2" />
                     Cancel
@@ -204,10 +322,24 @@ const ProfilePage = () => {
               )}
             </div>
           </div>
+
+          {/* Success/Error Messages */}
+          {saveSuccess && (
+            <Alert className="bg-green-50 border-green-200 mt-4">
+              <AlertDescription className="text-green-800">
+                Profile updated successfully!
+              </AlertDescription>
+            </Alert>
+          )}
+          {saveError && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertDescription>{saveError}</AlertDescription>
+            </Alert>
+          )}
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             {roleContent.tabs.map((tab) => (
               <TabsTrigger key={tab} value={tab} className="capitalize">
                 {tab}
@@ -224,18 +356,28 @@ const ProfilePage = () => {
                   <div className="text-center">
                     <div className="relative inline-block">
                       <Avatar className="w-24 h-24 mx-auto">
-                        <AvatarImage src="/placeholder-avatar.jpg" />
+                        <AvatarImage src={profileData.avatar_url || "/placeholder-avatar.jpg"} />
                         <AvatarFallback className="text-lg">
                           {getInitials()}
                         </AvatarFallback>
                       </Avatar>
                       {isEditing && (
-                        <Button 
-                          size="sm" 
-                          className="absolute -bottom-2 -right-2 rounded-full w-8 h-8 p-0"
-                        >
-                          <Camera className="w-4 h-4" />
-                        </Button>
+                        <>
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleAvatarChange}
+                          />
+                          <Button
+                            size="sm"
+                            className="absolute -bottom-2 -right-2 rounded-full w-8 h-8 p-0"
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            <Camera className="w-4 h-4" />
+                          </Button>
+                        </>
                       )}
                     </div>
                     
@@ -258,22 +400,30 @@ const ProfilePage = () => {
                             })}
                             placeholder="Last Name"
                           />
+                          <Input
+                            value={profileData.location}
+                            onChange={(e) => setProfileData({
+                              ...profileData,
+                              location: e.target.value
+                            })}
+                            placeholder="Location (e.g., Sydney, Australia)"
+                          />
                         </div>
                       ) : (
-                        <h3 className="text-xl font-semibold text-slate-900 dark:text-white">
-                          {profileData.first_name} {profileData.last_name}
-                        </h3>
-                      )}
-                      
-                      <p className="text-slate-600 dark:text-white/80 capitalize">
-                        {user?.role}
-                      </p>
-                      
-                      {profileData.location && (
-                        <div className="flex items-center justify-center mt-2 text-slate-500 dark:text-white/60">
-                          <MapPin className="w-4 h-4 mr-1" />
-                          <span className="text-sm">{profileData.location}</span>
-                        </div>
+                        <>
+                          <h3 className="text-xl font-semibold text-slate-900 dark:text-white">
+                            {profileData.first_name} {profileData.last_name}
+                          </h3>
+                          <p className="text-slate-600 dark:text-white/80 capitalize mt-1">
+                            {user?.role}
+                          </p>
+                          {profileData.location && (
+                            <div className="flex items-center justify-center mt-2 text-slate-500 dark:text-white/60">
+                              <MapPin className="w-4 h-4 mr-1" />
+                              <span className="text-sm">{profileData.location}</span>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
 
@@ -568,15 +718,36 @@ const ProfilePage = () => {
                         />
                       </div>
                     </div>
-                    
+
                     <div>
-                      <Label htmlFor="availability">Availability</Label>
-                      <select
-                        id="availability"
-                        value={profileData.availability}
-                        onChange={(e) => setProfileData({
-                          ...profileData,
-                          availability: e.target.value
+                      <Label htmlFor="daily_rate">Daily Rate</Label>
+                      <div className="mt-1 relative">
+                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <Input
+                          id="daily_rate"
+                          type="number"
+                          value={profileData.daily_rate}
+                          onChange={(e) => setProfileData({
+                            ...profileData,
+                            daily_rate: e.target.value
+                          })}
+                          placeholder="0"
+                          className="pl-10"
+                          disabled={!isEditing}
+                        />
+                      </div>
+                      <p className="text-sm text-gray-500 mt-1">At least one rate required</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="availability">Availability</Label>
+                    <select
+                      id="availability"
+                      value={profileData.availability}
+                      onChange={(e) => setProfileData({
+                        ...profileData,
+                        availability: e.target.value
                         })}
                         className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                         disabled={!isEditing}
@@ -586,7 +757,6 @@ const ProfilePage = () => {
                         <option value="unavailable">Unavailable</option>
                       </select>
                     </div>
-                  </div>
 
                   <div className="p-4 bg-blue-50 rounded-lg">
                     <h4 className="font-medium text-blue-900 mb-2">Pricing Tips</h4>
@@ -601,6 +771,14 @@ const ProfilePage = () => {
               </Card>
             </TabsContent>
           )}
+
+          {/* Availability Tab */}
+          <TabsContent value="availability">
+            <AvailabilityCalendar
+              userId={user?.id}
+              isOwnProfile={true}
+            />
+          </TabsContent>
         </Tabs>
       </div>
     </div>

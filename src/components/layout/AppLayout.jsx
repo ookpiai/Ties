@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { 
-  Home, 
-  Compass, 
-  MessageSquare, 
-  Bell, 
-  PlusCircle, 
-  CalendarCheck, 
-  User, 
+import {
+  Home,
+  Compass,
+  MessageSquare,
+  Bell,
+  PlusCircle,
+  CalendarCheck,
+  User,
   Briefcase,
   Menu,
   Settings,
@@ -16,7 +16,8 @@ import {
   Bug,
   LogOut,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Layers
 } from 'lucide-react'
 import { useAuth } from '../../App'
 
@@ -59,6 +60,7 @@ const AppLayout = ({ children }) => {
   const primaryNavItems = [
     { path: '/dashboard', label: 'Home', icon: Home },
     { path: '/discover', label: 'Discover', icon: Compass },
+    { path: '/jobs', label: 'Jobs', icon: Layers },
     { path: '/messages', label: 'Messages', icon: MessageSquare },
     { path: '/notifications', label: 'Notifications', icon: Bell },
     { path: '/create', label: 'Create', icon: PlusCircle },
@@ -68,6 +70,8 @@ const AppLayout = ({ children }) => {
   ]
 
   const moreItems = [
+    { path: '/jobs/my-applications', label: 'My Applications', icon: Briefcase },
+    { path: '/jobs/my-jobs', label: 'My Job Postings', icon: Layers },
     { path: '/settings', label: 'Settings', icon: Settings },
     { path: '/report', label: 'Report Problem', icon: Bug },
   ]

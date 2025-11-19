@@ -5,6 +5,9 @@ import AppLayout from './components/layout/AppLayout'
 import LandingPage from './components/LandingPage'
 import LoginPage from './components/auth/LoginPage'
 import RegisterPage from './components/auth/RegisterPage'
+import { ConfirmEmail } from './routes/ConfirmEmail'
+import { AuthCallback } from './routes/AuthCallback'
+import { EmailNotConfirmed } from './routes/EmailNotConfirmed'
 
 // ErrorBoundary Component
 class ErrorBoundary extends Component {
@@ -50,8 +53,14 @@ import AdminDashboard from './components/admin/AdminDashboard'
 import FunctionalStudioPage from './components/studio/FunctionalStudioPage'
 import EnhancedOnboarding from './components/onboarding/EnhancedOnboarding'
 import ProfilePage from './components/profile/ProfilePage'
+import PublicProfileView from './components/profile/PublicProfileView'
 import ProjectsPage from './components/projects/ProjectsPage'
 import GuidedOnboarding from './components/onboarding/GuidedOnboarding'
+import JobFeedPage from './components/jobs/JobFeedPage'
+import CreateJobPage from './components/jobs/CreateJobPage'
+import MyApplicationsPage from './components/jobs/MyApplicationsPage'
+import JobApplicantsPage from './components/jobs/JobApplicantsPage'
+import MyJobsPage from './components/jobs/MyJobsPage'
 import { LiveRegionManager, initFocusVisible, createSkipLink } from './utils/accessibility'
 import './styles/accessibility.css'
 import './App.css'
@@ -317,6 +326,11 @@ function App() {
             </PublicRoute>
           } />
 
+          {/* Email Confirmation Routes */}
+          <Route path="/confirm-email" element={<ConfirmEmail />} />
+          <Route path="/email-not-confirmed" element={<EmailNotConfirmed />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+
           {/* Onboarding Route */}
           <Route path="/onboarding" element={<OnboardingWrapper />} />
 
@@ -362,6 +376,46 @@ function App() {
             <ProtectedRoute>
               <AppLayout>
                 <BookingsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/jobs" element={
+            <ProtectedRoute>
+              <AppLayout>
+                <JobFeedPage />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/jobs/create" element={
+            <ProtectedRoute>
+              <CreateJobPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/jobs/my-applications" element={
+            <ProtectedRoute>
+              <AppLayout>
+                <MyApplicationsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/jobs/:jobId/applicants" element={
+            <ProtectedRoute>
+              <AppLayout>
+                <JobApplicantsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/jobs/my-jobs" element={
+            <ProtectedRoute>
+              <AppLayout>
+                <MyJobsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/profile/:userId" element={
+            <ProtectedRoute>
+              <AppLayout>
+                <PublicProfileView />
               </AppLayout>
             </ProtectedRoute>
           } />
