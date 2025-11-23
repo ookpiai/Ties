@@ -528,26 +528,398 @@ CREATE TABLE venue_group_members (
 
 # PART 3: USER-REQUESTED AMENDMENTS
 
-**Source:** `documentation/ammendments.txt` (currently empty)
-
-## ADD YOUR REQUIREMENTS HERE:
-
-### Amendment 1: [Title]
-**Description:**
-[What needs to be changed or added]
-
-**Priority:** [Low / Medium / High / Critical]
-**Effort:** [Hours/Days/Weeks]
-**Business Impact:**
-[Why this matters]
-
-**Implementation Notes:**
-[Technical details]
+**Source:** `documentation/ammendments.txt`
+**Date Added:** November 24, 2025
 
 ---
 
-### Amendment 2: [Title]
-[Add more as needed]
+## AMENDMENT 1: Discovery Page - Availability Filter ⭐⭐⭐⭐
+
+**Description:**
+Add an "Availability" section under "More filters" in the Discovery Page. This will allow organisers to filter and sort available vs unavailable users.
+
+**Priority:** HIGH
+**Effort:** 2-3 days
+**Business Impact:** HIGH - Core booking functionality
+
+**Implementation Details:**
+- Add date range picker in filters panel
+- Query profiles with availability data
+- Show "Available" badge on profile cards
+- Sort by availability (available first)
+- Filter: Available now, Available on specific dates, Unavailable
+
+**Files to Modify:**
+- `src/components/discovery/DiscoveryPage.jsx` - Add availability filter UI
+- `src/api/profiles.ts` - Update search to include availability
+- `src/api/availability.ts` - Query calendar blocks
+
+**Database:**
+- Use existing `calendar_blocks` table
+- Add availability calculation logic
+
+---
+
+## AMENDMENT 2: Discovery Page - Remove Filters ⭐⭐⭐
+
+**Description:**
+Remove "Collectives" and "Organisers" from the main role filter buttons at the top of the Discovery Page. Only show: All, Freelancers, Vendors, Venues.
+
+**Priority:** HIGH
+**Effort:** 30 minutes
+**Business Impact:** MEDIUM - Simplifies UI
+
+**Implementation:**
+- Already completed! ✅
+- We updated this when we simplified roles to Freelancer/Vendor/Venue/Organiser
+- Discovery page now only shows hire-able roles
+
+**Status:** ✅ COMPLETE
+
+---
+
+## AMENDMENT 3: Subscription - Compare Editions Visual ⭐⭐⭐⭐
+
+**Description:**
+Add a "Compare Editions" visual table in the Settings → Billing and Subscription section. This table will highlight the differences between each subscription tier with checkmarks and crosses showing which features are included.
+
+**Priority:** HIGH
+**Effort:** 1-2 days
+**Business Impact:** HIGH - Conversion optimization
+
+**Implementation Details:**
+Create comparison table with:
+- Free tier features
+- Pro tier features
+- Enterprise tier features
+- Visual indicators (✓ / ✗)
+- Highlight differences
+- Call-to-action buttons
+
+**Features to Compare:**
+```
+| Feature                  | Free | Pro | Enterprise |
+|--------------------------|------|-----|------------|
+| Basic bookings           |  ✓   |  ✓  |     ✓      |
+| Job postings             |  ✗   |  ✓  |     ✓      |
+| Unlimited bookings       |  ✗   |  ✓  |     ✓      |
+| Workspace features       |  ✗   |  ✓  |     ✓      |
+| Priority support         |  ✗   |  ✗  |     ✓      |
+| Multi-venue management   |  ✗   |  ✗  |     ✓      |
+| API access               |  ✗   |  ✗  |     ✓      |
+| Custom branding          |  ✗   |  ✗  |     ✓      |
+```
+
+**Files to Create:**
+- `src/components/settings/CompareEditions.jsx` - Comparison table component
+- `src/components/settings/SubscriptionTiers.jsx` - Tier cards
+
+**Location:** Settings Page → Billing and Subscription
+
+---
+
+## AMENDMENT 4: Remove Studio Pro Subscription ⭐⭐⭐
+
+**Description:**
+Delete the "Studio Pro" subscription tier. Simplify to: Free, Pro, Enterprise.
+
+**Priority:** MEDIUM
+**Effort:** 1 hour
+**Business Impact:** MEDIUM - Simplifies pricing
+
+**Implementation:**
+- Remove Studio Pro references from UI
+- Update pricing documentation
+- Update subscription comparison table
+- Migrate existing Studio Pro users to Pro tier
+
+**Files to Modify:**
+- `src/components/settings/SettingsPage.jsx`
+- Any subscription tier references
+
+---
+
+## AMENDMENT 5: Remove Jobs Listing from Studio ⭐⭐⭐
+
+**Description:**
+Remove the "Jobs Listing" section from the Studio/Workspace. Users should only access workspaces for jobs they're actively working on (after selection). For browsing/applying, they use the Jobs Board + Messages.
+
+**Priority:** MEDIUM
+**Effort:** 1-2 hours
+**Business Impact:** MEDIUM - Clarifies workspace purpose
+
+**Implementation:**
+- Workspace is only for accepted/selected jobs
+- Remove job browsing from workspace
+- Users browse jobs in Jobs Page
+- Workspace access requires TIES Pro subscription
+
+**Files to Modify:**
+- Remove job listing components from workspace
+- Update navigation
+
+---
+
+## AMENDMENT 6: Jobs Page Reorganization ⭐⭐⭐⭐
+
+**Description:**
+Restructure the Jobs Page to have three tabs:
+1. **Jobs Board** (current job feed - browse available jobs)
+2. **My Applications** (jobs I've applied to - renamed from "My Job Applications")
+3. **My Listings** (jobs I've posted - renamed from "My Job Postings")
+
+Move "My Job Applications" and "My Job Postings" from the "More" menu into the Jobs Page.
+
+**Priority:** HIGH
+**Effort:** 1 day
+**Business Impact:** HIGH - Better UX and navigation
+
+**Implementation Details:**
+Create tabbed interface in Jobs Page:
+
+```jsx
+<Tabs>
+  <Tab label="Jobs Board">
+    {/* Existing JobFeedPage content */}
+  </Tab>
+
+  <Tab label="My Applications" visibleFor="Freelancer, Vendor, Venue">
+    {/* MyApplicationsPage content */}
+  </Tab>
+
+  <Tab label="My Listings" visibleFor="Organiser">
+    {/* MyJobsPage content */}
+  </Tab>
+</Tabs>
+```
+
+**Files to Modify:**
+- `src/components/jobs/JobsPage.jsx` - Create new tabbed layout
+- Move `MyApplicationsPage.jsx` and `MyJobsPage.jsx` as tab content
+- Update navigation to remove from "More" menu
+- Role-based tab visibility (show "My Applications" for service providers, "My Listings" for organisers)
+
+---
+
+## AMENDMENT 7: Universal Profile Page Redesign ⭐⭐⭐⭐⭐
+
+**Description:**
+Redesign the profile page to be universal across all VFV (Venue, Freelancer, Vendor) users.
+
+**Current layout:** Overview, Settings, Availability
+**New layout:** Overview, Portfolio, Services, Availability
+
+Change the top navigation from "Overview, Settings, Availability" to "Overview, Portfolio, Services, Availability".
+
+**Priority:** CRITICAL
+**Effort:** 1 week
+**Business Impact:** CRITICAL - Core user experience
+
+**Implementation Details:**
+
+### New Profile Structure:
+
+**Tab 1: Overview** (Universal - Same for all)
+- Display name, bio, profile photo
+- Location, contact info
+- Rating and reviews
+- Stats (bookings completed, response time)
+- Social links
+
+**Tab 2: Portfolio** (Universal - Same for all)
+- Photo/video gallery
+- Past work examples
+- Case studies
+- Testimonials
+- Awards/certifications
+
+**Tab 3: Services** (Dynamic - Changes by user type)
+See Amendment 8 for full Services page breakdown
+
+**Tab 4: Availability** (Universal - Same for all)
+- Calendar view
+- Available dates
+- Booking schedule
+- Block dates
+
+**Files to Create/Modify:**
+- `src/components/profile/ProfileTabs.jsx` - New tabbed layout
+- `src/components/profile/OverviewTab.jsx`
+- `src/components/profile/PortfolioTab.jsx`
+- `src/components/profile/ServicesTab.jsx` (new - see Amendment 8)
+- `src/components/profile/AvailabilityTab.jsx`
+- Move Settings to separate Settings Page (already exists)
+
+---
+
+## AMENDMENT 8: Universal Services Page ⭐⭐⭐⭐⭐
+
+**Description:**
+Create a universal "Services" tab in the profile page that dynamically shows different fields based on user type (Freelancer, Venue, Vendor). All users see the same 3 section headers, but fields change.
+
+**Priority:** CRITICAL
+**Effort:** 1 week
+**Business Impact:** CRITICAL - Defines service offerings
+
+### UNIVERSAL STRUCTURE:
+
+All users see these 3 sections:
+1. **What I Offer**
+2. **Pricing & Packages**
+3. **Logistics & Requirements**
+
+Fields inside each section change dynamically based on user type.
+
+---
+
+### FREELANCERS - Services Page Fields
+
+**Section 1: What I Offer**
+- Role / Skill Areas (Required) - DJ, Photographer, Performer, etc.
+- Skills (Required) - Multi-select chips
+- Industries / Genres (Required) - Weddings, Corporate, Festivals, etc.
+- Service Description (Optional) - Text area
+
+**Section 2: Pricing & Packages**
+- Rate Type (Required) - Dropdown: hourly / per day / per project / per set
+- Base Rate (Required) - Number input with currency
+- Package Options (Optional) - Create custom packages
+- Add-ons (Optional) - Editing, travel, equipment hire (checkbox list with prices)
+
+**Section 3: Logistics & Requirements**
+- Travel Availability (Required) - Toggle Yes/No + max distance slider
+- Equipment Provided (Required) - Toggle Yes/No + equipment list
+- Online / Remote Work (Optional) - Toggle
+- Response Time Expectation (Optional) - Dropdown: Immediate, 24h, 48h, 1 week
+
+---
+
+### VENUES - Services Page Fields
+
+**Section 1: What I Offer**
+- Venue Type (Required) - Dropdown: Studio, Gallery, Theater, Outdoor, etc.
+- Suitability Tags (Required) - Multi-select: photoshoots, events, workshops, rehearsals, etc.
+- Service Description (Optional) - Text area
+
+**Section 2: Pricing & Packages**
+- Hourly Rate (Required) - Number input
+- Half-Day Rate (Optional) - Number input
+- Full-Day Rate (Optional) - Number input
+- Packages (Optional) - Weekend packages, recurring hire discounts
+
+**Section 3: Logistics & Requirements**
+- Capacity (Required) - Number: max people
+- Features / Amenities (Required) - Multi-select: lighting, sound, AC, mirrors, kitchen, bathroom, WiFi, etc.
+- Venue Rules (Required) - Text area: noise restrictions, operating hours, bond required, alcohol rules
+- Accessibility (Required) - Multi-select: wheelchair access, parking, lift, ground floor, etc.
+- Floor Plan Upload (Optional) - File upload
+
+---
+
+### VENDORS - Services Page Fields
+
+**Section 1: What I Offer**
+- Service Category (Required) - Dropdown: AV hire, catering, décor, staging, lighting, transport, etc.
+- Product Types (Required) - Multi-select tags: specific equipment/products
+- Service Description (Optional) - Text area
+
+**Section 2: Pricing & Packages**
+- Hire Fees (Required) - Per item or per package pricing
+- Day / Project Rate (Optional) - Flat rate options
+- Bundle Deals (Optional) - Package pricing
+- Deposit Required? (Required) - Toggle + percentage/amount
+
+**Section 3: Logistics & Requirements**
+- Delivery Available? (Required) - Toggle Yes/No + delivery cost
+- Set-Up Available? (Required) - Toggle Yes/No + setup cost
+- Pickup Options (Required) - Customer pickup, vendor pickup, flexible
+- Travel Radius (Required) - Distance slider or postcode coverage
+- Equipment Specs (Optional) - Technical specifications document/link
+- Minimum Hire Value (Required) - Number: minimum order value
+- Insurance Coverage (Required) - Toggle Yes/No + details
+
+---
+
+### Implementation Plan for Services Page:
+
+**Database Schema:**
+```sql
+-- Add to profiles table
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS services_data JSONB;
+
+-- Store dynamic fields as JSON based on user type
+-- Example structure:
+{
+  "role_type": "Freelancer",
+  "what_i_offer": {
+    "role_areas": ["DJ", "MC"],
+    "skills": ["Mixing", "Crowd Reading", "Equipment Setup"],
+    "industries": ["Weddings", "Corporate", "Clubs"],
+    "description": "Professional DJ with 10+ years experience..."
+  },
+  "pricing": {
+    "rate_type": "per_set",
+    "base_rate": 500,
+    "packages": [...],
+    "add_ons": [...]
+  },
+  "logistics": {
+    "travel_available": true,
+    "max_distance": 50,
+    "equipment_provided": true,
+    "equipment_list": ["PA System", "Lights", "Mixer"],
+    "remote_work": false,
+    "response_time": "24h"
+  }
+}
+```
+
+**Files to Create:**
+- `src/components/profile/ServicesTab.jsx` - Main services container
+- `src/components/profile/services/WhatIOffer.jsx` - Section 1
+- `src/components/profile/services/PricingPackages.jsx` - Section 2
+- `src/components/profile/services/Logistics.jsx` - Section 3
+- `src/components/profile/services/FreelancerServices.jsx` - Freelancer fields
+- `src/components/profile/services/VenueServices.jsx` - Venue fields
+- `src/components/profile/services/VendorServices.jsx` - Vendor fields
+- `src/api/services.ts` - API functions for services CRUD
+
+**UI Component Structure:**
+```jsx
+<ServicesTab userRole={user.role}>
+  <Section1_WhatIOffer>
+    {userRole === 'Freelancer' && <FreelancerFields />}
+    {userRole === 'Venue' && <VenueFields />}
+    {userRole === 'Vendor' && <VendorFields />}
+  </Section1_WhatIOffer>
+
+  <Section2_PricingPackages>
+    {/* Dynamic based on user role */}
+  </Section2_PricingPackages>
+
+  <Section3_Logistics>
+    {/* Dynamic based on user role */}
+  </Section3_Logistics>
+</ServicesTab>
+```
+
+---
+
+## SUMMARY OF AMENDMENTS
+
+**Total Amendments:** 8
+**Critical Priority:** 3 (Amendments 7, 8, and profile redesign)
+**High Priority:** 4 (Amendments 1, 3, 6)
+**Medium Priority:** 2 (Amendments 4, 5)
+**Low Priority:** 0
+
+**Estimated Total Effort:** 2-3 weeks for all amendments
+
+**Dependencies:**
+- Amendment 7 (Profile redesign) must be done before Amendment 8 (Services page)
+- Amendment 6 (Jobs page reorg) is independent
+- Amendment 1 (Availability filter) requires existing calendar system
+- Amendment 3 (Subscription comparison) requires pricing tiers defined
 
 ---
 
@@ -662,27 +1034,81 @@ CREATE TABLE venue_group_members (
 
 ---
 
-# PART 5: PRIORITIZATION MATRIX
+# PART 5: PRIORITIZATION MATRIX (UPDATED WITH AMENDMENTS)
 
-## MUST HAVE (v1.1 Launch Blockers)
-1. **Payment System** - Without this, no revenue
-2. **Favorites** - Core UX improvement
-3. **Booking Modifications** - Real-world necessity
+## TIER 1: CRITICAL - MUST DO FIRST (v1.1)
+1. **Amendment 7: Universal Profile Redesign** ⭐⭐⭐⭐⭐ (1 week)
+   - Foundation for all other profile features
+   - New tab structure: Overview, Portfolio, Services, Availability
 
-## SHOULD HAVE (v1.2 Quick Wins)
-1. **Automated Reminders** - Reduces no-shows
-2. **Enhanced Search** - Better discovery
-3. **CRM Features** - Power user tools
+2. **Amendment 8: Universal Services Page** ⭐⭐⭐⭐⭐ (1 week)
+   - Depends on Amendment 7
+   - Dynamic fields per user type (Freelancer/Venue/Vendor)
+   - Core value proposition
 
-## NICE TO HAVE (v1.3+ Growth)
-1. **Public Calendar** - Marketing tool
-2. **Widgets** - Venue integration
-3. **Multi-Venue** - Enterprise feature
+3. **Amendment 6: Jobs Page Reorganization** ⭐⭐⭐⭐ (1 day)
+   - Three tabs: Jobs Board, My Applications, My Listings
+   - Better navigation and UX
 
-## FUTURE (v2.0+ Long-term)
-1. **Mobile App** - Native iOS/Android
-2. **Advanced Analytics** - Business intelligence
-3. **API Platform** - Third-party integrations
+## TIER 2: HIGH VALUE - DO NEXT (v1.2)
+1. **Payment System** ⭐⭐⭐⭐⭐ (3-4 weeks)
+   - Without this, no revenue
+   - Can run in parallel with other work
+
+2. **Amendment 1: Availability Filter** ⭐⭐⭐⭐ (2-3 days)
+   - Core booking functionality
+   - Filter discovery by availability
+
+3. **Amendment 3: Subscription Compare Editions** ⭐⭐⭐⭐ (1-2 days)
+   - Conversion optimization
+   - Must define pricing tiers first
+
+4. **Favorites/Save System** ⭐⭐⭐⭐ (2-3 days)
+   - Core UX improvement
+   - Users love this feature
+
+5. **Booking Modifications** ⭐⭐⭐⭐ (3-4 days)
+   - Real-world necessity
+   - Edit bookings after acceptance
+
+## TIER 3: QUICK WINS - EASY IMPROVEMENTS (v1.3)
+1. **Amendment 2: Remove Discovery Filters** ⭐⭐⭐ (✅ DONE)
+   - Already completed!
+
+2. **Amendment 4: Remove Studio Pro** ⭐⭐⭐ (1 hour)
+   - Simple cleanup
+
+3. **Amendment 5: Remove Jobs from Studio** ⭐⭐⭐ (1-2 hours)
+   - Clarifies workspace purpose
+
+4. **Automated Reminders** ⭐⭐⭐ (1-2 days)
+   - Reduces no-shows
+
+5. **Enhanced Search & Filtering** ⭐⭐⭐ (2-3 days)
+   - Better discovery
+
+6. **CRM Enhancements** ⭐⭐⭐ (2-3 days)
+   - Private notes, tags, activity logs
+
+## TIER 4: GROWTH FEATURES (v1.4)
+1. **Public Calendar/Gig Guide** ⭐⭐⭐ (1 week)
+   - Marketing tool
+
+2. **Website Widgets** ⭐⭐ (3-5 days)
+   - Venue integration
+
+3. **Review System Improvements** ⭐⭐ (2-3 days)
+   - Trust & credibility
+
+## TIER 5: ENTERPRISE & POLISH (v2.0+)
+1. **Multi-Venue Management** ⭐⭐ (2 weeks)
+   - Enterprise feature
+
+2. **Advanced Analytics** ⭐⭐ (1 week)
+   - Business intelligence
+
+3. **API Platform** ⭐ (4-6 weeks)
+   - Third-party integrations
 
 ---
 
