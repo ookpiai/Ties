@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useToast } from '../components/Toaster'
 import { TitoLoader, useLoader } from '../components/TitoLoader'
+import { SPECIALTY_OPTIONS, getSpecialtiesByCategory, hasSpecialtyOptions } from '../constants/specialties'
 
 export function ProfileSetup() {
   const { user } = useUser()
@@ -20,7 +21,9 @@ export function ProfileSetup() {
 
   const [formData, setFormData] = useState({
     display_name: '',
-    role: '' as 'Artist' | 'Crew' | 'Venue' | 'Organiser' | '',
+    role: '' as 'Freelancer' | 'Vendor' | 'Venue' | 'Organiser' | '',
+    specialty: '',
+    specialty_display_name: '',
     city: '',
     bio: ''
   })
@@ -41,6 +44,17 @@ export function ProfileSetup() {
     }
   }
 
+  const handleSpecialtyChange = (value: string) => {
+    // Find the specialty option to get its label
+    const specialtyOption = SPECIALTY_OPTIONS[formData.role]?.find(opt => opt.value === value)
+    setFormData({
+      ...formData,
+      specialty: value,
+      specialty_display_name: specialtyOption?.label || value
+    })
+    if (error) setError('')
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -52,6 +66,12 @@ export function ProfileSetup() {
 
     if (!formData.display_name || !formData.role) {
       setError('Please fill in all required fields')
+      return
+    }
+
+    // Validate specialty for roles that require it
+    if (hasSpecialtyOptions(formData.role) && !formData.specialty) {
+      setError('Please select your specialty')
       return
     }
 
@@ -68,7 +88,9 @@ export function ProfileSetup() {
         await createProfile({
           id: user.id,
           display_name: formData.display_name,
-          role: formData.role as 'Artist' | 'Crew' | 'Venue' | 'Organiser',
+          role: formData.role as 'Freelancer' | 'Vendor' | 'Venue' | 'Organiser',
+          specialty: formData.specialty || null,
+          specialty_display_name: formData.specialty_display_name || null,
           city: formData.city || null,
           bio: formData.bio || null,
           avatar_url
@@ -116,7 +138,9 @@ export function ProfileSetup() {
                 <Label htmlFor="role" className="text-black">I am a... *</Label>
                 <Select
                   value={formData.role}
-                  onValueChange={(value) => setFormData({ ...formData, role: value as any })}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, role: value as any, specialty: '', specialty_display_name: '' })
+                  }}
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select your role" />
@@ -129,6 +153,32 @@ export function ProfileSetup() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Specialty Selection - Only show for roles with specialties */}
+              {formData.role && hasSpecialtyOptions(formData.role) && (
+                <div>
+                  <Label htmlFor="specialty" className="text-black">What type of {formData.role.toLowerCase()}? *</Label>
+                  <Select
+                    value={formData.specialty}
+                    onValueChange={handleSpecialtyChange}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder={`Select your specialty`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(getSpecialtiesByCategory(formData.role)).map(([category, options]) => (
+                        <optgroup key={category} label={category}>
+                          {options.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div>
                 <Label htmlFor="city" className="text-black">City</Label>

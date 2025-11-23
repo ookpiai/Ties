@@ -34,6 +34,7 @@ import {
   Loader2
 } from 'lucide-react'
 import { searchProfiles } from '../../api/profiles'
+import { getSpecialtyLabel } from '../../constants/specialties'
 
 const DiscoveryPage = () => {
   const navigate = useNavigate()
@@ -109,6 +110,9 @@ const DiscoveryPage = () => {
           id: profile.id,
           name: profile.display_name || 'Anonymous',
           role: mapSupabaseRoleToComponentRole(profile.role),
+          originalRole: profile.role, // Keep original role for specialty label lookup
+          specialty: profile.specialty,
+          specialty_display_name: profile.specialty_display_name || getSpecialtyLabel(profile.role, profile.specialty),
           title: profile.role || 'Creative Professional',
           location: profile.city || 'Location not specified',
           avatar: profile.avatar_url,
@@ -484,6 +488,15 @@ const DiscoveryPage = () => {
                           <Heart className={`w-5 h-5 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
                         </button>
                       </div>
+
+                      {/* Specialty Badge - Prominent display */}
+                      {professional.specialty_display_name && (
+                        <div className="mb-2">
+                          <Badge variant="default" className="bg-primary text-white font-semibold">
+                            {professional.specialty_display_name}
+                          </Badge>
+                        </div>
+                      )}
 
                       <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">
                         {professional.name}
