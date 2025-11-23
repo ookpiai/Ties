@@ -53,10 +53,13 @@ const DiscoveryPage = () => {
   // Map Supabase roles to component roles
   const mapSupabaseRoleToComponentRole = (supabaseRole) => {
     const roleMap = {
-      'Artist': 'freelancer',
-      'Crew': 'freelancer',
+      'Freelancer': 'freelancer',
+      'Vendor': 'vendor',
       'Venue': 'venue',
-      'Organiser': 'organiser'
+      'Organiser': 'organiser',
+      // Legacy mappings for existing users
+      'Artist': 'freelancer',
+      'Crew': 'freelancer'
     }
     return roleMap[supabaseRole] || 'freelancer'
   }
@@ -64,9 +67,9 @@ const DiscoveryPage = () => {
   // Map component roles to Supabase roles for filtering
   const mapComponentRoleToSupabaseRole = (componentRole) => {
     const roleMap = {
-      'freelancer': ['Artist', 'Crew'],
+      'freelancer': ['Freelancer', 'Artist', 'Crew'], // Include legacy roles
+      'vendor': ['Vendor'],
       'venue': ['Venue'],
-      'organiser': ['Organiser'],
       'all': null
     }
     return roleMap[componentRole] || null
@@ -89,10 +92,16 @@ const DiscoveryPage = () => {
           location: selectedLocation
         })
 
-        // Filter for freelancer role locally (since it maps to multiple Supabase roles)
+        // Filter for specific roles locally (since some map to multiple Supabase roles)
         let filteredProfiles = profiles
         if (selectedRole === 'freelancer') {
-          filteredProfiles = profiles.filter(p => p.role === 'Artist' || p.role === 'Crew')
+          filteredProfiles = profiles.filter(p =>
+            p.role === 'Freelancer' || p.role === 'Artist' || p.role === 'Crew'
+          )
+        } else if (selectedRole === 'vendor') {
+          filteredProfiles = profiles.filter(p => p.role === 'Vendor')
+        } else if (selectedRole === 'venue') {
+          filteredProfiles = profiles.filter(p => p.role === 'Venue')
         }
 
         // Transform Supabase profiles to match component's expected format
@@ -136,12 +145,10 @@ const DiscoveryPage = () => {
   const [filteredProfessionals, setFilteredProfessionals] = useState([])
 
   const roleOptions = [
-    { value: 'all', label: 'All Roles', icon: Users },
+    { value: 'all', label: 'All', icon: Users },
     { value: 'freelancer', label: 'Freelancers', icon: Briefcase },
-    { value: 'collective', label: 'Collectives', icon: Users },
-    { value: 'venue', label: 'Venues', icon: Building },
     { value: 'vendor', label: 'Vendors', icon: Package },
-    { value: 'organiser', label: 'Organisers', icon: Calendar }
+    { value: 'venue', label: 'Venues', icon: Building }
   ]
 
   const skillOptions = [

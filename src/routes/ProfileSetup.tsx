@@ -122,10 +122,10 @@ export function ProfileSetup() {
                     <SelectValue placeholder="Select your role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Artist">Artist</SelectItem>
-                    <SelectItem value="Crew">Crew</SelectItem>
-                    <SelectItem value="Venue">Venue</SelectItem>
-                    <SelectItem value="Organiser">Organiser</SelectItem>
+                    <SelectItem value="Freelancer">Freelancer (DJ, Photographer, Performer, etc.)</SelectItem>
+                    <SelectItem value="Vendor">Vendor (Catering, Equipment, Services)</SelectItem>
+                    <SelectItem value="Venue">Venue (Event Space, Location)</SelectItem>
+                    <SelectItem value="Organiser">Organiser (Event Planner)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

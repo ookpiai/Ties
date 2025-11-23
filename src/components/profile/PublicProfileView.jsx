@@ -73,10 +73,13 @@ const PublicProfileView = () => {
 
   const getRoleIcon = (role) => {
     const roleMap = {
-      'Artist': Briefcase,
-      'Crew': Users,
+      'Freelancer': Briefcase,
+      'Vendor': Package,
       'Venue': MapPin,
-      'Organiser': Calendar
+      'Organiser': Calendar,
+      // Legacy role support
+      'Artist': Briefcase,
+      'Crew': Users
     }
     return roleMap[role] || User
   }

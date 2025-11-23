@@ -82,18 +82,18 @@ const JobDetailsModal = ({ jobId, isOpen, onClose }) => {
     // Prevent organiser from applying to their own job
     if (job?.organiser_id === user.id) return false
 
-    // Freelancers can apply to freelancer roles
-    if (role.role_type === 'freelancer' && (user.role === 'freelancer' || user.role === 'Artist')) {
+    // Freelancers can apply to freelancer roles (includes legacy Artist/Crew roles)
+    if (role.role_type === 'freelancer' && (user.role === 'Freelancer' || user.role === 'Artist' || user.role === 'Crew')) {
       return true
     }
 
     // Venues can apply to venue roles
-    if (role.role_type === 'venue' && user.role === 'venue') {
+    if (role.role_type === 'venue' && user.role === 'Venue') {
       return true
     }
 
     // Vendors can apply to vendor roles
-    if (role.role_type === 'vendor' && user.role === 'vendor') {
+    if (role.role_type === 'vendor' && user.role === 'Vendor') {
       return true
     }
 

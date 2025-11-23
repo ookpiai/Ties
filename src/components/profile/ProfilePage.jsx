@@ -132,9 +132,9 @@ const ProfilePage = () => {
     try {
       // Get user's role to check if rates are required
       const profile = await getProfile(user.id)
-      const requiresRates = profile.role === 'Artist' || profile.role === 'Crew'
+      const requiresRates = profile.role === 'Freelancer' || profile.role === 'Artist' || profile.role === 'Crew'
 
-      // Validate rates for Artist/Crew roles
+      // Validate rates for Freelancer roles
       if (requiresRates) {
         const hourly = parseFloat(profileData.hourly_rate) || 0
         const daily = parseFloat(profileData.daily_rate) || 0
