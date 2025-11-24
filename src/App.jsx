@@ -277,10 +277,11 @@ const PublicRoute = ({ children }) => {
   return user ? <Navigate to="/dashboard" /> : children
 }
 
-function App() {
+// Inner app component that uses router hooks
+function AppRoutes() {
   const [showShortcutsModal, setShowShortcutsModal] = useState(false)
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts - now inside Router context
   useKeyboardShortcuts({
     onShowHelp: () => setShowShortcutsModal(true),
     onFocusSearch: () => {
@@ -292,40 +293,10 @@ function App() {
     }
   })
 
-  // Initialize accessibility features
-  useEffect(() => {
-    // Initialize focus-visible polyfill
-    initFocusVisible()
-
-    // Create and add skip link
-    const skipLink = createSkipLink()
-    document.body.insertBefore(skipLink, document.body.firstChild)
-
-    // Initialize live region manager
-    const liveRegionManager = new LiveRegionManager()
-    window.liveRegionManager = liveRegionManager
-
-    // Set page language
-    document.documentElement.lang = 'en'
-
-    // Add main content landmark
-    const mainContent = document.createElement('main')
-    mainContent.id = 'main-content'
-    mainContent.setAttribute('role', 'main')
-
-    return () => {
-      // Cleanup
-      if (window.liveRegionManager) {
-        delete window.liveRegionManager
-      }
-    }
-  }, [])
-
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          {/* Public Routes - No Layout */}
+    <>
+      <Routes>
+        {/* Public Routes - No Layout */}
           <Route path="/" element={
             <PublicRoute>
               <LandingPage />
@@ -481,13 +452,51 @@ function App() {
           {/* Catch all route */}
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
-      </Router>
 
       {/* Global Keyboard Shortcuts Modal */}
       <KeyboardShortcutsModal
         isOpen={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
       />
+    </>
+  )
+}
+
+function App() {
+  // Initialize accessibility features
+  useEffect(() => {
+    // Initialize focus-visible polyfill
+    initFocusVisible()
+
+    // Create and add skip link
+    const skipLink = createSkipLink()
+    document.body.insertBefore(skipLink, document.body.firstChild)
+
+    // Initialize live region manager
+    const liveRegionManager = new LiveRegionManager()
+    window.liveRegionManager = liveRegionManager
+
+    // Set page language
+    document.documentElement.lang = 'en'
+
+    // Add main content landmark
+    const mainContent = document.createElement('main')
+    mainContent.id = 'main-content'
+    mainContent.setAttribute('role', 'main')
+
+    return () => {
+      // Cleanup
+      if (window.liveRegionManager) {
+        delete window.liveRegionManager
+      }
+    }
+  }, [])
+
+  return (
+    <AuthProvider>
+      <Router>
+        <AppRoutes />
+      </Router>
     </AuthProvider>
   )
 }

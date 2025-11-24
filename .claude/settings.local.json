@@ -21,7 +21,8 @@
       "Bash(npx supabase:*)",
       "Bash(npm run dev:*)",
       "Bash(npx eslint:*)",
-      "Bash(timeout 10 npm run dev:*)"
+      "Bash(timeout 10 npm run dev:*)",
+      "Bash(node -e:*)"
     ],
     "deny": [],
     "ask": []
