@@ -11,9 +11,9 @@
     --border: #E5E7EB;
     --text: #0F172A;
     --text-muted: #6B7280;
-    --accent: #E03131;       /* brand red */
-    --accent-hover: #F03E3E; /* red hover */
-    --focus: #F03E3E;
+    --accent: #dc2626;       /* brand red - Tailwind red-600 */
+    --accent-hover: #b91c1c; /* red hover - Tailwind red-700 */
+    --focus: #dc2626;
   }
 
   html.dark {
@@ -29,9 +29,9 @@
     --text-primary: #FFFFFF; /* white primary text */
     --text-muted: #B3B3B3;   /* grey secondary text */
     --text-secondary: #B3B3B3; /* grey secondary text */
-    --accent: #E03131;
-    --accent-hover: #F03E3E;
-    --focus: #F03E3E;
+    --accent: #dc2626;       /* brand red - Tailwind red-600 */
+    --accent-hover: #b91c1c; /* red hover - Tailwind red-700 */
+    --focus: #dc2626;
   }
 
   * {
