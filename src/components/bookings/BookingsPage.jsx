@@ -12,7 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import StatusBadge from '@/components/ui/StatusBadge'
 import { Button } from '@/components/ui/button'
-import { Loader2, Calendar, Inbox, TrendingUp, DollarSign, Clock, CheckCircle } from 'lucide-react'
+import EmptyState from '@/components/ui/EmptyState'
+import { Loader2, Calendar, Inbox, TrendingUp, DollarSign, Clock, CheckCircle, Search } from 'lucide-react'
 import { useAuth } from '../../App'
 import { getBookings, getBookingStats } from '../../api/bookings'
 import BookingCard from './BookingCard'
@@ -289,15 +290,21 @@ const BookingsPage = () => {
 const BookingsList = ({ bookings, currentUserId, onUpdate }) => {
   if (bookings.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <div className="h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-          <Inbox className="h-8 w-8 text-gray-400" />
-        </div>
-        <h3 className="text-lg font-semibold mb-2">No bookings found</h3>
-        <p className="text-sm text-muted-foreground text-center max-w-sm">
-          When you book someone or receive a booking request, it will appear here.
-        </p>
-      </div>
+      <EmptyState
+        icon={Inbox}
+        title="No bookings found"
+        description="When you book someone or receive a booking request, it will appear here. Start by discovering creative professionals."
+        action={{
+          label: "Discover Talent",
+          href: "/discover",
+          icon: Search
+        }}
+        secondaryAction={{
+          label: "View Calendar",
+          href: "/calendar",
+          icon: Calendar
+        }}
+      />
     )
   }
 

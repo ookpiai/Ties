@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import StatusBadge from '@/components/ui/StatusBadge'
+import EmptyState from '@/components/ui/EmptyState'
 import {
   Users,
   Calendar,
@@ -502,15 +503,18 @@ const Dashboard = () => {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                   </div>
                 ) : weekSchedule.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Calendar className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-                    <p className="text-sm text-slate-600 dark:text-slate-400 font-medium mb-1">
-                      No bookings this week
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-500">
-                      Check the discovery page to find new opportunities
-                    </p>
-                  </div>
+                  <EmptyState
+                    icon={Calendar}
+                    title="No bookings this week"
+                    description="Check the discovery page to find new opportunities and grow your network."
+                    action={{
+                      label: "Discover Talent",
+                      href: "/discover",
+                      icon: Search
+                    }}
+                    variant="compact"
+                    size="sm"
+                  />
                 ) : (
                   <div className="space-y-3">
                     {weekSchedule.map((booking) => {
@@ -605,12 +609,13 @@ const Dashboard = () => {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                   </div>
                 ) : recentActivity.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Clock className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
-                    <p className="text-xs text-slate-500 dark:text-slate-500">
-                      No recent activity
-                    </p>
-                  </div>
+                  <EmptyState
+                    icon={Clock}
+                    title="No recent activity"
+                    description="Your activity feed will show updates here."
+                    variant="compact"
+                    size="sm"
+                  />
                 ) : (
                   <div className="space-y-3">
                     {recentActivity.map((activity, index) => (
