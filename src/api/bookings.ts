@@ -15,6 +15,8 @@ import {
   sendBookingCancelledEmail,
   sendBookingCompletedEmail
 } from './emails'
+import { generateInvoiceOnCompletion } from './invoices'
+import { capturePayment } from './payments'
 
 // =====================================================
 // TYPESCRIPT INTERFACES
@@ -619,8 +621,22 @@ export async function completeBooking(
       throw error
     }
 
-    // ⚠️ Phase 4B: Trigger payout processing here
-    // await processPayoutForBooking(bookingId, booking.stripe_payment_intent_id)
+    // 💰 PHASE 1: Automatic Invoice Generation & Payment Capture
+    try {
+      // Generate invoice automatically
+      const invoice = await generateInvoiceOnCompletion(bookingId)
+      console.log('✅ Invoice generated:', invoice.invoice_number)
+
+      // If payment was authorized, capture it now
+      if (booking.stripe_payment_intent_id && booking.payment_status === 'authorized') {
+        await capturePayment(bookingId, booking.stripe_payment_intent_id)
+        console.log('✅ Payment captured')
+      }
+    } catch (paymentError) {
+      console.error('⚠️ Failed to process payment/invoice:', paymentError)
+      // Don't throw - booking is still completed, just log the error
+      // You may want to implement retry logic or manual intervention
+    }
 
     // Send email notifications to both parties
     try {
@@ -659,8 +675,6 @@ export async function completeBooking(
       console.error('⚠️ Failed to send booking completed emails:', emailError)
       // Don't throw - booking is still completed
     }
-
-    console.log('⚠️ Phase 4B: Payout processing not yet implemented')
 
     return data as Booking
   } catch (error) {
