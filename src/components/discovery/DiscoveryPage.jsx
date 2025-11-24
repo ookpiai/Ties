@@ -36,9 +36,12 @@ import {
 } from 'lucide-react'
 import { searchProfiles } from '../../api/profiles'
 import { getSpecialtyLabel } from '../../constants/specialties'
+import { getFavorites, addFavorite, removeFavorite } from '../../api/favorites'
+import { useToast } from '@/hooks/use-toast'
 
 const DiscoveryPage = () => {
   const navigate = useNavigate()
+  const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedRole, setSelectedRole] = useState('all')
   const [selectedLocation, setSelectedLocation] = useState('')
@@ -76,6 +79,20 @@ const DiscoveryPage = () => {
     }
     return roleMap[componentRole] || null
   }
+
+  // Load favorites on mount
+  useEffect(() => {
+    const loadFavorites = async () => {
+      try {
+        const favs = await getFavorites()
+        // Extract just the profile IDs
+        setFavorites(favs.map(f => f.profile.id))
+      } catch (err) {
+        console.error('Failed to load favorites:', err)
+      }
+    }
+    loadFavorites()
+  }, [])
 
   // Load profiles from Supabase on mount and when filters change
   useEffect(() => {
@@ -173,12 +190,43 @@ const DiscoveryPage = () => {
   // Filtering now happens via Supabase searchProfiles() API
   // No need for local filtering since data is pre-filtered from database
 
-  const toggleFavorite = (professionalId) => {
-    setFavorites(prev => 
-      prev.includes(professionalId) 
+  const toggleFavorite = async (professionalId) => {
+    const isFav = favorites.includes(professionalId)
+
+    // Optimistic update
+    setFavorites(prev =>
+      isFav
         ? prev.filter(id => id !== professionalId)
         : [...prev, professionalId]
     )
+
+    try {
+      if (isFav) {
+        await removeFavorite(professionalId)
+        toast({
+          title: 'Removed from favorites',
+          description: 'Profile has been removed from your saved list.',
+        })
+      } else {
+        await addFavorite(professionalId)
+        toast({
+          title: 'Added to favorites',
+          description: 'Profile has been saved to your favorites.',
+        })
+      }
+    } catch (error) {
+      // Revert on error
+      setFavorites(prev =>
+        isFav
+          ? [...prev, professionalId]
+          : prev.filter(id => id !== professionalId)
+      )
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to update favorites.',
+      })
+    }
   }
 
   const addSkillFilter = (skill) => {
