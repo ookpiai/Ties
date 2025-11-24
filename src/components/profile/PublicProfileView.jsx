@@ -195,6 +195,14 @@ const PublicProfileView = () => {
                           <span className="text-sm">{profile.city}</span>
                         </div>
                       )}
+
+                      {/* Availability Indicator - Prominent */}
+                      <div className="mt-3 flex items-center justify-center">
+                        <div className="flex items-center space-x-2 text-xs px-3 py-1.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-900/40">
+                          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                          <span className="font-medium">Available</span>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Stats */}
