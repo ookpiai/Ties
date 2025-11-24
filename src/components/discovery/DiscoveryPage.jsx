@@ -1008,7 +1008,6 @@ const DiscoveryPage = () => {
           })}
           </div>
         )}
-          </div>
         </div>
       </div>
     </div>
