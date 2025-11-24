@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import EmptyState from '@/components/ui/EmptyState'
 import {
   Search,
   Filter,
@@ -211,204 +212,245 @@ const DiscoveryPage = () => {
     <div className="min-h-screen bg-app text-app transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Discover Talent</h1>
-          <p className="text-slate-600 dark:text-slate-300 mt-1">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Discover Talent</h1>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
             Find the perfect creative professionals for your projects
           </p>
         </div>
 
-        {/* Search and Filters */}
-        <div className="mb-8 space-y-4">
-          {/* Search Bar */}
+        {/* Search Bar */}
+        <div className="mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by name, skills, or services..."
-              className="pl-10 pr-4 py-3 text-lg"
+              className="pl-10 pr-4 py-3"
             />
           </div>
+        </div>
 
-          {/* Quick Filters */}
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center space-x-2">
-              {roleOptions.map((role) => {
-                const Icon = role.icon
-                return (
+        {/* Main Layout: Sidebar + Content */}
+        <div className="flex gap-6">
+          {/* Filter Sidebar - Surreal Style */}
+          <aside className={`${showFilters ? 'block' : 'hidden'} lg:block w-full lg:w-64 flex-shrink-0`}>
+            <Card className="sticky top-4 bg-surface border border-app rounded-xl">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base font-semibold flex items-center">
+                    <SlidersHorizontal className="w-4 h-4 mr-2" />
+                    Filters
+                  </CardTitle>
                   <Button
-                    key={role.value}
-                    variant={selectedRole === role.value ? "default" : "outline"}
+                    variant="ghost"
                     size="sm"
-                    onClick={() => setSelectedRole(role.value)}
-                    className="flex items-center space-x-1"
+                    onClick={clearAllFilters}
+                    className="text-xs h-7 px-2"
                   >
-                    <Icon className="w-4 h-4" />
-                    <span>{role.label}</span>
+                    Clear
                   </Button>
-                )
-              })}
-            </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6 text-sm">
+                {/* Role Type */}
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2 block">
+                    Role Type
+                  </Label>
+                  <div className="space-y-2">
+                    {roleOptions.map((role) => {
+                      const Icon = role.icon
+                      const count = role.value === 'all' ? filteredProfessionals.length :
+                                    filteredProfessionals.filter(p => p.role === role.value).length
+                      return (
+                        <button
+                          key={role.value}
+                          onClick={() => setSelectedRole(role.value)}
+                          className={`w-full flex items-center justify-between p-2 rounded-lg transition-colors ${
+                            selectedRole === role.value
+                              ? 'bg-primary/10 text-primary border border-primary/20'
+                              : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <Icon className="w-4 h-4" />
+                            <span className="text-sm">{role.label}</span>
+                          </div>
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                            ({professionals.length})
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center space-x-1"
-            >
-              <SlidersHorizontal className="w-4 h-4" />
-              <span>More Filters</span>
-            </Button>
-
-            <div className="flex items-center space-x-2 ml-auto">
-              <Label className="text-sm text-gray-600">View:</Label>
-              <Button
-                variant={viewMode === 'grid' ? "default" : "outline"}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-              >
-                <Grid3X3 className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? "default" : "outline"}
-                size="sm"
-                onClick={() => setViewMode('list')}
-              >
-                <List className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'map' ? "default" : "outline"}
-                size="sm"
-                onClick={() => setViewMode('map')}
-              >
-                <Map className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Advanced Filters */}
-          {showFilters && (
-            <Card>
-              <CardContent className="p-6">
-                <div className="grid md:grid-cols-3 gap-6">
-                  <div>
-                    <Label className="text-sm font-medium">Location</Label>
+                {/* Location */}
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2 block">
+                    Location
+                  </Label>
+                  <div className="relative">
+                    <MapPin className="absolute left-2 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                     <Input
                       value={selectedLocation}
                       onChange={(e) => setSelectedLocation(e.target.value)}
                       placeholder="City, Country"
-                      className="mt-1"
+                      className="pl-8 h-9 text-sm"
                     />
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-medium">Sort By</Label>
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
-                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                    >
-                      {sortOptions.map(option => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-medium">Price Range (£/hour)</Label>
-                    <div className="mt-1 flex items-center space-x-2">
-                      <Input
-                        type="number"
-                        value={priceRange[0]}
-                        onChange={(e) => setPriceRange([parseInt(e.target.value) || 0, priceRange[1]])}
-                        placeholder="Min"
-                        className="w-20"
-                      />
-                      <span>-</span>
-                      <Input
-                        type="number"
-                        value={priceRange[1]}
-                        onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 500])}
-                        placeholder="Max"
-                        className="w-20"
-                      />
-                    </div>
                   </div>
                 </div>
 
-                <div className="mt-6">
-                  <Label className="text-sm font-medium">Skills</Label>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {skillOptions.map(skill => (
-                      <Button
+                {/* Sort By */}
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2 block">
+                    Sort By
+                  </Label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  >
+                    {sortOptions.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Price Range */}
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2 block">
+                    Price Range (£/hour)
+                  </Label>
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      type="number"
+                      value={priceRange[0]}
+                      onChange={(e) => setPriceRange([parseInt(e.target.value) || 0, priceRange[1]])}
+                      placeholder="Min"
+                      className="w-full h-9 text-sm"
+                    />
+                    <span className="text-slate-400">-</span>
+                    <Input
+                      type="number"
+                      value={priceRange[1]}
+                      onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 500])}
+                      placeholder="Max"
+                      className="w-full h-9 text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Skills */}
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2 block">
+                    Skills
+                  </Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {skillOptions.slice(0, 8).map(skill => (
+                      <button
                         key={skill}
-                        variant={selectedSkills.includes(skill) ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => 
-                          selectedSkills.includes(skill) 
+                        onClick={() =>
+                          selectedSkills.includes(skill)
                             ? removeSkillFilter(skill)
                             : addSkillFilter(skill)
                         }
+                        className={`text-xs px-2 py-1 rounded-md transition-colors ${
+                          selectedSkills.includes(skill)
+                            ? 'bg-primary text-white'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                        }`}
                       >
                         {skill}
-                      </Button>
+                      </button>
                     ))}
                   </div>
                 </div>
-
-                <div className="mt-6 flex justify-between">
-                  <Button variant="outline" onClick={clearAllFilters}>
-                    Clear All Filters
-                  </Button>
-                  <Button onClick={() => setShowFilters(false)}>
-                    Apply Filters
-                  </Button>
-                </div>
               </CardContent>
             </Card>
-          )}
+          </aside>
 
-          {/* Active Filters */}
-          {(selectedSkills.length > 0 || selectedLocation || selectedRole !== 'all') && (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-gray-600">Active filters:</span>
-              {selectedRole !== 'all' && (
-                <Badge variant="secondary" className="flex items-center space-x-1">
-                  <span>{roleOptions.find(r => r.value === selectedRole)?.label}</span>
-                  <button onClick={() => setSelectedRole('all')}>
-                    <X className="w-3 h-3" />
-                  </button>
-                </Badge>
-              )}
-              {selectedLocation && (
-                <Badge variant="secondary" className="flex items-center space-x-1">
-                  <span>{selectedLocation}</span>
-                  <button onClick={() => setSelectedLocation('')}>
-                    <X className="w-3 h-3" />
-                  </button>
-                </Badge>
-              )}
-              {selectedSkills.map(skill => (
-                <Badge key={skill} variant="secondary" className="flex items-center space-x-1">
-                  <span>{skill}</span>
-                  <button onClick={() => removeSkillFilter(skill)}>
-                    <X className="w-3 h-3" />
-                  </button>
-                </Badge>
-              ))}
+          {/* Main Content Area */}
+          <div className="flex-1 min-w-0">
+            {/* Top Bar: Results count + View modes + Mobile filter toggle */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="lg:hidden flex items-center space-x-1"
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                  <span>Filters</span>
+                </Button>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  {filteredProfessionals.length} result{filteredProfessionals.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant={viewMode === 'grid' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                  className="w-9 h-9 p-0"
+                >
+                  <Grid3X3 className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'list' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                  className="w-9 h-9 p-0"
+                >
+                  <List className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'map' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode('map')}
+                  className="w-9 h-9 p-0"
+                >
+                  <Map className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
-          )}
-        </div>
 
-        {/* Results */}
-        <div className="mb-4 flex items-center justify-between">
-          <p className="text-gray-600">
-            {filteredProfessionals.length} result{filteredProfessionals.length !== 1 ? 's' : ''} found
-          </p>
-        </div>
+            {/* Active Filters Pills */}
+            {(selectedSkills.length > 0 || selectedLocation || selectedRole !== 'all') && (
+              <div className="flex flex-wrap items-center gap-2 mb-4">
+                <span className="text-xs text-slate-600 dark:text-slate-400">Active:</span>
+                {selectedRole !== 'all' && (
+                  <Badge variant="secondary" className="flex items-center space-x-1 h-6">
+                    <span>{roleOptions.find(r => r.value === selectedRole)?.label}</span>
+                    <button onClick={() => setSelectedRole('all')}>
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                )}
+                {selectedLocation && (
+                  <Badge variant="secondary" className="flex items-center space-x-1 h-6">
+                    <span>{selectedLocation}</span>
+                    <button onClick={() => setSelectedLocation('')}>
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                )}
+                {selectedSkills.map(skill => (
+                  <Badge key={skill} variant="secondary" className="flex items-center space-x-1 h-6">
+                    <span>{skill}</span>
+                    <button onClick={() => removeSkillFilter(skill)}>
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
 
         {/* Loading State */}
         {isLoading && (
@@ -427,11 +469,15 @@ const DiscoveryPage = () => {
 
         {/* Empty State */}
         {!isLoading && !error && filteredProfessionals.length === 0 && viewMode !== 'map' && (
-          <div className="text-center py-12">
-            <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No profiles found</h3>
-            <p className="text-gray-600">Try adjusting your search filters</p>
-          </div>
+          <EmptyState
+            icon={Users}
+            title="No profiles found"
+            description="Try adjusting your search filters or browse all available talent."
+            action={{
+              label: "Clear Filters",
+              onClick: clearAllFilters
+            }}
+          />
         )}
 
         {/* Map View */}
@@ -582,6 +628,8 @@ const DiscoveryPage = () => {
           })}
           </div>
         )}
+          </div>
+        </div>
       </div>
     </div>
   )
