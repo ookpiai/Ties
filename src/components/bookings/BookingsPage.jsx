@@ -10,8 +10,9 @@ import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
+import StatusBadge from '@/components/ui/StatusBadge'
 import { Button } from '@/components/ui/button'
-import { Loader2, Calendar, Inbox } from 'lucide-react'
+import { Loader2, Calendar, Inbox, TrendingUp, DollarSign, Clock, CheckCircle } from 'lucide-react'
 import { useAuth } from '../../App'
 import { getBookings, getBookingStats } from '../../api/bookings'
 import BookingCard from './BookingCard'
@@ -81,64 +82,80 @@ const BookingsPage = () => {
         </p>
       </div>
 
-      {/* Statistics Cards */}
+      {/* Statistics Cards - Surreal-inspired */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <Card className="bg-surface border border-app rounded-xl hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between mb-2">
+                <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
+                {stats.as_client.total}
+              </div>
+              <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                 As Client
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.as_client.total}</div>
-              <p className="text-xs text-muted-foreground mt-1">
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-500">
                 ${stats.as_client.total_spent.toFixed(2)} spent
               </p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+          <Card className="bg-surface border border-app rounded-xl hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between mb-2">
+                <div className="w-8 h-8 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center">
+                  <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400" />
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
+                {stats.as_freelancer.total}
+              </div>
+              <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                 As Freelancer
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.as_freelancer.total}</div>
-              <p className="text-xs text-muted-foreground mt-1">
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-500">
                 ${stats.as_freelancer.total_earned.toFixed(2)} earned
               </p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Pending Requests
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
+          <Card className="bg-surface border border-app rounded-xl hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between mb-2">
+                <div className="w-8 h-8 bg-orange-100 dark:bg-orange-900/20 rounded-lg flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
                 {stats.as_client.pending + stats.as_freelancer.pending}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {stats.as_freelancer.pending} need your attention
+              <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                Pending
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-500">
+                {stats.as_freelancer.pending} need attention
               </p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Completed
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
+          <Card className="bg-surface border border-app rounded-xl hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between mb-2">
+                <div className="w-8 h-8 bg-gray-100 dark:bg-gray-900/20 rounded-lg flex items-center justify-center">
+                  <CheckCircle className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
                 {stats.as_client.completed + stats.as_freelancer.completed}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                Completed
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-500">
                 All time
               </p>
             </CardContent>

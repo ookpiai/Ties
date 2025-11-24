@@ -10,6 +10,7 @@ import React, { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import StatusBadge from '@/components/ui/StatusBadge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   Calendar,
@@ -19,7 +20,9 @@ import {
   XCircle,
   Ban,
   Eye,
-  Loader2
+  Loader2,
+  MapPin,
+  User
 } from 'lucide-react'
 import { format, formatDistance } from 'date-fns'
 import BookingDetailsModal from './BookingDetailsModal'
@@ -252,63 +255,89 @@ const BookingCard = ({ booking, currentUserId, onUpdate }) => {
 
   return (
     <>
-      <Card className="hover:shadow-md transition-shadow">
-        <CardContent className="p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-12 w-12">
-                <AvatarImage src={otherProfile?.avatar_url} alt={otherPersonName} />
-                <AvatarFallback>
-                  {otherPersonName.split(' ').map(n => n[0]).join('')}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h3 className="font-semibold text-lg">
-                  {isClient ? 'Booked ' : 'Request from '}
-                  {otherPersonName}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {otherProfile?.role || 'User'}
-                </p>
+      <Card className="hover:shadow-lg transition-all hover:border-primary/30 rounded-xl bg-surface border border-app">
+        <CardContent className="p-4">
+          {/* Header Row */}
+          <div className="flex items-start gap-3 mb-3">
+            <Avatar className="h-10 w-10 flex-shrink-0">
+              <AvatarImage src={otherProfile?.avatar_url} alt={otherPersonName} />
+              <AvatarFallback className="bg-primary/10 text-primary">
+                {otherPersonName.split(' ').map(n => n[0]).join('')}
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-base text-slate-900 dark:text-white truncate">
+                    {otherPersonName}
+                  </h3>
+                  <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                    <User className="h-3 w-3" />
+                    <span className="capitalize">{otherProfile?.role || 'User'}</span>
+                    {otherProfile?.city && (
+                      <>
+                        <span>•</span>
+                        <MapPin className="h-3 w-3" />
+                        <span>{otherProfile.city}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <StatusBadge status={booking.status} type="booking" size="sm" />
+              </div>
+
+              {/* Role Context Badge */}
+              <div className="mt-2">
+                <Badge variant="outline" className="text-xs h-5 border-slate-300 dark:border-slate-600">
+                  {isClient ? 'You booked' : 'Requested from you'}
+                </Badge>
               </div>
             </div>
-            <Badge className={statusConfig.color}>
-              {statusConfig.label}
-            </Badge>
           </div>
 
-          <div className="space-y-2 mb-4">
-            <div className="flex items-center gap-2 text-sm">
-              <Calendar className="h-4 w-4 text-gray-500" />
-              <span>
-                {format(new Date(booking.start_date), 'PPP')}
-                {' → '}
-                {format(new Date(booking.end_date), 'PPP')}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2 text-sm">
-              <Clock className="h-4 w-4 text-gray-500" />
-              <span>
+          {/* Info Grid - Compact */}
+          <div className="grid grid-cols-2 gap-3 mb-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+            <div>
+              <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 mb-1">
+                <Calendar className="h-3.5 w-3.5" />
+                <span className="font-medium">Dates</span>
+              </div>
+              <p className="text-xs font-semibold text-slate-900 dark:text-white">
+                {format(new Date(booking.start_date), 'MMM d')}
+                {' - '}
+                {format(new Date(booking.end_date), 'MMM d, yyyy')}
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-500 mt-0.5">
                 {formatDistance(new Date(booking.start_date), new Date(booking.end_date))}
-              </span>
+              </p>
             </div>
 
-            <div className="flex items-center gap-2 text-sm">
-              <DollarSign className="h-4 w-4 text-gray-500" />
-              <span className="font-semibold text-lg">
+            <div>
+              <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 mb-1">
+                <DollarSign className="h-3.5 w-3.5" />
+                <span className="font-medium">Amount</span>
+              </div>
+              <p className="text-base font-bold text-slate-900 dark:text-white">
                 ${booking.total_amount.toFixed(2)}
-              </span>
+              </p>
+              {booking.payment_status && (
+                <StatusBadge status={booking.payment_status} type="payment" size="sm" className="mt-1" />
+              )}
             </div>
           </div>
 
-          <div className="mb-4">
-            <p className="text-sm text-gray-600 line-clamp-2">
-              {booking.service_description}
-            </p>
-          </div>
+          {/* Description */}
+          {booking.service_description && (
+            <div className="mb-3">
+              <p className="text-xs text-slate-700 dark:text-slate-300 line-clamp-2">
+                {booking.service_description}
+              </p>
+            </div>
+          )}
 
-          <div className="flex flex-wrap gap-2">
+          {/* Actions Row */}
+          <div className="flex flex-wrap gap-2 pt-3 border-t border-slate-200 dark:border-slate-700">
             {getActions()}
           </div>
         </CardContent>
