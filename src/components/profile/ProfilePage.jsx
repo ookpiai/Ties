@@ -225,48 +225,28 @@ const ProfilePage = () => {
     return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase()
   }
 
-  const getRoleSpecificContent = () => {
-    switch (user?.role) {
-      case 'freelancer':
-        return {
-          title: 'Freelancer Profile',
-          subtitle: 'Showcase your skills and attract clients',
-          tabs: ['overview', 'portfolio', 'skills', 'rates', 'availability']
-        }
-      case 'organiser':
-        return {
-          title: 'Organiser Profile',
-          subtitle: 'Manage your events and projects',
-          tabs: ['overview', 'projects', 'team', 'preferences', 'availability']
-        }
-      case 'venue':
-        return {
-          title: 'Venue Profile',
-          subtitle: 'Showcase your space and amenities',
-          tabs: ['overview', 'space', 'amenities', 'booking', 'availability']
-        }
-      case 'vendor':
-        return {
-          title: 'Vendor Profile',
-          subtitle: 'List your services and equipment',
-          tabs: ['overview', 'services', 'equipment', 'rates', 'availability']
-        }
-      case 'collective':
-        return {
-          title: 'Collective Profile',
-          subtitle: 'Represent your creative group',
-          tabs: ['overview', 'members', 'projects', 'services', 'availability']
-        }
-      default:
-        return {
-          title: 'Profile',
-          subtitle: 'Manage your account',
-          tabs: ['overview', 'settings', 'availability']
-        }
+  // Universal profile structure (Amendment 7) - Same tabs for all roles
+  const getProfileContent = () => {
+    const roleLabels = {
+      'Freelancer': 'Freelancer',
+      'Vendor': 'Vendor',
+      'Venue': 'Venue',
+      'Organiser': 'Organiser',
+      // Legacy support
+      'Artist': 'Freelancer',
+      'Crew': 'Freelancer'
+    }
+
+    const roleLabel = roleLabels[user?.role] || 'User'
+
+    return {
+      title: `${roleLabel} Profile`,
+      subtitle: 'Manage your professional profile',
+      tabs: ['overview', 'portfolio', 'services', 'availability']
     }
   }
 
-  const roleContent = getRoleSpecificContent()
+  const roleContent = getProfileContent()
 
   return (
     <div className="min-h-screen bg-app dark:bg-[#0B0B0B] text-app transition-colors duration-200">
@@ -339,7 +319,7 @@ const ProfilePage = () => {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             {roleContent.tabs.map((tab) => (
               <TabsTrigger key={tab} value={tab} className="capitalize">
                 {tab}
@@ -637,140 +617,25 @@ const ProfilePage = () => {
             </TabsContent>
           )}
 
-          {/* Skills Tab */}
-          <TabsContent value="skills">
+          {/* Services Tab - Universal (Amendment 8) */}
+          <TabsContent value="services">
             <Card>
               <CardHeader>
-                <CardTitle>Skills & Expertise</CardTitle>
+                <CardTitle>Services & Offerings</CardTitle>
               </CardHeader>
               <CardContent>
-                {isEditing && (
-                  <div className="mb-6">
-                    <div className="flex space-x-2">
-                      <Input
-                        value={newSkill}
-                        onChange={(e) => setNewSkill(e.target.value)}
-                        placeholder="Add a skill..."
-                        onKeyPress={(e) => e.key === 'Enter' && addSkill()}
-                      />
-                      <Button onClick={addSkill}>
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex flex-wrap gap-2">
-                  {profileData.skills.map((skill, index) => (
-                    <Badge key={index} variant="secondary" className="relative group">
-                      {skill}
-                      {isEditing && (
-                        <button
-                          onClick={() => removeSkill(skill)}
-                          className="ml-2 text-gray-500 hover:text-red-500"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      )}
-                    </Badge>
-                  ))}
+                <div className="text-center py-12">
+                  <Briefcase className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Services page coming soon
+                  </h3>
+                  <p className="text-gray-600">
+                    This will include: What I Offer, Pricing & Packages, and Logistics & Requirements
+                  </p>
                 </div>
-
-                {profileData.skills.length === 0 && (
-                  <div className="text-center py-8">
-                    <Award className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      No skills added yet
-                    </h3>
-                    <p className="text-gray-600">
-                      Add your skills to help others discover your expertise.
-                    </p>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </TabsContent>
-
-          {/* Rates Tab (for freelancers/vendors) */}
-          {(user?.role === 'freelancer' || user?.role === 'vendor') && (
-            <TabsContent value="rates">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Rates & Availability</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div>
-                      <Label htmlFor="hourly_rate">Hourly Rate</Label>
-                      <div className="mt-1 relative">
-                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                        <Input
-                          id="hourly_rate"
-                          type="number"
-                          value={profileData.hourly_rate}
-                          onChange={(e) => setProfileData({
-                            ...profileData,
-                            hourly_rate: e.target.value
-                          })}
-                          placeholder="0"
-                          className="pl-10"
-                          disabled={!isEditing}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="daily_rate">Daily Rate</Label>
-                      <div className="mt-1 relative">
-                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                        <Input
-                          id="daily_rate"
-                          type="number"
-                          value={profileData.daily_rate}
-                          onChange={(e) => setProfileData({
-                            ...profileData,
-                            daily_rate: e.target.value
-                          })}
-                          placeholder="0"
-                          className="pl-10"
-                          disabled={!isEditing}
-                        />
-                      </div>
-                      <p className="text-sm text-gray-500 mt-1">At least one rate required</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="availability">Availability</Label>
-                    <select
-                      id="availability"
-                      value={profileData.availability}
-                      onChange={(e) => setProfileData({
-                        ...profileData,
-                        availability: e.target.value
-                        })}
-                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                        disabled={!isEditing}
-                      >
-                        <option value="available">Available</option>
-                        <option value="busy">Busy</option>
-                        <option value="unavailable">Unavailable</option>
-                      </select>
-                    </div>
-
-                  <div className="p-4 bg-blue-50 rounded-lg">
-                    <h4 className="font-medium text-blue-900 mb-2">Pricing Tips</h4>
-                    <ul className="text-sm text-blue-700 space-y-1">
-                      <li>• Research market rates for your skills and experience level</li>
-                      <li>• Consider offering package deals for larger projects</li>
-                      <li>• Update your rates regularly as you gain experience</li>
-                      <li>• Be transparent about what's included in your rate</li>
-                    </ul>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          )}
 
           {/* Availability Tab */}
           <TabsContent value="availability">
