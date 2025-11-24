@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import AvailabilityCalendar from '../calendar/AvailabilityCalendar'
 import BookNowButton from '../bookings/BookNowButton'
+import ServicesPage from './ServicesPage'
 import {
   User,
   MapPin,
@@ -272,22 +273,7 @@ const PublicProfileView = () => {
 
           {/* Services Tab */}
           <TabsContent value="services">
-            <Card className="bg-surface border border-app text-app rounded-2xl">
-              <CardHeader>
-                <CardTitle>Services & Offerings</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12">
-                  <Briefcase className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    Services page coming soon
-                  </h3>
-                  <p className="text-gray-600">
-                    This will include: What I Offer, Pricing & Packages, and Logistics & Requirements
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <ServicesPage userId={userId} isOwnProfile={false} />
           </TabsContent>
 
           {/* Availability Tab */}
