@@ -62,6 +62,8 @@ import MyApplicationsPage from './components/jobs/MyApplicationsPage'
 import JobApplicantsPage from './components/jobs/JobApplicantsPage'
 import MyJobsPage from './components/jobs/MyJobsPage'
 import { LiveRegionManager, initFocusVisible, createSkipLink } from './utils/accessibility'
+import useKeyboardShortcuts from './hooks/useKeyboardShortcuts'
+import KeyboardShortcutsModal from './components/ui/KeyboardShortcutsModal'
 import './styles/accessibility.css'
 import './App.css'
 
@@ -276,27 +278,41 @@ const PublicRoute = ({ children }) => {
 }
 
 function App() {
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false)
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    onShowHelp: () => setShowShortcutsModal(true),
+    onFocusSearch: () => {
+      // Try to find and focus search input
+      const searchInput = document.querySelector('input[type="search"], input[placeholder*="Search"]')
+      if (searchInput) {
+        searchInput.focus()
+      }
+    }
+  })
+
   // Initialize accessibility features
   useEffect(() => {
     // Initialize focus-visible polyfill
     initFocusVisible()
-    
+
     // Create and add skip link
     const skipLink = createSkipLink()
     document.body.insertBefore(skipLink, document.body.firstChild)
-    
+
     // Initialize live region manager
     const liveRegionManager = new LiveRegionManager()
     window.liveRegionManager = liveRegionManager
-    
+
     // Set page language
     document.documentElement.lang = 'en'
-    
+
     // Add main content landmark
     const mainContent = document.createElement('main')
     mainContent.id = 'main-content'
     mainContent.setAttribute('role', 'main')
-    
+
     return () => {
       // Cleanup
       if (window.liveRegionManager) {
@@ -466,6 +482,12 @@ function App() {
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </Router>
+
+      {/* Global Keyboard Shortcuts Modal */}
+      <KeyboardShortcutsModal
+        isOpen={showShortcutsModal}
+        onClose={() => setShowShortcutsModal(false)}
+      />
     </AuthProvider>
   )
 }
