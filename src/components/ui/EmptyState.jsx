@@ -1,6 +1,5 @@
 import { Button } from '@/components/ui/button'
 import { Link } from 'react-router-dom'
-import { LucideIcon } from 'lucide-react'
 
 /**
  * EmptyState Component - Professional empty state displays

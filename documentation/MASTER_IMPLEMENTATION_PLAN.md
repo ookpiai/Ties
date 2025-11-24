@@ -717,10 +717,42 @@ Change the top navigation from "Overview, Settings, Availability" to "Overview, 
 
 **Implementation Details:**
 
+### IMPORTANT: Two-Tier Role System
+
+**Tier 1: Primary Role** (Broad category for filtering)
+- Freelancer
+- Vendor
+- Venue
+- Organiser
+
+**Tier 2: Specialty/Sub-type** (Specific type shown on cards)
+- **Freelancers:** DJ, Singer, Photographer, Videographer, Bartender, MC, Performer, etc.
+- **Vendors:** Catering, AV Equipment, Lighting, Decor, Staging, Transport, etc.
+- **Venues:** Studio, Gallery, Theater, Outdoor Space, Event Hall, Rehearsal Space, etc.
+
+**How It Works:**
+1. **Discovery Page:** Users filter by Tier 1 (Freelancer/Vendor/Venue)
+2. **Profile Cards:** Display Tier 2 specialty badge (e.g., "DJ", "Caterer", "Studio")
+3. **Profile Setup:** Users select BOTH role and specialty during signup
+4. **Profile Editing:** Users can change specialty in Overview tab
+
+**Example Flow:**
+```
+Discovery → Filter: "Freelancers"
+Results show cards with:
+- Card 1: DJ badge
+- Card 2: Photographer badge
+- Card 3: Singer badge
+- Card 4: Bartender badge
+All are Freelancers, but each has their specific specialty
+```
+
 ### New Profile Structure:
 
 **Tab 1: Overview** (Universal - Same for all)
 - Display name, bio, profile photo
+- **Primary role** (Freelancer/Vendor/Venue) - Read-only
+- **Specialty/Sub-type** (DJ, Caterer, Studio, etc.) - Editable dropdown ⭐ NEW
 - Location, contact info
 - Rating and reviews
 - Stats (bookings completed, response time)
@@ -742,12 +774,26 @@ See Amendment 8 for full Services page breakdown
 - Booking schedule
 - Block dates
 
+**Database Schema Update:**
+```sql
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS specialty TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS specialty_display_name TEXT;
+
+-- Specialty options per role
+-- Freelancers: 'dj', 'singer', 'photographer', 'videographer', 'bartender', 'mc', 'performer', 'musician', 'dancer', 'actor', 'model'
+-- Vendors: 'catering', 'av_equipment', 'lighting', 'decor', 'staging', 'transport', 'printing', 'signage', 'security', 'cleaning'
+-- Venues: 'studio', 'gallery', 'theater', 'outdoor_space', 'event_hall', 'rehearsal_space', 'warehouse', 'rooftop', 'restaurant', 'bar'
+```
+
 **Files to Create/Modify:**
 - `src/components/profile/ProfileTabs.jsx` - New tabbed layout
-- `src/components/profile/OverviewTab.jsx`
+- `src/components/profile/OverviewTab.jsx` - Add specialty dropdown
 - `src/components/profile/PortfolioTab.jsx`
 - `src/components/profile/ServicesTab.jsx` (new - see Amendment 8)
 - `src/components/profile/AvailabilityTab.jsx`
+- `src/routes/ProfileSetup.tsx` - Add specialty selection after role selection
+- `src/components/discovery/DiscoveryPage.jsx` - Display specialty badge on cards
+- `src/constants/specialties.ts` - NEW - Specialty options per role
 - Move Settings to separate Settings Page (already exists)
 
 ---
@@ -775,10 +821,14 @@ Fields inside each section change dynamically based on user type.
 ### FREELANCERS - Services Page Fields
 
 **Section 1: What I Offer**
-- Role / Skill Areas (Required) - DJ, Photographer, Performer, etc.
-- Skills (Required) - Multi-select chips
-- Industries / Genres (Required) - Weddings, Corporate, Festivals, etc.
-- Service Description (Optional) - Text area
+- **Specialty** (Required) - Auto-populated from profile (DJ, Photographer, etc.) - Read-only, edit in Overview tab
+- **Additional Specialties** (Optional) - Multi-select: Can offer multiple services (e.g., DJ + MC)
+- **Skills** (Required) - Multi-select chips based on specialty
+  - DJ: Mixing, Scratching, Crowd Reading, Equipment Setup
+  - Photographer: Portrait, Event, Product, Editing
+  - Singer: Jazz, Pop, Classical, A Cappella
+- **Industries / Genres** (Required) - Weddings, Corporate, Festivals, Nightclubs, Private Events
+- **Service Description** (Optional) - Text area
 
 **Section 2: Pricing & Packages**
 - Rate Type (Required) - Dropdown: hourly / per day / per project / per set
@@ -797,9 +847,10 @@ Fields inside each section change dynamically based on user type.
 ### VENUES - Services Page Fields
 
 **Section 1: What I Offer**
-- Venue Type (Required) - Dropdown: Studio, Gallery, Theater, Outdoor, etc.
-- Suitability Tags (Required) - Multi-select: photoshoots, events, workshops, rehearsals, etc.
-- Service Description (Optional) - Text area
+- **Specialty** (Required) - Auto-populated from profile (Studio, Gallery, etc.) - Read-only, edit in Overview tab
+- **Additional Venue Types** (Optional) - Multi-select: Can serve multiple purposes
+- **Suitability Tags** (Required) - Multi-select: photoshoots, events, workshops, rehearsals, performances, exhibitions
+- **Service Description** (Optional) - Text area
 
 **Section 2: Pricing & Packages**
 - Hourly Rate (Required) - Number input
@@ -819,9 +870,13 @@ Fields inside each section change dynamically based on user type.
 ### VENDORS - Services Page Fields
 
 **Section 1: What I Offer**
-- Service Category (Required) - Dropdown: AV hire, catering, décor, staging, lighting, transport, etc.
-- Product Types (Required) - Multi-select tags: specific equipment/products
-- Service Description (Optional) - Text area
+- **Specialty** (Required) - Auto-populated from profile (Catering, AV Equipment, etc.) - Read-only, edit in Overview tab
+- **Additional Services** (Optional) - Multi-select: Can offer multiple vendor services
+- **Product Types** (Required) - Multi-select tags: specific equipment/products based on specialty
+  - Catering: Buffet, Plated, Canapes, Desserts, Bar Service
+  - AV Equipment: Speakers, Microphones, Projectors, Screens, Lighting
+  - Decor: Flowers, Furniture, Draping, Centerpieces, Signage
+- **Service Description** (Optional) - Text area
 
 **Section 2: Pricing & Packages**
 - Hire Fees (Required) - Per item or per package pricing
@@ -905,17 +960,313 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS services_data JSONB;
 
 ---
 
+---
+
+## AMENDMENT 9: Complete Specialty/Sub-type System ⭐⭐⭐⭐⭐
+
+**Description:**
+Comprehensive two-tier role system with specialty options for all user types. This is integrated into Amendments 7 & 8 but documented separately for reference.
+
+**Priority:** CRITICAL (Part of Amendment 7 & 8)
+**Effort:** Included in 2-week profile overhaul
+**Business Impact:** CRITICAL - Enables specific discovery and categorization
+
+### COMPLETE SPECIALTY OPTIONS
+
+#### FREELANCER SPECIALTIES
+
+**Performance & Entertainment:**
+- DJ - Mobile/Club/Wedding DJ services
+- MC / Host - Event hosting and emceeing
+- Singer - Solo vocalists
+- Musician - Instrumentalists (specify instrument in skills)
+- Band - Musical groups
+- Dancer - Professional dancers and choreographers
+- Performer - General performance artists
+- Actor - Theater and commercial actors
+- Comedian - Stand-up and entertainment
+
+**Visual Arts & Media:**
+- Photographer - Event/Portrait/Commercial photography
+- Videographer - Video production and filming
+- Editor - Photo/Video post-production
+- Drone Operator - Aerial photography and videography
+- Graphic Designer - Visual design services
+
+**Event Services:**
+- Bartender - Bar and beverage services
+- Waiter / Server - Front-of-house service
+- Event Coordinator - On-site event management
+- Security - Event security services
+
+**Creative Services:**
+- Makeup Artist - Beauty and special effects makeup
+- Hair Stylist - Professional hair services
+- Stylist - Fashion and wardrobe styling
+- Florist - Floral design and arrangement
+
+**Technical:**
+- Sound Engineer - Audio production and mixing
+- Lighting Technician - Lighting design and operation
+- Stage Manager - Production management
+
+#### VENDOR SPECIALTIES
+
+**Food & Beverage:**
+- Catering - Full catering services
+- Mobile Bar - Bar hire and service
+- Coffee Cart - Specialty coffee services
+- Food Truck - Mobile food vendors
+- Desserts - Specialty dessert catering
+- Beverage Supplier - Drinks and refreshments
+
+**Equipment & Technology:**
+- AV Equipment - Audio/visual rental
+- Lighting Equipment - Stage and event lighting
+- Sound Equipment - PA systems and audio gear
+- Photography Equipment - Camera and photo gear
+- DJ Equipment - Turntables, controllers, speakers
+- Projection Equipment - Projectors and screens
+
+**Event Infrastructure:**
+- Staging - Stage construction and rental
+- Tenting - Tent and marquee hire
+- Furniture - Table, chair, and furniture rental
+- Flooring - Dance floors and surface solutions
+- Fencing - Crowd barriers and perimeter fencing
+- Generators - Power supply and generation
+
+**Decoration & Design:**
+- Decor - General event decoration
+- Floral Design - Flowers and arrangements
+- Balloon Services - Balloon decorations
+- Signage - Event signage and wayfinding
+- Draping - Fabric draping and backdrops
+- Centerpieces - Table decoration
+
+**Production Services:**
+- Printing - Programs, signage, materials
+- Photography Services - Photo booth hire
+- Video Production - Filming services
+- Live Streaming - Broadcast services
+- LED Screens - Large format displays
+
+**Logistics:**
+- Transport - Vehicle and transport services
+- Valet Parking - Parking management
+- Security Services - Event security
+- Cleaning Services - Pre/post event cleaning
+- Waste Management - Rubbish and recycling
+
+**Other:**
+- Entertainment Rental - Games, activities
+- Special Effects - Smoke, confetti, pyrotechnics
+- Branding - Custom event branding
+
+#### VENUE SPECIALTIES
+
+**Indoor Spaces:**
+- Studio - Photography/Film studios
+- Gallery - Art galleries and exhibition spaces
+- Theater - Performance theaters
+- Event Hall - Large event venues
+- Ballroom - Formal event spaces
+- Conference Room - Meeting and conference facilities
+- Warehouse - Industrial event spaces
+- Loft - Open-plan loft spaces
+- Restaurant - Restaurant venue hire
+- Bar / Club - Bar and nightclub venues
+
+**Outdoor Spaces:**
+- Outdoor Space - General outdoor areas
+- Garden - Garden venues
+- Rooftop - Rooftop terraces
+- Beachfront - Beach locations
+- Park - Park and recreation areas
+- Farm / Barn - Rural event spaces
+- Vineyard - Winery venues
+- Sports Field - Sports facilities
+
+**Specialized Venues:**
+- Rehearsal Space - Practice and rehearsal rooms
+- Recording Studio - Audio recording facilities
+- Dance Studio - Dance practice spaces
+- Workshop Space - Creative workshop venues
+- Showroom - Product display spaces
+- Museum - Museum venue hire
+
+### IMPLEMENTATION DETAILS
+
+**Constants File Structure:**
+```typescript
+// src/constants/specialties.ts
+
+export const SPECIALTY_OPTIONS = {
+  Freelancer: [
+    // Performance & Entertainment
+    { value: 'dj', label: 'DJ', category: 'Performance & Entertainment' },
+    { value: 'mc', label: 'MC / Host', category: 'Performance & Entertainment' },
+    { value: 'singer', label: 'Singer', category: 'Performance & Entertainment' },
+    { value: 'musician', label: 'Musician', category: 'Performance & Entertainment' },
+    { value: 'band', label: 'Band', category: 'Performance & Entertainment' },
+    { value: 'dancer', label: 'Dancer', category: 'Performance & Entertainment' },
+    { value: 'performer', label: 'Performer', category: 'Performance & Entertainment' },
+    { value: 'actor', label: 'Actor', category: 'Performance & Entertainment' },
+    { value: 'comedian', label: 'Comedian', category: 'Performance & Entertainment' },
+
+    // Visual Arts & Media
+    { value: 'photographer', label: 'Photographer', category: 'Visual Arts & Media' },
+    { value: 'videographer', label: 'Videographer', category: 'Visual Arts & Media' },
+    { value: 'editor', label: 'Editor', category: 'Visual Arts & Media' },
+    { value: 'drone_operator', label: 'Drone Operator', category: 'Visual Arts & Media' },
+    { value: 'graphic_designer', label: 'Graphic Designer', category: 'Visual Arts & Media' },
+
+    // Event Services
+    { value: 'bartender', label: 'Bartender', category: 'Event Services' },
+    { value: 'waiter', label: 'Waiter / Server', category: 'Event Services' },
+    { value: 'event_coordinator', label: 'Event Coordinator', category: 'Event Services' },
+    { value: 'security', label: 'Security', category: 'Event Services' },
+
+    // Creative Services
+    { value: 'makeup_artist', label: 'Makeup Artist', category: 'Creative Services' },
+    { value: 'hair_stylist', label: 'Hair Stylist', category: 'Creative Services' },
+    { value: 'stylist', label: 'Stylist', category: 'Creative Services' },
+    { value: 'florist', label: 'Florist', category: 'Creative Services' },
+
+    // Technical
+    { value: 'sound_engineer', label: 'Sound Engineer', category: 'Technical' },
+    { value: 'lighting_technician', label: 'Lighting Technician', category: 'Technical' },
+    { value: 'stage_manager', label: 'Stage Manager', category: 'Technical' },
+  ],
+
+  Vendor: [
+    // Food & Beverage
+    { value: 'catering', label: 'Catering', category: 'Food & Beverage' },
+    { value: 'mobile_bar', label: 'Mobile Bar', category: 'Food & Beverage' },
+    { value: 'coffee_cart', label: 'Coffee Cart', category: 'Food & Beverage' },
+    { value: 'food_truck', label: 'Food Truck', category: 'Food & Beverage' },
+    { value: 'desserts', label: 'Desserts', category: 'Food & Beverage' },
+
+    // Equipment & Technology
+    { value: 'av_equipment', label: 'AV Equipment', category: 'Equipment & Technology' },
+    { value: 'lighting_equipment', label: 'Lighting Equipment', category: 'Equipment & Technology' },
+    { value: 'sound_equipment', label: 'Sound Equipment', category: 'Equipment & Technology' },
+    { value: 'photography_equipment', label: 'Photography Equipment', category: 'Equipment & Technology' },
+    { value: 'dj_equipment', label: 'DJ Equipment', category: 'Equipment & Technology' },
+
+    // Event Infrastructure
+    { value: 'staging', label: 'Staging', category: 'Event Infrastructure' },
+    { value: 'tenting', label: 'Tenting', category: 'Event Infrastructure' },
+    { value: 'furniture', label: 'Furniture', category: 'Event Infrastructure' },
+    { value: 'flooring', label: 'Flooring', category: 'Event Infrastructure' },
+
+    // Decoration & Design
+    { value: 'decor', label: 'Decor', category: 'Decoration & Design' },
+    { value: 'floral_design', label: 'Floral Design', category: 'Decoration & Design' },
+    { value: 'balloon_services', label: 'Balloon Services', category: 'Decoration & Design' },
+    { value: 'signage', label: 'Signage', category: 'Decoration & Design' },
+
+    // Logistics
+    { value: 'transport', label: 'Transport', category: 'Logistics' },
+    { value: 'security_services', label: 'Security Services', category: 'Logistics' },
+    { value: 'cleaning', label: 'Cleaning Services', category: 'Logistics' },
+  ],
+
+  Venue: [
+    // Indoor Spaces
+    { value: 'studio', label: 'Studio', category: 'Indoor Spaces' },
+    { value: 'gallery', label: 'Gallery', category: 'Indoor Spaces' },
+    { value: 'theater', label: 'Theater', category: 'Indoor Spaces' },
+    { value: 'event_hall', label: 'Event Hall', category: 'Indoor Spaces' },
+    { value: 'ballroom', label: 'Ballroom', category: 'Indoor Spaces' },
+    { value: 'conference_room', label: 'Conference Room', category: 'Indoor Spaces' },
+    { value: 'warehouse', label: 'Warehouse', category: 'Indoor Spaces' },
+    { value: 'loft', label: 'Loft', category: 'Indoor Spaces' },
+    { value: 'restaurant', label: 'Restaurant', category: 'Indoor Spaces' },
+    { value: 'bar_club', label: 'Bar / Club', category: 'Indoor Spaces' },
+
+    // Outdoor Spaces
+    { value: 'outdoor_space', label: 'Outdoor Space', category: 'Outdoor Spaces' },
+    { value: 'garden', label: 'Garden', category: 'Outdoor Spaces' },
+    { value: 'rooftop', label: 'Rooftop', category: 'Outdoor Spaces' },
+    { value: 'beachfront', label: 'Beachfront', category: 'Outdoor Spaces' },
+    { value: 'park', label: 'Park', category: 'Outdoor Spaces' },
+    { value: 'farm_barn', label: 'Farm / Barn', category: 'Outdoor Spaces' },
+    { value: 'vineyard', label: 'Vineyard', category: 'Outdoor Spaces' },
+
+    // Specialized Venues
+    { value: 'rehearsal_space', label: 'Rehearsal Space', category: 'Specialized Venues' },
+    { value: 'recording_studio', label: 'Recording Studio', category: 'Specialized Venues' },
+    { value: 'dance_studio', label: 'Dance Studio', category: 'Specialized Venues' },
+    { value: 'workshop_space', label: 'Workshop Space', category: 'Specialized Venues' },
+  ],
+}
+
+export const getSpecialtyLabel = (role: string, specialtyValue: string): string => {
+  const options = SPECIALTY_OPTIONS[role] || []
+  const specialty = options.find(opt => opt.value === specialtyValue)
+  return specialty?.label || specialtyValue
+}
+
+export const getSpecialtiesByCategory = (role: string) => {
+  const options = SPECIALTY_OPTIONS[role] || []
+  const grouped = {}
+  options.forEach(opt => {
+    if (!grouped[opt.category]) {
+      grouped[opt.category] = []
+    }
+    grouped[opt.category].push(opt)
+  })
+  return grouped
+}
+```
+
+**ProfileSetup Flow:**
+```jsx
+// Step 1: Select Role
+<Select value={role} onChange={setRole}>
+  <option value="Freelancer">Freelancer</option>
+  <option value="Vendor">Vendor</option>
+  <option value="Venue">Venue</option>
+  <option value="Organiser">Organiser</option>
+</Select>
+
+// Step 2: Select Specialty (only if not Organiser)
+{role !== 'Organiser' && (
+  <Select value={specialty} onChange={setSpecialty}>
+    {SPECIALTY_OPTIONS[role].map(opt => (
+      <optgroup label={opt.category} key={opt.category}>
+        {/* Options grouped by category */}
+      </optgroup>
+    ))}
+  </Select>
+)}
+```
+
+**Discovery Card Display:**
+```jsx
+<Card>
+  <Badge variant="primary">{getSpecialtyLabel(profile.role, profile.specialty)}</Badge>
+  <h3>{profile.display_name}</h3>
+  <p>{profile.location}</p>
+  <p>{profile.hourly_rate ? `$${profile.hourly_rate}/hr` : 'Contact for pricing'}</p>
+</Card>
+```
+
+---
+
 ## SUMMARY OF AMENDMENTS
 
-**Total Amendments:** 8
-**Critical Priority:** 3 (Amendments 7, 8, and profile redesign)
+**Total Amendments:** 9 (including specialty system)
+**Critical Priority:** 4 (Amendments 7, 8, 9 - profile system)
 **High Priority:** 4 (Amendments 1, 3, 6)
 **Medium Priority:** 2 (Amendments 4, 5)
-**Low Priority:** 0
+**Completed:** 1 (Amendment 2 - discovery filters)
 
 **Estimated Total Effort:** 2-3 weeks for all amendments
 
 **Dependencies:**
+- Amendment 9 (Specialty system) is integrated into Amendments 7 & 8
 - Amendment 7 (Profile redesign) must be done before Amendment 8 (Services page)
 - Amendment 6 (Jobs page reorg) is independent
 - Amendment 1 (Availability filter) requires existing calendar system

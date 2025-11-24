@@ -32,7 +32,11 @@ import {
   List,
   Map,
   X,
-  Loader2
+  Loader2,
+  Check,
+  Square,
+  CheckSquare,
+  GitCompare
 } from 'lucide-react'
 import { searchProfiles } from '../../api/profiles'
 import { getSpecialtyLabel } from '../../constants/specialties'
@@ -54,6 +58,10 @@ const DiscoveryPage = () => {
   const [professionals, setProfessionals] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+
+  // Bulk selection state
+  const [selectedProfiles, setSelectedProfiles] = useState([])
+  const [bulkActionMode, setBulkActionMode] = useState(false)
 
   // Map Supabase roles to component roles
   const mapSupabaseRoleToComponentRole = (supabaseRole) => {
@@ -227,6 +235,82 @@ const DiscoveryPage = () => {
         description: error.message || 'Failed to update favorites.',
       })
     }
+  }
+
+  // Bulk selection handlers
+  const toggleBulkMode = () => {
+    setBulkActionMode(!bulkActionMode)
+    setSelectedProfiles([])
+  }
+
+  const toggleProfileSelection = (profileId) => {
+    setSelectedProfiles(prev =>
+      prev.includes(profileId)
+        ? prev.filter(id => id !== profileId)
+        : [...prev, profileId]
+    )
+  }
+
+  const selectAllProfiles = () => {
+    setSelectedProfiles(filteredProfessionals.map(p => p.id))
+  }
+
+  const clearSelection = () => {
+    setSelectedProfiles([])
+  }
+
+  const bulkAddToFavorites = async () => {
+    const profilesToAdd = selectedProfiles.filter(id => !favorites.includes(id))
+
+    if (profilesToAdd.length === 0) {
+      toast({
+        title: 'Already favorited',
+        description: 'All selected profiles are already in your favorites.',
+      })
+      return
+    }
+
+    // Optimistic update
+    setFavorites(prev => [...new Set([...prev, ...profilesToAdd])])
+
+    try {
+      await Promise.all(profilesToAdd.map(id => addFavorite(id)))
+      toast({
+        title: 'Added to favorites',
+        description: `${profilesToAdd.length} profile${profilesToAdd.length > 1 ? 's' : ''} added to favorites.`,
+      })
+      clearSelection()
+      setBulkActionMode(false)
+    } catch (error) {
+      // Revert on error
+      setFavorites(prev => prev.filter(id => !profilesToAdd.includes(id)))
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to add profiles to favorites.',
+      })
+    }
+  }
+
+  const bulkCompare = () => {
+    if (selectedProfiles.length < 2) {
+      toast({
+        title: 'Select more profiles',
+        description: 'Please select at least 2 profiles to compare.',
+      })
+      return
+    }
+
+    if (selectedProfiles.length > 4) {
+      toast({
+        title: 'Too many profiles',
+        description: 'You can compare up to 4 profiles at once.',
+      })
+      return
+    }
+
+    // Navigate to comparison page with selected profile IDs
+    navigate(`/compare?ids=${selectedProfiles.join(',')}`)
   }
 
   const addSkillFilter = (skill) => {
@@ -442,6 +526,19 @@ const DiscoveryPage = () => {
               </div>
 
               <div className="flex items-center space-x-2">
+                {/* Bulk Actions Toggle */}
+                <Button
+                  variant={bulkActionMode ? "default" : "outline"}
+                  size="sm"
+                  onClick={toggleBulkMode}
+                  className="h-9"
+                >
+                  <CheckSquare className="w-4 h-4 mr-2" />
+                  Select
+                </Button>
+
+                {/* View Mode Toggles */}
+                <div className="h-6 w-px bg-slate-200 dark:bg-slate-700" />
                 <Button
                   variant={viewMode === 'grid' ? "default" : "outline"}
                   size="sm"
@@ -500,6 +597,78 @@ const DiscoveryPage = () => {
               </div>
             )}
 
+            {/* Bulk Action Toolbar */}
+            {bulkActionMode && (
+              <Card className="mb-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
+                <CardContent className="p-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    {/* Selection Info */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <CheckSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        <span className="text-sm font-medium text-slate-900 dark:text-white">
+                          {selectedProfiles.length} selected
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="link"
+                          size="sm"
+                          onClick={selectAllProfiles}
+                          className="h-auto p-0 text-xs text-blue-600 dark:text-blue-400"
+                        >
+                          Select all ({filteredProfessionals.length})
+                        </Button>
+                        {selectedProfiles.length > 0 && (
+                          <>
+                            <span className="text-slate-300 dark:text-slate-600">|</span>
+                            <Button
+                              variant="link"
+                              size="sm"
+                              onClick={clearSelection}
+                              className="h-auto p-0 text-xs text-blue-600 dark:text-blue-400"
+                            >
+                              Clear
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Bulk Actions */}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={bulkAddToFavorites}
+                        disabled={selectedProfiles.length === 0}
+                      >
+                        <Heart className="w-4 h-4 mr-2" />
+                        Add to Favorites
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={bulkCompare}
+                        disabled={selectedProfiles.length < 2}
+                      >
+                        <GitCompare className="w-4 h-4 mr-2" />
+                        Compare
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={toggleBulkMode}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
         {/* Loading State */}
         {isLoading && (
           <div className="flex justify-center items-center py-12">
@@ -546,7 +715,29 @@ const DiscoveryPage = () => {
             const isFavorite = favorites.includes(professional.id)
 
             return (
-              <Card key={professional.id} className={`relative group hover:shadow-lg transition-shadow bg-white dark:bg-[#121620] border-slate-200 dark:border-slate-700 ${professional.featured ? 'ring-2 ring-yellow-200 dark:ring-yellow-600' : ''}`}>
+              <Card
+                key={professional.id}
+                className={`relative group hover:shadow-lg transition-shadow bg-white dark:bg-[#121620] border-slate-200 dark:border-slate-700 ${professional.featured ? 'ring-2 ring-yellow-200 dark:ring-yellow-600' : ''} ${bulkActionMode && selectedProfiles.includes(professional.id) ? 'ring-2 ring-blue-500' : ''} ${bulkActionMode ? 'cursor-pointer' : ''}`}
+                onClick={bulkActionMode ? () => toggleProfileSelection(professional.id) : undefined}
+              >
+                {/* Bulk Selection Checkbox */}
+                {bulkActionMode && (
+                  <div className="absolute top-3 left-3 z-20">
+                    <button
+                      onClick={() => toggleProfileSelection(professional.id)}
+                      className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
+                        selectedProfiles.includes(professional.id)
+                          ? 'bg-blue-600 border-blue-600'
+                          : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-blue-500'
+                      }`}
+                    >
+                      {selectedProfiles.includes(professional.id) && (
+                        <Check className="w-4 h-4 text-white" />
+                      )}
+                    </button>
+                  </div>
+                )}
+
                 {professional.featured && (
                   <div className="absolute top-3 right-3 z-10">
                     <Badge className="bg-yellow-100 text-yellow-800">

@@ -15,7 +15,13 @@
       "Bash(git checkout:*)",
       "Bash(find:*)",
       "WebFetch(domain:supabase.com)",
-      "Bash(npx supabase db push)"
+      "Bash(npx supabase db push)",
+      "Bash(git pull:*)",
+      "WebFetch(domain:surreal.live)",
+      "Bash(npx supabase:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npx eslint:*)",
+      "Bash(timeout 10 npm run dev:*)"
     ],
     "deny": [],
     "ask": []
