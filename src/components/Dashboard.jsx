@@ -2,6 +2,7 @@ import { useAuth } from '../App'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import StatusBadge from '@/components/ui/StatusBadge'
 import {
   Users,
   Calendar,
@@ -541,12 +542,12 @@ const Dashboard = () => {
                               {booking.start_time || 'Time TBD'}
                             </p>
                           </div>
-                          <Badge
-                            variant={booking.status === 'in_progress' ? 'default' : 'secondary'}
-                            className="text-xs flex-shrink-0"
-                          >
-                            {booking.status}
-                          </Badge>
+                          <StatusBadge
+                            status={booking.status}
+                            type="booking"
+                            size="sm"
+                            className="flex-shrink-0"
+                          />
                         </Link>
                       )
                     })}
@@ -631,16 +632,12 @@ const Dashboard = () => {
                             <p className="text-xs text-slate-500 dark:text-white/50">
                               {activity.timeDisplay}
                             </p>
-                            <Badge
-                              variant={
-                                activity.status === 'pending' || activity.status === 'unread'
-                                  ? 'default'
-                                  : 'secondary'
-                              }
-                              className="text-xs h-4 px-1.5"
-                            >
-                              {activity.status}
-                            </Badge>
+                            <StatusBadge
+                              status={activity.status}
+                              type={activity.type}
+                              size="sm"
+                              className="h-4 px-1.5"
+                            />
                           </div>
                         </div>
                       </Link>
