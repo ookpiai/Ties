@@ -26,7 +26,8 @@ import {
   Eye,
   MessageCircle,
   Loader2,
-  ArrowLeft
+  ArrowLeft,
+  Package
 } from 'lucide-react'
 import { getProfile } from '../../api/profiles'
 import { sendMessage } from '../../api/messages'

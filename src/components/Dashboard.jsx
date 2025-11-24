@@ -11,7 +11,12 @@ import {
   TrendingUp,
   Star,
   Clock,
-  Plus
+  Plus,
+  AlertCircle,
+  CheckCircle,
+  DollarSign,
+  ArrowRight,
+  Activity
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
@@ -282,59 +287,136 @@ const Dashboard = () => {
 
   const roleContent = getRoleSpecificContent()
 
+  // Get pending actions that need attention
+  const getPendingActions = () => {
+    const actions = []
+
+    // Pending bookings (requests to review)
+    const pendingBookings = bookings.filter(b => b?.status === 'pending')
+    if (pendingBookings.length > 0) {
+      pendingBookings.forEach(booking => {
+        const isFreelancer = booking.freelancer_id === user?.id
+        const otherParty = isFreelancer ? booking.client : booking.freelancer
+        actions.push({
+          id: `booking-${booking.id}`,
+          title: isFreelancer
+            ? `Review booking request from ${otherParty?.display_name || 'Unknown'}`
+            : `Awaiting response from ${otherParty?.display_name || 'Unknown'}`,
+          description: `${booking.service_type || 'Booking'} on ${new Date(booking.start_date).toLocaleDateString()}`,
+          type: 'booking',
+          link: `/bookings/${booking.id}`,
+          urgent: isFreelancer,
+          icon: Calendar
+        })
+      })
+    }
+
+    // Unread messages
+    const unreadConvs = conversations.filter(c => c?.unreadCount > 0)
+    if (unreadConvs.length > 0) {
+      actions.push({
+        id: 'unread-messages',
+        title: `${unreadMessagesCount} unread message${unreadMessagesCount > 1 ? 's' : ''}`,
+        description: `From ${unreadConvs.length} conversation${unreadConvs.length > 1 ? 's' : ''}`,
+        type: 'message',
+        link: '/messages',
+        urgent: unreadMessagesCount > 5,
+        icon: MessageCircle
+      })
+    }
+
+    // Incomplete profile
+    if (!user?.bio || !user?.avatar_url) {
+      actions.push({
+        id: 'complete-profile',
+        title: 'Complete your profile',
+        description: 'Add a bio and photo to improve your visibility',
+        type: 'profile',
+        link: '/profile',
+        urgent: false,
+        icon: Users
+      })
+    }
+
+    return actions.slice(0, 5) // Limit to 5 most important
+  }
+
+  const pendingActions = loading ? [] : getPendingActions()
+
+  // Get this week's schedule (upcoming bookings)
+  const getThisWeeksSchedule = () => {
+    const now = new Date()
+    const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+
+    return bookings
+      .filter(b => {
+        if (!b?.start_date) return false
+        const startDate = new Date(b.start_date)
+        return startDate >= now && startDate <= weekFromNow &&
+               ['accepted', 'in_progress'].includes(b.status)
+      })
+      .sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
+      .slice(0, 5)
+  }
+
+  const weekSchedule = loading ? [] : getThisWeeksSchedule()
+
   return (
     <div className="min-h-screen bg-app text-app transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-                {roleContent.title}
-              </h1>
-              <p className="text-slate-600 dark:text-slate-300 mt-1">
-                {roleContent.subtitle}
-              </p>
-            </div>
-            <div className="flex items-center space-x-4">
+        {/* Header - Surreal-inspired */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+              Welcome back, {user?.display_name || user?.first_name || 'there'}
+            </h1>
+            <div className="flex items-center space-x-3">
               {user?.subscription_type === 'pro' && (
-                <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
                   <Star className="w-3 h-3 mr-1" />
                   PRO
                 </Badge>
               )}
               <Link to={roleContent.primaryHref}>
-                <Button>
+                <Button size="sm">
                   <Plus className="w-4 h-4 mr-2" />
                   {roleContent.primaryAction}
                 </Button>
               </Link>
             </div>
           </div>
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Quick Stats - Birds Eye View */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {stats.map((stat, index) => {
             const Icon = stat.icon
+            const isLoading = stat.value === '...'
             return (
-              <Card key={index} className="bg-surface border border-app text-app rounded-2xl">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-slate-600 dark:text-white/80">
-                        {stat.title}
-                      </p>
-                      <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                        {stat.value}
-                      </p>
-                      <p className="text-xs text-slate-500 dark:text-white/60 mt-1">
-                        {stat.change}
-                      </p>
+              <Card key={index} className="bg-surface border border-app text-app rounded-xl hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Icon className="w-4 h-4 text-primary" />
                     </div>
-                    <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                      <Icon className="w-6 h-6 text-primary" />
-                    </div>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
+                      {isLoading ? (
+                        <span className="inline-block w-12 h-7 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></span>
+                      ) : (
+                        stat.value
+                      )}
+                    </p>
+                    <p className="text-xs font-medium text-slate-600 dark:text-white/70 mb-1">
+                      {stat.title}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-white/50">
+                      {stat.change}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -342,32 +424,158 @@ const Dashboard = () => {
           })}
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Quick Actions */}
-          <div className="lg:col-span-2">
-            <Card className="bg-surface border border-app text-app rounded-2xl">
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-                <CardDescription>
-                  Get started with these common tasks
-                </CardDescription>
+        {/* Pending Actions - Surreal-inspired attention section */}
+        {pendingActions.length > 0 && (
+          <Card className="bg-orange-50 border border-orange-200 dark:bg-orange-950/20 dark:border-orange-900/30 rounded-xl mb-6">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                  <h3 className="font-semibold text-orange-900 dark:text-orange-100">
+                    Requires Your Attention ({pendingActions.length})
+                  </h3>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {pendingActions.map((action) => {
+                  const ActionIcon = action.icon
+                  return (
+                    <Link
+                      key={action.id}
+                      to={action.link}
+                      className="flex items-center justify-between p-3 bg-white dark:bg-slate-900/50 rounded-lg hover:shadow-sm transition-shadow border border-slate-200 dark:border-slate-700"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                          action.urgent
+                            ? 'bg-red-100 dark:bg-red-900/30'
+                            : 'bg-slate-100 dark:bg-slate-800'
+                        }`}>
+                          <ActionIcon className={`w-4 h-4 ${
+                            action.urgent
+                              ? 'text-red-600 dark:text-red-400'
+                              : 'text-slate-600 dark:text-slate-400'
+                          }`} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-slate-900 dark:text-white">
+                            {action.title}
+                          </p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">
+                            {action.description}
+                          </p>
+                        </div>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-slate-400" />
+                    </Link>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Main Content Grid */}
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* This Week's Schedule */}
+          <div className="lg:col-span-2 space-y-6">
+            <Card className="bg-surface border border-app text-app rounded-xl">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg">This Week's Schedule</CardTitle>
+                    <CardDescription className="text-xs">
+                      Upcoming confirmed bookings
+                    </CardDescription>
+                  </div>
+                  <Link to="/bookings">
+                    <Button variant="ghost" size="sm">
+                      View All <ArrowRight className="w-3 h-3 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="grid md:grid-cols-2 gap-4">
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : weekSchedule.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Calendar className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+                    <p className="text-sm text-slate-600 dark:text-slate-400 font-medium mb-1">
+                      No bookings this week
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-500">
+                      Check the discovery page to find new opportunities
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {weekSchedule.map((booking) => {
+                      const isFreelancer = booking.freelancer_id === user?.id
+                      const otherParty = isFreelancer ? booking.client : booking.freelancer
+                      const startDate = new Date(booking.start_date)
+                      const dayName = startDate.toLocaleDateString('en-US', { weekday: 'short' })
+                      const dateStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+
+                      return (
+                        <Link
+                          key={booking.id}
+                          to={`/bookings/${booking.id}`}
+                          className="flex items-center space-x-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg hover:shadow-sm transition-shadow border border-slate-200 dark:border-slate-700"
+                        >
+                          <div className="flex-shrink-0 w-12 text-center">
+                            <p className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                              {dayName}
+                            </p>
+                            <p className="text-sm font-bold text-slate-900 dark:text-white">
+                              {dateStr}
+                            </p>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                              {booking.service_type || 'Booking'} with {otherParty?.display_name || 'Unknown'}
+                            </p>
+                            <p className="text-xs text-slate-600 dark:text-slate-400">
+                              {booking.start_time || 'Time TBD'}
+                            </p>
+                          </div>
+                          <Badge
+                            variant={booking.status === 'in_progress' ? 'default' : 'secondary'}
+                            className="text-xs flex-shrink-0"
+                          >
+                            {booking.status}
+                          </Badge>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card className="bg-surface border border-app text-app rounded-xl">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-3">
                   {quickActions.map((action, index) => {
                     const Icon = action.icon
                     return (
                       <Link key={index} to={action.href}>
-                        <div className="p-4 border border-app rounded-lg hover:border-[#E03131] dark:hover:border-[#F03E3E] hover:shadow-sm transition-all cursor-pointer bg-surface">
+                        <div className="p-3 border border-app rounded-lg hover:border-primary hover:shadow-sm transition-all cursor-pointer bg-surface">
                           <div className="flex items-start space-x-3">
-                            <div className={`w-10 h-10 ${action.color} rounded-lg flex items-center justify-center`}>
-                              <Icon className="w-5 h-5 text-white" />
+                            <div className={`w-9 h-9 ${action.color} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                              <Icon className="w-4 h-4 text-white" />
                             </div>
-                            <div>
-                              <h3 className="font-medium text-slate-900 dark:text-white">
+                            <div className="min-w-0">
+                              <h3 className="text-sm font-medium text-slate-900 dark:text-white">
                                 {action.title}
                               </h3>
-                              <p className="text-sm text-slate-600 dark:text-white/80 mt-1">
+                              <p className="text-xs text-slate-600 dark:text-white/70 mt-1">
                                 {action.description}
                               </p>
                             </div>
@@ -381,14 +589,14 @@ const Dashboard = () => {
             </Card>
           </div>
 
-          {/* Recent Activity */}
+          {/* Recent Activity Sidebar */}
           <div>
-            <Card className="bg-surface border border-app text-app rounded-2xl">
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>
-                  Your latest updates and notifications
-                </CardDescription>
+            <Card className="bg-surface border border-app text-app rounded-xl">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center">
+                  <Activity className="w-4 h-4 mr-2" />
+                  Recent Activity
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 {loading ? (
@@ -397,29 +605,30 @@ const Dashboard = () => {
                   </div>
                 ) : recentActivity.length === 0 ? (
                   <div className="text-center py-8">
-                    <p className="text-slate-500 dark:text-white/60 text-sm">
-                      No recent activity yet
-                    </p>
-                    <p className="text-xs text-slate-400 dark:text-white/40 mt-1">
-                      Start by exploring talent or checking your bookings
+                    <Clock className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+                    <p className="text-xs text-slate-500 dark:text-slate-500">
+                      No recent activity
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {recentActivity.map((activity, index) => (
                       <Link
                         key={index}
                         to={activity.link || '#'}
-                        className="flex items-start space-x-3 hover:bg-slate-50 dark:hover:bg-slate-800 p-2 -m-2 rounded-lg transition-colors"
+                        className="flex items-start space-x-2 hover:bg-slate-50 dark:hover:bg-slate-800 p-2 -m-2 rounded-lg transition-colors"
                       >
-                        <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                        <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                          activity.status === 'pending' || activity.status === 'unread'
+                            ? 'bg-primary'
+                            : 'bg-slate-300 dark:bg-slate-600'
+                        }`}></div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-900 dark:text-white">
+                          <p className="text-xs font-medium text-slate-900 dark:text-white line-clamp-2">
                             {activity.title}
                           </p>
                           <div className="flex items-center space-x-2 mt-1">
-                            <Clock className="w-3 h-3 text-slate-400 dark:text-white/60" />
-                            <p className="text-xs text-slate-500 dark:text-white/60">
+                            <p className="text-xs text-slate-500 dark:text-white/50">
                               {activity.timeDisplay}
                             </p>
                             <Badge
@@ -428,7 +637,7 @@ const Dashboard = () => {
                                   ? 'default'
                                   : 'secondary'
                               }
-                              className="text-xs"
+                              className="text-xs h-4 px-1.5"
                             >
                               {activity.status}
                             </Badge>
@@ -438,9 +647,9 @@ const Dashboard = () => {
                     ))}
                   </div>
                 )}
-                <div className="mt-4 pt-4 border-t border-app">
+                <div className="mt-4 pt-3 border-t border-app">
                   <Link to="/bookings">
-                    <Button variant="outline" size="sm" className="w-full">
+                    <Button variant="outline" size="sm" className="w-full text-xs">
                       View All Activity
                     </Button>
                   </Link>
@@ -450,24 +659,24 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Getting Started Section for New Users */}
+        {/* Getting Started Banner for New Users */}
         {!user?.bio && (
-          <Card className="mt-8 bg-surface border border-app text-app rounded-2xl">
-            <CardContent className="p-6">
-              <div className="flex items-start space-x-4">
-                <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <Users className="w-6 h-6 text-white" />
+          <Card className="mt-6 bg-blue-50 border border-blue-200 dark:bg-blue-950/20 dark:border-blue-900/30 rounded-xl">
+            <CardContent className="p-4">
+              <div className="flex items-start space-x-3">
+                <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Users className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100">
+                  <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
                     Complete Your Profile
                   </h3>
-                  <p className="text-blue-700 dark:text-blue-200 mt-1">
-                    Add a bio, portfolio items, and tags to help others discover your work and connect with you.
+                  <p className="text-xs text-blue-700 dark:text-blue-200 mt-1">
+                    Add a bio, portfolio items, and services to help others discover your work.
                   </p>
-                  <div className="mt-4">
+                  <div className="mt-3">
                     <Link to="/profile">
-                      <Button variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-100">
+                      <Button size="sm" variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/30">
                         Complete Profile
                       </Button>
                     </Link>
