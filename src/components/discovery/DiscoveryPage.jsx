@@ -9,6 +9,13 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import EmptyState from '@/components/ui/EmptyState'
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
   Search,
   Filter,
   MapPin,
@@ -36,7 +43,12 @@ import {
   Check,
   Square,
   CheckSquare,
-  GitCompare
+  GitCompare,
+  MoreVertical,
+  MessageCircle,
+  Share2,
+  UserPlus,
+  ExternalLink
 } from 'lucide-react'
 import { searchProfiles } from '../../api/profiles'
 import { getSpecialtyLabel } from '../../constants/specialties'
@@ -311,6 +323,64 @@ const DiscoveryPage = () => {
 
     // Navigate to comparison page with selected profile IDs
     navigate(`/compare?ids=${selectedProfiles.join(',')}`)
+  }
+
+  // Quick actions handlers
+  const handleMessage = (professionalId, professionalName) => {
+    navigate('/messages', { state: { openConversationWithUserId: professionalId } })
+  }
+
+  const handleBookNow = (professionalId, professionalName) => {
+    navigate(`/book/${professionalId}`)
+  }
+
+  const handleShareProfile = async (professionalId, professionalName) => {
+    const profileUrl = `${window.location.origin}/profile/${professionalId}`
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Check out ${professionalName}'s profile`,
+          text: `View ${professionalName} on TIES Together`,
+          url: profileUrl
+        })
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          // Fallback to clipboard
+          navigator.clipboard.writeText(profileUrl)
+          toast({
+            title: 'Link copied',
+            description: 'Profile link copied to clipboard.',
+          })
+        }
+      }
+    } else {
+      // Fallback to clipboard
+      navigator.clipboard.writeText(profileUrl)
+      toast({
+        title: 'Link copied',
+        description: 'Profile link copied to clipboard.',
+      })
+    }
+  }
+
+  const handleAddContact = async (professionalId, professionalName) => {
+    // This would integrate with a contacts/network feature
+    // For now, just add to favorites
+    try {
+      await addFavorite(professionalId)
+      setFavorites(prev => [...prev, professionalId])
+      toast({
+        title: 'Added to network',
+        description: `${professionalName} has been added to your network.`,
+      })
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to add to network.',
+      })
+    }
   }
 
   const addSkillFilter = (skill) => {
@@ -766,12 +836,83 @@ const DiscoveryPage = () => {
                           <Icon className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                           <span className="text-sm text-slate-500 dark:text-slate-400 capitalize">{professional.role}</span>
                         </div>
-                        <button
-                          onClick={() => toggleFavorite(professional.id)}
-                          className="text-slate-400 dark:text-slate-500 hover:text-red-500 transition-colors"
-                        >
-                          <Heart className={`w-5 h-5 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
-                        </button>
+                        <div className="flex items-center space-x-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleFavorite(professional.id)
+                            }}
+                            className="text-slate-400 dark:text-slate-500 hover:text-red-500 transition-colors p-1"
+                          >
+                            <Heart className={`w-5 h-5 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
+                          </button>
+
+                          {/* Quick Actions Menu */}
+                          {!bulkActionMode && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <MoreVertical className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleMessage(professional.id, professional.name)
+                                  }}
+                                >
+                                  <MessageCircle className="w-4 h-4 mr-2" />
+                                  Send Message
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleBookNow(professional.id, professional.name)
+                                  }}
+                                >
+                                  <Calendar className="w-4 h-4 mr-2" />
+                                  Book Now
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    navigate(`/profile/${professional.id}`)
+                                  }}
+                                >
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  View Full Profile
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleShareProfile(professional.id, professional.name)
+                                  }}
+                                >
+                                  <Share2 className="w-4 h-4 mr-2" />
+                                  Share Profile
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleAddContact(professional.id, professional.name)
+                                  }}
+                                  disabled={isFavorite}
+                                >
+                                  <UserPlus className="w-4 h-4 mr-2" />
+                                  {isFavorite ? 'Already in Network' : 'Add to Network'}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
                       </div>
 
                       {/* Specialty Badge - Prominent display */}
