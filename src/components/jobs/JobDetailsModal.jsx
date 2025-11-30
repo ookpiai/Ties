@@ -1,18 +1,23 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { X, MapPin, Calendar, DollarSign, Users, Building2, Package, Clock, User as UserIcon } from 'lucide-react'
+import { X, MapPin, Calendar, DollarSign, Users, Building2, Package, Clock, User as UserIcon, ShieldCheck } from 'lucide-react'
 import { getJobPostingById } from '../../api/jobs'
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
 import { useAuth } from '../../App'
 import ApplyToRoleModal from './ApplyToRoleModal'
+import ApplyOnBehalfModal from './ApplyOnBehalfModal'
 
 const JobDetailsModal = ({ jobId, isOpen, onClose }) => {
   const navigate = useNavigate()
   const [job, setJob] = useState(null)
   const [loading, setLoading] = useState(true)
   const [applyingToRole, setApplyingToRole] = useState(null)
+  const [applyOnBehalfRole, setApplyOnBehalfRole] = useState(null)
   const { user } = useAuth()
+
+  // Check if user is a verified agent
+  const isVerifiedAgent = user?.is_agent && user?.is_agent_verified
 
   useEffect(() => {
     if (isOpen && jobId) {
@@ -245,7 +250,7 @@ const JobDetailsModal = ({ jobId, isOpen, onClose }) => {
 
                       {/* Apply Button */}
                       {job.status === 'open' && role.filled_count < role.quantity && (
-                        <div className="mt-3">
+                        <div className="mt-3 space-y-2">
                           {canApplyToRole(role) ? (
                             <Button
                               size="sm"
@@ -261,6 +266,18 @@ const JobDetailsModal = ({ jobId, isOpen, onClose }) => {
                                 : `Only ${role.role_type}s can apply to this role`
                               }
                             </p>
+                          )}
+                          {/* Apply on Behalf button for verified agents on freelancer roles */}
+                          {isVerifiedAgent && role.role_type === 'freelancer' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                              onClick={() => setApplyOnBehalfRole(role)}
+                            >
+                              <ShieldCheck className="h-4 w-4 mr-2" />
+                              Apply on Behalf of Talent
+                            </Button>
                           )}
                         </div>
                       )}
@@ -325,6 +342,17 @@ const JobDetailsModal = ({ jobId, isOpen, onClose }) => {
         onClose={() => setApplyingToRole(null)}
         job={job}
         role={applyingToRole}
+        onApplicationSubmitted={() => {
+          loadJobDetails() // Reload to get updated application count
+        }}
+      />
+
+      {/* Apply On Behalf Modal (for Agents) */}
+      <ApplyOnBehalfModal
+        isOpen={!!applyOnBehalfRole}
+        onClose={() => setApplyOnBehalfRole(null)}
+        job={job}
+        role={applyOnBehalfRole}
         onApplicationSubmitted={() => {
           loadJobDetails() // Reload to get updated application count
         }}

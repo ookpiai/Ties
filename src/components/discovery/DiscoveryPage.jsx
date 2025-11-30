@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import VenueMapView from './VenueMapView'
 import { Button } from '@/components/ui/button'
@@ -48,12 +48,19 @@ import {
   MessageCircle,
   Share2,
   UserPlus,
-  ExternalLink
+  ExternalLink,
+  ShieldCheck,
+  Zap,
+  CheckCircle,
+  Crown,
+  Image
 } from 'lucide-react'
 import { searchProfiles } from '../../api/profiles'
 import { getSpecialtyLabel } from '../../constants/specialties'
 import { getFavorites, addFavorite, removeFavorite } from '../../api/favorites'
 import { useToast } from '@/hooks/use-toast'
+import { HelpTooltip, FeatureTip } from '@/components/ui/HelpTooltip'
+import { helpContent } from '../../constants/helpContent'
 
 const DiscoveryPage = () => {
   const navigate = useNavigate()
@@ -74,6 +81,9 @@ const DiscoveryPage = () => {
   // Bulk selection state
   const [selectedProfiles, setSelectedProfiles] = useState([])
   const [bulkActionMode, setBulkActionMode] = useState(false)
+
+  // Badge filter state (per badge.md spec)
+  const [selectedBadgeFilters, setSelectedBadgeFilters] = useState([])
 
   // Map Supabase roles to component roles
   const mapSupabaseRoleToComponentRole = (supabaseRole) => {
@@ -141,17 +151,20 @@ const DiscoveryPage = () => {
           filteredProfiles = profiles.filter(p => p.role === 'Vendor')
         } else if (selectedRole === 'venue') {
           filteredProfiles = profiles.filter(p => p.role === 'Venue')
+        } else if (selectedRole === 'agent') {
+          // Filter for verified agents only
+          filteredProfiles = profiles.filter(p => p.is_agent && p.is_agent_verified)
         }
 
         // Transform Supabase profiles to match component's expected format
         const transformedProfiles = filteredProfiles.map(profile => ({
           id: profile.id,
           name: profile.display_name || 'Anonymous',
-          role: mapSupabaseRoleToComponentRole(profile.role),
+          role: profile.is_agent && profile.is_agent_verified ? 'agent' : mapSupabaseRoleToComponentRole(profile.role),
           originalRole: profile.role, // Keep original role for specialty label lookup
           specialty: profile.specialty,
           specialty_display_name: profile.specialty_display_name || getSpecialtyLabel(profile.role, profile.specialty),
-          title: profile.role || 'Creative Professional',
+          title: profile.is_agent && profile.is_agent_verified ? 'Verified Agent' : (profile.role || 'Creative Professional'),
           location: profile.city || 'Location not specified',
           avatar: profile.avatar_url,
           rating: 0, // TODO: Add ratings in future phase
@@ -163,7 +176,10 @@ const DiscoveryPage = () => {
           availability: 'available',
           featured: false,
           profileViews: 0,
-          completedProjects: 0
+          completedProjects: 0,
+          // Agent-specific fields
+          isAgent: profile.is_agent && profile.is_agent_verified,
+          agentIndustryTags: profile.agent_industry_tags || []
         }))
 
         setProfessionals(transformedProfiles)
@@ -190,7 +206,8 @@ const DiscoveryPage = () => {
     { value: 'all', label: 'All', icon: Users },
     { value: 'freelancer', label: 'Freelancers', icon: Briefcase },
     { value: 'vendor', label: 'Vendors', icon: Package },
-    { value: 'venue', label: 'Venues', icon: Building }
+    { value: 'venue', label: 'Venues', icon: Building },
+    { value: 'agent', label: 'Agents', icon: ShieldCheck }
   ]
 
   const skillOptions = [
@@ -206,6 +223,24 @@ const DiscoveryPage = () => {
     { value: 'price_high', label: 'Price: High to Low' },
     { value: 'recent', label: 'Recently Active' }
   ]
+
+  // Badge filter options per badge.md spec
+  const badgeFilterOptions = [
+    { value: 'verified', label: 'Verified', icon: ShieldCheck, color: 'text-blue-600', bgColor: 'bg-blue-100' },
+    { value: 'activity', label: 'Active (30 days)', icon: Zap, color: 'text-orange-600', bgColor: 'bg-orange-100' },
+    { value: 'completion', label: 'Reliable', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-100' },
+    { value: 'quality', label: 'Top Rated', icon: Star, color: 'text-yellow-600', bgColor: 'bg-yellow-100' },
+    { value: 'ties_pro', label: 'TIES Pro', icon: Crown, color: 'text-amber-600', bgColor: 'bg-amber-100' }
+  ]
+
+  // Toggle badge filter
+  const toggleBadgeFilter = (badge) => {
+    setSelectedBadgeFilters(prev =>
+      prev.includes(badge)
+        ? prev.filter(b => b !== badge)
+        : [...prev, badge]
+    )
+  }
 
   // Filtering now happens via Supabase searchProfiles() API
   // No need for local filtering since data is pre-filtered from database
@@ -399,6 +434,7 @@ const DiscoveryPage = () => {
     setSelectedSkills([])
     setPriceRange([0, 500])
     setSearchQuery('')
+    setSelectedBadgeFilters([])
   }
 
   const getRoleIcon = (role) => {
@@ -415,7 +451,15 @@ const DiscoveryPage = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Discover Talent</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            Discover Talent
+            <HelpTooltip
+              content={helpContent.discovery.search.description}
+              title={helpContent.discovery.search.title}
+              variant="info"
+              size="sm"
+            />
+          </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
             Find the perfect creative professionals for your projects
           </p>
@@ -572,6 +616,43 @@ const DiscoveryPage = () => {
                     ))}
                   </div>
                 </div>
+
+                {/* Badge Filters (per badge.md spec) */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Badge Filters
+                    </Label>
+                    <Link to="/badges" className="text-xs text-primary hover:underline">
+                      View Rules
+                    </Link>
+                  </div>
+                  <div className="space-y-2">
+                    {badgeFilterOptions.map(badge => {
+                      const Icon = badge.icon
+                      const isSelected = selectedBadgeFilters.includes(badge.value)
+                      return (
+                        <button
+                          key={badge.value}
+                          onClick={() => toggleBadgeFilter(badge.value)}
+                          className={`w-full flex items-center justify-between p-2 rounded-lg transition-colors ${
+                            isSelected
+                              ? `${badge.bgColor} dark:bg-opacity-30 border border-current`
+                              : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <Icon className={`w-4 h-4 ${isSelected ? badge.color : ''}`} />
+                            <span className={`text-sm ${isSelected ? badge.color : ''}`}>{badge.label}</span>
+                          </div>
+                          {isSelected && (
+                            <Check className={`w-4 h-4 ${badge.color}`} />
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </aside>
@@ -637,7 +718,7 @@ const DiscoveryPage = () => {
             </div>
 
             {/* Active Filters Pills */}
-            {(selectedSkills.length > 0 || selectedLocation || selectedRole !== 'all') && (
+            {(selectedSkills.length > 0 || selectedLocation || selectedRole !== 'all' || selectedBadgeFilters.length > 0) && (
               <div className="flex flex-wrap items-center gap-2 mb-4">
                 <span className="text-xs text-slate-600 dark:text-slate-400">Active:</span>
                 {selectedRole !== 'all' && (
@@ -664,6 +745,20 @@ const DiscoveryPage = () => {
                     </button>
                   </Badge>
                 ))}
+                {selectedBadgeFilters.map(badgeKey => {
+                  const badge = badgeFilterOptions.find(b => b.value === badgeKey)
+                  if (!badge) return null
+                  const Icon = badge.icon
+                  return (
+                    <Badge key={badgeKey} className={`flex items-center space-x-1 h-6 ${badge.bgColor} ${badge.color}`}>
+                      <Icon className="w-3 h-3" />
+                      <span>{badge.label}</span>
+                      <button onClick={() => toggleBadgeFilter(badgeKey)}>
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  )
+                })}
               </div>
             )}
 
@@ -737,52 +832,56 @@ const DiscoveryPage = () => {
                 </CardContent>
               </Card>
             )}
-          </div>
 
-        {/* Loading State */}
-        {isLoading && (
-          <div className="flex justify-center items-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <span className="ml-2 text-gray-600">Loading profiles...</span>
-          </div>
-        )}
+            {/* Loading State */}
+            {isLoading && (
+              <div className="flex justify-center items-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <span className="ml-2 text-gray-600">Loading profiles...</span>
+              </div>
+            )}
 
-        {/* Error State */}
-        {error && !isLoading && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-            {error}
-          </div>
-        )}
+            {/* Error State */}
+            {error && !isLoading && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+                {error}
+              </div>
+            )}
 
-        {/* Empty State */}
-        {!isLoading && !error && filteredProfessionals.length === 0 && viewMode !== 'map' && (
-          <EmptyState
-            icon={Users}
-            title="No profiles found"
-            description="Try adjusting your search filters or browse all available talent."
-            action={{
-              label: "Clear Filters",
-              onClick: clearAllFilters
-            }}
-          />
-        )}
+            {/* Empty State */}
+            {!isLoading && !error && filteredProfessionals.length === 0 && viewMode !== 'map' && (
+              <EmptyState
+                icon={Users}
+                title="No profiles found"
+                description="Try adjusting your search filters or browse all available talent."
+                action={{
+                  label: "Clear Filters",
+                  onClick: clearAllFilters
+                }}
+              />
+            )}
 
-        {/* Map View */}
-        {viewMode === 'map' && (
-          <div className="h-[600px] rounded-lg overflow-hidden border border-gray-200">
-            <VenueMapView />
-          </div>
-        )}
+            {/* Map View */}
+            {viewMode === 'map' && (
+              <div className="h-[600px] rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                <VenueMapView
+                  profiles={filteredProfessionals}
+                  selectedRole={selectedRole}
+                  searchQuery={searchQuery}
+                  selectedLocation={selectedLocation}
+                />
+              </div>
+            )}
 
-        {/* Professionals Grid/List */}
-        {!isLoading && !error && filteredProfessionals.length > 0 && viewMode !== 'map' && (
-          <div className={viewMode === 'grid'
-            ? "grid md:grid-cols-2 lg:grid-cols-3 gap-6"
-            : "space-y-4"
-          }>
-            {filteredProfessionals.map((professional) => {
-            const Icon = getRoleIcon(professional.role)
-            const isFavorite = favorites.includes(professional.id)
+            {/* Professionals Grid/List */}
+            {!isLoading && !error && filteredProfessionals.length > 0 && viewMode !== 'map' && (
+              <div className={viewMode === 'grid'
+                ? "grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+                : "space-y-4"
+              }>
+                {filteredProfessionals.map((professional) => {
+                  const Icon = getRoleIcon(professional.role)
+                  const isFavorite = favorites.includes(professional.id)
 
             return (
               <Card
@@ -975,7 +1074,13 @@ const DiscoveryPage = () => {
                             <Eye className="w-4 h-4 mr-1" />
                             View
                           </Button>
-                          <Button size="sm">
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleMessage(professional.id, professional.name)
+                            }}
+                          >
                             Contact
                           </Button>
                         </div>
@@ -1004,10 +1109,11 @@ const DiscoveryPage = () => {
                   </div>
                 </CardContent>
               </Card>
-            )
-          })}
+                  )
+                })}
+              </div>
+            )}
           </div>
-        )}
         </div>
       </div>
     </div>

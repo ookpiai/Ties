@@ -116,21 +116,25 @@ ALTER TABLE job_selections ENABLE ROW LEVEL SECURITY;
 -- ===== JOB POSTINGS POLICIES =====
 
 -- Anyone can view open jobs
+DROP POLICY IF EXISTS "Anyone can view open job postings" ON job_postings;
 CREATE POLICY "Anyone can view open job postings"
   ON job_postings FOR SELECT
   USING (status IN ('open', 'in_progress', 'filled'));
 
 -- Organisers can create jobs
+DROP POLICY IF EXISTS "Organisers can create jobs" ON job_postings;
 CREATE POLICY "Organisers can create jobs"
   ON job_postings FOR INSERT
   WITH CHECK (auth.uid() = organiser_id);
 
 -- Organisers can update their own jobs
+DROP POLICY IF EXISTS "Organisers can update own jobs" ON job_postings;
 CREATE POLICY "Organisers can update own jobs"
   ON job_postings FOR UPDATE
   USING (auth.uid() = organiser_id);
 
 -- Organisers can delete their own jobs
+DROP POLICY IF EXISTS "Organisers can delete own jobs" ON job_postings;
 CREATE POLICY "Organisers can delete own jobs"
   ON job_postings FOR DELETE
   USING (auth.uid() = organiser_id);
@@ -138,6 +142,7 @@ CREATE POLICY "Organisers can delete own jobs"
 -- ===== JOB ROLES POLICIES =====
 
 -- Anyone can view roles for open jobs
+DROP POLICY IF EXISTS "Anyone can view job roles" ON job_roles;
 CREATE POLICY "Anyone can view job roles"
   ON job_roles FOR SELECT
   USING (
@@ -149,6 +154,7 @@ CREATE POLICY "Anyone can view job roles"
   );
 
 -- Organisers can manage roles for their jobs
+DROP POLICY IF EXISTS "Organisers can manage their job roles" ON job_roles;
 CREATE POLICY "Organisers can manage their job roles"
   ON job_roles FOR ALL
   USING (
@@ -162,6 +168,7 @@ CREATE POLICY "Organisers can manage their job roles"
 -- ===== JOB APPLICATIONS POLICIES =====
 
 -- Anyone can view applications for jobs they're involved in
+DROP POLICY IF EXISTS "View applications for relevant jobs" ON job_applications;
 CREATE POLICY "View applications for relevant jobs"
   ON job_applications FOR SELECT
   USING (
@@ -177,16 +184,19 @@ CREATE POLICY "View applications for relevant jobs"
   );
 
 -- Users can create applications
+DROP POLICY IF EXISTS "Users can apply to jobs" ON job_applications;
 CREATE POLICY "Users can apply to jobs"
   ON job_applications FOR INSERT
   WITH CHECK (auth.uid() = applicant_id);
 
 -- Users can update their own pending applications
+DROP POLICY IF EXISTS "Users can update own pending applications" ON job_applications;
 CREATE POLICY "Users can update own pending applications"
   ON job_applications FOR UPDATE
   USING (auth.uid() = applicant_id AND status = 'pending');
 
 -- Users can delete their own pending applications
+DROP POLICY IF EXISTS "Users can withdraw applications" ON job_applications;
 CREATE POLICY "Users can withdraw applications"
   ON job_applications FOR DELETE
   USING (auth.uid() = applicant_id AND status = 'pending');
@@ -194,6 +204,7 @@ CREATE POLICY "Users can withdraw applications"
 -- ===== JOB SELECTIONS POLICIES =====
 
 -- Anyone involved can view selections
+DROP POLICY IF EXISTS "View selections for relevant jobs" ON job_selections;
 CREATE POLICY "View selections for relevant jobs"
   ON job_selections FOR SELECT
   USING (
@@ -209,6 +220,7 @@ CREATE POLICY "View selections for relevant jobs"
   );
 
 -- Only organisers can create selections
+DROP POLICY IF EXISTS "Organisers can create selections" ON job_selections;
 CREATE POLICY "Organisers can create selections"
   ON job_selections FOR INSERT
   WITH CHECK (
@@ -244,6 +256,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS update_job_postings_updated_at ON job_postings;
 CREATE TRIGGER update_job_postings_updated_at
   BEFORE UPDATE ON job_postings
   FOR EACH ROW

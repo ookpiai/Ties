@@ -22,12 +22,14 @@ import {
   Eye,
   Loader2,
   MapPin,
-  User
+  User,
+  CreditCard
 } from 'lucide-react'
 import { format, formatDistance } from 'date-fns'
 import BookingDetailsModal from './BookingDetailsModal'
 import { acceptBooking, declineBooking, cancelBooking, completeBooking } from '../../api/bookings'
 import { useToast } from '@/hooks/use-toast'
+import PaymentButton from '../payments/PaymentButton'
 
 const BookingCard = ({ booking, currentUserId, onUpdate }) => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
@@ -40,21 +42,25 @@ const BookingCard = ({ booking, currentUserId, onUpdate }) => {
 
   // Get the other party's profile
   const otherProfile = isClient ? booking.freelancer_profile : booking.client_profile
-  const otherPersonName = otherProfile?.full_name || 'Unknown User'
+  const otherPersonName = otherProfile?.display_name || otherProfile?.full_name || 'Unknown User'
 
   // Status badge configuration
   const getStatusConfig = (status) => {
     const configs = {
       pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
+      confirmed: { color: 'bg-green-100 text-green-800', label: 'Confirmed' },
       accepted: { color: 'bg-green-100 text-green-800', label: 'Accepted' },
       declined: { color: 'bg-red-100 text-red-800', label: 'Declined' },
       in_progress: { color: 'bg-blue-100 text-blue-800', label: 'In Progress' },
       completed: { color: 'bg-gray-100 text-gray-800', label: 'Completed' },
       cancelled: { color: 'bg-red-100 text-red-800', label: 'Cancelled' },
-      paid: { color: 'bg-green-100 text-green-800', label: 'Paid' }
+      paid: { color: 'bg-emerald-100 text-emerald-800', label: 'Paid' }
     }
     return configs[status] || configs.pending
   }
+
+  // Check if booking was handled by an agent (defensive - fields may not exist)
+  const isAgentManaged = booking?.agent_id && booking?.agent_accepted
 
   const statusConfig = getStatusConfig(booking.status)
 
@@ -209,6 +215,38 @@ const BookingCard = ({ booking, currentUserId, onUpdate }) => {
       const now = new Date()
       const canComplete = endDate <= now
 
+      // Show Pay Now button for client if booking is accepted but not yet paid
+      // Check payout_status as fallback if payment_status doesn't exist
+      const paymentComplete = booking.payment_status === 'captured' ||
+                              booking.payment_status === 'succeeded' ||
+                              booking.payout_status === 'completed'
+      if (isClient && !paymentComplete) {
+        actions.push(
+          <PaymentButton
+            key="pay"
+            bookingId={booking.id}
+            amount={booking.total_amount}
+            clientEmail={booking.client_profile?.email || ''}
+            freelancerName={booking.freelancer_profile?.display_name || booking.freelancer_profile?.full_name || 'Freelancer'}
+            description={booking.service_description || 'Booking Payment'}
+            size="sm"
+            onSuccess={() => {
+              toast({
+                title: 'Redirecting to Payment',
+                description: 'You will be redirected to complete your payment.',
+              })
+            }}
+            onError={(error) => {
+              toast({
+                variant: 'destructive',
+                title: 'Payment Error',
+                description: error,
+              })
+            }}
+          />
+        )
+      }
+
       if (canComplete) {
         actions.push(
           <Button
@@ -288,10 +326,15 @@ const BookingCard = ({ booking, currentUserId, onUpdate }) => {
               </div>
 
               {/* Role Context Badge */}
-              <div className="mt-2">
+              <div className="mt-2 flex flex-wrap gap-1">
                 <Badge variant="outline" className="text-xs h-5 border-slate-300 dark:border-slate-600">
                   {isClient ? 'You booked' : 'Requested from you'}
                 </Badge>
+                {isAgentManaged && (
+                  <Badge variant="outline" className="text-xs h-5 border-purple-300 dark:border-purple-600 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300">
+                    Managed by Agent
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
@@ -321,8 +364,8 @@ const BookingCard = ({ booking, currentUserId, onUpdate }) => {
               <p className="text-base font-bold text-slate-900 dark:text-white">
                 ${booking.total_amount.toFixed(2)}
               </p>
-              {booking.payment_status && (
-                <StatusBadge status={booking.payment_status} type="payment" size="sm" className="mt-1" />
+              {(booking.payment_status || booking.payout_status) && (
+                <StatusBadge status={booking.payment_status || booking.payout_status} type="payment" size="sm" className="mt-1" />
               )}
             </div>
           </div>

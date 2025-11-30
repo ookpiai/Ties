@@ -128,6 +128,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS update_bookings_timestamp ON public.bookings;
 CREATE TRIGGER update_bookings_timestamp
     BEFORE UPDATE ON public.bookings
     FOR EACH ROW
@@ -142,6 +143,7 @@ CREATE TRIGGER update_bookings_timestamp
 ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Users can view bookings where they are client OR freelancer
+DROP POLICY IF EXISTS "Users can view their own bookings" ON public.bookings;
 CREATE POLICY "Users can view their own bookings"
     ON public.bookings
     FOR SELECT
@@ -151,16 +153,18 @@ CREATE POLICY "Users can view their own bookings"
     );
 
 -- Policy: Only clients can create bookings
+DROP POLICY IF EXISTS "Clients can create bookings" ON public.bookings;
 CREATE POLICY "Clients can create bookings"
     ON public.bookings
     FOR INSERT
     WITH CHECK (
         auth.uid() = client_id AND
-        status = 'pending'
+        status IN ('pending', 'draft')
     );
 
 -- Policy: Freelancers can update their bookings (accept/decline)
 -- Clients can cancel their bookings
+DROP POLICY IF EXISTS "Users can update their bookings" ON public.bookings;
 CREATE POLICY "Users can update their bookings"
     ON public.bookings
     FOR UPDATE
@@ -174,6 +178,7 @@ CREATE POLICY "Users can update their bookings"
     );
 
 -- Policy: No deletes (soft delete via status = 'cancelled')
+DROP POLICY IF EXISTS "No one can delete bookings" ON public.bookings;
 CREATE POLICY "No one can delete bookings"
     ON public.bookings
     FOR DELETE
@@ -274,7 +279,12 @@ CREATE OR REPLACE FUNCTION public.validate_booking_status_transition()
 RETURNS TRIGGER AS $$
 BEGIN
     -- Status transition rules
-    IF OLD.status = 'pending' THEN
+    IF OLD.status = 'draft' THEN
+        -- From draft: can go to pending or cancelled (draft doesn't notify)
+        IF NEW.status NOT IN ('pending', 'cancelled') THEN
+            RAISE EXCEPTION 'Invalid status transition from draft to %', NEW.status;
+        END IF;
+    ELSIF OLD.status = 'pending' THEN
         -- From pending: can go to accepted, declined, or cancelled
         IF NEW.status NOT IN ('accepted', 'declined', 'cancelled') THEN
             RAISE EXCEPTION 'Invalid status transition from pending to %', NEW.status;
@@ -303,6 +313,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS validate_status_transition ON public.bookings;
 CREATE TRIGGER validate_status_transition
     BEFORE UPDATE OF status ON public.bookings
     FOR EACH ROW

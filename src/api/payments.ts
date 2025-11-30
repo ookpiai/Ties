@@ -17,14 +17,40 @@ import Stripe from 'stripe'
 // CONFIGURATION
 // =====================================================
 
-// Initialize Stripe (server-side only - this should be in a backend/Edge Function)
-// For now, we'll use environment variables
-const STRIPE_SECRET_KEY = import.meta.env.VITE_STRIPE_SECRET_KEY || ''
+// Stripe configuration (publishable key only - secret operations go through Edge Functions)
 const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || ''
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || ''
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
 // Platform settings
 const PLATFORM_FEE_PERCENT = 0.10 // 10% commission
-const CURRENCY = 'usd'
+const CURRENCY = 'aud'
+
+// =====================================================
+// EDGE FUNCTION HELPER
+// =====================================================
+
+/**
+ * Call a Supabase Edge Function
+ */
+async function callEdgeFunction(functionName: string, body: object): Promise<any> {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify(body),
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(data.error || `Edge function ${functionName} failed`)
+  }
+
+  return data
+}
 
 // =====================================================
 // TYPESCRIPT INTERFACES
@@ -103,44 +129,21 @@ export interface PaymentSettings {
 export async function createStripeConnectAccount(
   userId: string,
   email: string,
-  country: string = 'US'
-): Promise<{ accountId: string; onboardingUrl: string }> {
+  country: string = 'AU'
+): Promise<{ accountId: string; onboardingUrl: string; isExisting?: boolean }> {
   try {
-    // NOTE: This should be done in a Supabase Edge Function for security
-    // For now, this is the structure - you'll need to implement the Edge Function
-
-    const response = await fetch('/api/stripe/create-connect-account', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, email, country })
+    const data = await callEdgeFunction('create-connect-account', {
+      userId,
+      email,
+      country,
+      returnUrl: `${window.location.origin}/settings?stripe=success`,
+      refreshUrl: `${window.location.origin}/settings?stripe=refresh`,
     })
-
-    if (!response.ok) {
-      throw new Error('Failed to create Stripe Connect account')
-    }
-
-    const data = await response.json()
-
-    // Save account to database
-    const { error } = await supabase
-      .from('stripe_accounts')
-      .insert({
-        user_id: userId,
-        stripe_account_id: data.accountId,
-        account_type: 'express',
-        country,
-        currency: CURRENCY,
-        charges_enabled: false,
-        payouts_enabled: false,
-        details_submitted: false,
-        onboarding_completed: false
-      })
-
-    if (error) throw error
 
     return {
       accountId: data.accountId,
-      onboardingUrl: data.onboardingUrl
+      onboardingUrl: data.onboardingUrl,
+      isExisting: data.isExisting,
     }
   } catch (error) {
     console.error('createStripeConnectAccount error:', error)
@@ -331,59 +334,56 @@ export async function createPaymentIntent(
   bookingId: string,
   amount: number, // in dollars
   clientId: string,
-  freelancerId: string
+  freelancerId: string,
+  description?: string
 ): Promise<{ paymentIntentId: string; clientSecret: string }> {
   try {
-    const amountInCents = Math.round(amount * 100)
-    const platformFee = Math.round(amountInCents * PLATFORM_FEE_PERCENT)
-
-    // Get freelancer's Stripe account
-    const { data: stripeAccount } = await supabase
-      .from('stripe_accounts')
-      .select('stripe_account_id')
-      .eq('user_id', freelancerId)
-      .single()
-
-    if (!stripeAccount) {
-      throw new Error('Freelancer has not set up payment account')
-    }
-
-    // Call Edge Function to create PaymentIntent
-    const response = await fetch('/api/stripe/create-payment-intent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        amount: amountInCents,
-        platformFee,
-        connectedAccountId: stripeAccount.stripe_account_id,
-        bookingId,
-        clientId,
-        freelancerId
-      })
+    const data = await callEdgeFunction('create-payment-intent', {
+      bookingId,
+      amount,
+      clientId,
+      freelancerId,
+      description,
     })
-
-    if (!response.ok) {
-      throw new Error('Failed to create payment intent')
-    }
-
-    const data = await response.json()
-
-    // Update booking with payment intent ID
-    await supabase
-      .from('bookings')
-      .update({
-        stripe_payment_intent_id: data.paymentIntentId,
-        stripe_connected_account_id: stripeAccount.stripe_account_id,
-        payment_status: 'authorized'
-      })
-      .eq('id', bookingId)
 
     return {
       paymentIntentId: data.paymentIntentId,
-      clientSecret: data.clientSecret
+      clientSecret: data.clientSecret,
     }
   } catch (error) {
     console.error('createPaymentIntent error:', error)
+    throw error
+  }
+}
+
+/**
+ * Create a Stripe Checkout session for booking payment
+ * Redirects client to Stripe-hosted payment page
+ */
+export async function createCheckoutSession(
+  bookingId: string,
+  amount: number,
+  clientEmail: string,
+  freelancerName: string,
+  description?: string
+): Promise<{ sessionId: string; url: string }> {
+  try {
+    const data = await callEdgeFunction('create-checkout-session', {
+      bookingId,
+      amount,
+      clientEmail,
+      freelancerName,
+      description,
+      successUrl: `${window.location.origin}/bookings?payment=success&booking=${bookingId}`,
+      cancelUrl: `${window.location.origin}/bookings?payment=cancelled&booking=${bookingId}`,
+    })
+
+    return {
+      sessionId: data.sessionId,
+      url: data.url,
+    }
+  } catch (error) {
+    console.error('createCheckoutSession error:', error)
     throw error
   }
 }
@@ -394,55 +394,18 @@ export async function createPaymentIntent(
 export async function capturePayment(
   bookingId: string,
   paymentIntentId: string
-): Promise<Payment> {
+): Promise<{ success: boolean; invoiceId?: string; amount?: number }> {
   try {
-    // Call Edge Function to capture payment
-    const response = await fetch('/api/stripe/capture-payment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ paymentIntentId, bookingId })
+    const data = await callEdgeFunction('capture-payment', {
+      paymentIntentId,
+      bookingId,
     })
 
-    if (!response.ok) {
-      throw new Error('Failed to capture payment')
+    return {
+      success: data.success,
+      invoiceId: data.invoiceId,
+      amount: data.amount,
     }
-
-    const data = await response.json()
-
-    // Create payment record
-    const { data: payment, error } = await supabase
-      .from('payments')
-      .insert({
-        invoice_id: data.invoiceId,
-        booking_id: bookingId,
-        stripe_payment_intent_id: paymentIntentId,
-        stripe_charge_id: data.chargeId,
-        stripe_transfer_id: data.transferId,
-        payer_id: data.payerId,
-        recipient_id: data.recipientId,
-        amount: data.amount,
-        platform_fee: data.platformFee,
-        recipient_amount: data.recipientAmount,
-        status: 'succeeded',
-        payment_method_id: data.paymentMethodId,
-        payment_method_type: data.paymentMethodType,
-        captured_at: new Date().toISOString()
-      })
-      .select()
-      .single()
-
-    if (error) throw error
-
-    // Update booking
-    await supabase
-      .from('bookings')
-      .update({
-        payment_status: 'captured',
-        payment_captured_at: new Date().toISOString()
-      })
-      .eq('id', bookingId)
-
-    return payment as Payment
   } catch (error) {
     console.error('capturePayment error:', error)
     throw error
@@ -619,9 +582,9 @@ export function calculatePlatformFee(amount: number): number {
 /**
  * Format amount from cents to dollars
  */
-export function formatAmount(cents: number, currency: string = 'USD'): string {
+export function formatAmount(cents: number, currency: string = 'AUD'): string {
   const dollars = cents / 100
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('en-AU', {
     style: 'currency',
     currency
   }).format(dollars)
@@ -647,6 +610,7 @@ export default {
   setDefaultPaymentMethod,
   removePaymentMethod,
   createPaymentIntent,
+  createCheckoutSession,
   capturePayment,
   getPaymentHistory,
   getEarningsHistory,

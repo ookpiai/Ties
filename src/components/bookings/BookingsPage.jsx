@@ -13,10 +13,16 @@ import { Badge } from '@/components/ui/badge'
 import StatusBadge from '@/components/ui/StatusBadge'
 import { Button } from '@/components/ui/button'
 import EmptyState from '@/components/ui/EmptyState'
-import { Loader2, Calendar, Inbox, TrendingUp, DollarSign, Clock, CheckCircle, Search } from 'lucide-react'
+import { Loader2, Calendar, Inbox, TrendingUp, DollarSign, Clock, CheckCircle, Search, CalendarCheck, CalendarDays, Lock } from 'lucide-react'
 import { useAuth } from '../../App'
 import { getBookings, getBookingStats } from '../../api/bookings'
 import BookingCard from './BookingCard'
+import { HelpTooltip } from '@/components/ui/HelpTooltip'
+import { helpContent } from '../../constants/helpContent'
+import AvailabilityRequestsPanel from '../calendar/AvailabilityRequestsPanel'
+import ScheduleGridView from '../calendar/ScheduleGridView'
+import DateRangeBlockModal from '../calendar/DateRangeBlockModal'
+import { createCalendarBlock } from '../../api/calendarUnified'
 
 const BookingsPage = () => {
   const { user } = useAuth()
@@ -26,6 +32,9 @@ const BookingsPage = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [statusFilter, setStatusFilter] = useState('all')
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0)
+  const [showBlockModal, setShowBlockModal] = useState(false)
+  const [isBlockingDates, setIsBlockingDates] = useState(false)
 
   useEffect(() => {
     if (user?.id) {
@@ -63,6 +72,27 @@ const BookingsPage = () => {
     loadStats()
   }
 
+  const handleBlockDates = async (blockData) => {
+    setIsBlockingDates(true)
+    try {
+      await createCalendarBlock({
+        start_date: blockData.startDate,
+        end_date: blockData.endDate,
+        reason: 'manual',
+        visibility_message: blockData.visibilityMessage,
+        notes: blockData.notes,
+        timezone: blockData.timezone,
+        is_recurring: blockData.isRecurring,
+        recurrence_pattern: blockData.recurrencePattern
+      })
+      setShowBlockModal(false)
+    } catch (err) {
+      console.error('Failed to block dates:', err)
+    } finally {
+      setIsBlockingDates(false)
+    }
+  }
+
   // Filter bookings by status
   const filteredBookings = bookings.filter(booking => {
     if (statusFilter === 'all') return true
@@ -77,7 +107,15 @@ const BookingsPage = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Bookings</h1>
+        <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
+          Bookings
+          <HelpTooltip
+            content="View and manage all your bookings. As a client, see services you've booked. As a freelancer, see jobs you've been hired for."
+            title="Your Bookings"
+            variant="info"
+            size="sm"
+          />
+        </h1>
         <p className="text-muted-foreground">
           Manage your bookings and requests
         </p>
@@ -168,7 +206,7 @@ const BookingsPage = () => {
       <Card>
         <CardContent className="p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsList className="grid w-full grid-cols-5 mb-6">
               <TabsTrigger value="all">
                 All Bookings
                 {bookings.length > 0 && (
@@ -193,6 +231,19 @@ const BookingsPage = () => {
                   </Badge>
                 )}
               </TabsTrigger>
+              <TabsTrigger value="schedule">
+                <CalendarDays className="w-4 h-4 mr-1" />
+                Schedule
+              </TabsTrigger>
+              <TabsTrigger value="requests">
+                <CalendarCheck className="w-4 h-4 mr-1" />
+                Requests
+                {pendingRequestsCount > 0 && (
+                  <Badge variant="destructive" className="ml-2">
+                    {pendingRequestsCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
             </TabsList>
 
             {/* Status Filter Badges */}
@@ -213,10 +264,24 @@ const BookingsPage = () => {
               </Button>
               <Button
                 size="sm"
+                variant={statusFilter === 'confirmed' ? 'default' : 'outline'}
+                onClick={() => setStatusFilter('confirmed')}
+              >
+                Confirmed {getStatusCount('confirmed') > 0 && `(${getStatusCount('confirmed')})`}
+              </Button>
+              <Button
+                size="sm"
                 variant={statusFilter === 'accepted' ? 'default' : 'outline'}
                 onClick={() => setStatusFilter('accepted')}
               >
                 Accepted {getStatusCount('accepted') > 0 && `(${getStatusCount('accepted')})`}
+              </Button>
+              <Button
+                size="sm"
+                variant={statusFilter === 'paid' ? 'default' : 'outline'}
+                onClick={() => setStatusFilter('paid')}
+              >
+                Paid {getStatusCount('paid') > 0 && `(${getStatusCount('paid')})`}
               </Button>
               <Button
                 size="sm"
@@ -277,11 +342,54 @@ const BookingsPage = () => {
                     onUpdate={handleBookingUpdate}
                   />
                 </TabsContent>
+
+                <TabsContent value="schedule" className="mt-0">
+                  <div className="space-y-4">
+                    {/* Quick Actions */}
+                    <div className="flex items-center justify-end gap-2 mb-4">
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowBlockModal(true)}
+                      >
+                        <Lock className="w-4 h-4 mr-2" />
+                        Block Dates
+                      </Button>
+                    </div>
+
+                    {/* Schedule Grid View */}
+                    <ScheduleGridView
+                      userId={user?.id}
+                      onEventClick={(event) => {
+                        console.log('Event clicked:', event)
+                        // TODO: Open booking details modal
+                      }}
+                      onDateClick={(date) => {
+                        console.log('Date clicked:', date)
+                        // TODO: Open date details or create booking
+                      }}
+                      showAddButton={false}
+                    />
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="requests" className="mt-0">
+                  <AvailabilityRequestsPanel
+                    onRequestsChange={(count) => setPendingRequestsCount(count)}
+                  />
+                </TabsContent>
               </>
             )}
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Date Range Block Modal */}
+      <DateRangeBlockModal
+        isOpen={showBlockModal}
+        onClose={() => setShowBlockModal(false)}
+        onConfirm={handleBlockDates}
+        isLoading={isBlockingDates}
+      />
     </div>
   )
 }

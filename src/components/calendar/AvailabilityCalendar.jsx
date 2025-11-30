@@ -12,7 +12,7 @@ import {
   createCalendarBlock,
   deleteCalendarBlock,
   checkAvailability
-} from '../../api/availability'
+} from '../../api/calendarUnified'
 import { getBookings } from '../../api/bookings'
 import 'react-calendar/dist/Calendar.css'
 import './AvailabilityCalendar.css'

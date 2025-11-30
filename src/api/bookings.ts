@@ -7,7 +7,7 @@
  */
 
 import { supabase } from '../lib/supabase'
-import { blockDatesForBooking, releaseDatesForBooking } from './availability'
+import { blockDatesForBooking, releaseDatesForBooking } from './calendarUnified'
 import {
   sendBookingRequestEmail,
   sendBookingAcceptedEmail,

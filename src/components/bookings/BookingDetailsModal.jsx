@@ -49,15 +49,22 @@ const BookingDetailsModal = ({ bookingId, currentUserId, isOpen, onClose, onUpda
   const getStatusConfig = (status) => {
     const configs = {
       pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
+      confirmed: { color: 'bg-green-100 text-green-800', label: 'Confirmed' },
       accepted: { color: 'bg-green-100 text-green-800', label: 'Accepted' },
       declined: { color: 'bg-red-100 text-red-800', label: 'Declined' },
       in_progress: { color: 'bg-blue-100 text-blue-800', label: 'In Progress' },
       completed: { color: 'bg-gray-100 text-gray-800', label: 'Completed' },
       cancelled: { color: 'bg-red-100 text-red-800', label: 'Cancelled' },
-      paid: { color: 'bg-green-100 text-green-800', label: 'Paid' }
+      paid: { color: 'bg-emerald-100 text-emerald-800', label: 'Paid' }
     }
     return configs[status] || configs.pending
   }
+
+  // Check if booking was handled by an agent (defensive - fields may not exist)
+  const isAgentManaged = booking?.agent_id && booking?.agent_accepted
+
+  // Get display name with fallback
+  const getDisplayName = (profile) => profile?.display_name || profile?.full_name || 'Unknown User'
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -84,23 +91,30 @@ const BookingDetailsModal = ({ bookingId, currentUserId, isOpen, onClose, onUpda
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Avatar className="h-14 w-14">
-                  <AvatarImage src={otherProfile?.avatar_url} alt={otherProfile?.full_name} />
+                  <AvatarImage src={otherProfile?.avatar_url} alt={getDisplayName(otherProfile)} />
                   <AvatarFallback>
-                    {otherProfile?.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
+                    {getDisplayName(otherProfile).split(' ').map(n => n[0]).join('') || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <h3 className="font-semibold text-lg">
-                    {otherProfile?.full_name || 'Unknown User'}
+                    {getDisplayName(otherProfile)}
                   </h3>
                   <p className="text-sm text-muted-foreground">
                     {otherProfile?.role || 'User'}
                   </p>
                 </div>
               </div>
-              <Badge className={getStatusConfig(booking.status).color}>
-                {getStatusConfig(booking.status).label}
-              </Badge>
+              <div className="flex flex-col items-end gap-1">
+                <Badge className={getStatusConfig(booking.status).color}>
+                  {getStatusConfig(booking.status).label}
+                </Badge>
+                {isAgentManaged && (
+                  <Badge variant="outline" className="text-xs border-purple-300 bg-purple-50 text-purple-700">
+                    Managed by Agent
+                  </Badge>
+                )}
+              </div>
             </div>
 
             <Separator />

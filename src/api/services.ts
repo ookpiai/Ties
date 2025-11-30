@@ -27,6 +27,17 @@ export async function getService(id: string) {
   return data
 }
 
+export async function getServices(userId: string) {
+  const { data, error } = await supabase
+    .from('services')
+    .select('*')
+    .eq('owner_id', userId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
 export async function createService(service: Omit<Service, 'id' | 'created_at'>) {
   const { data, error } = await supabase
     .from('services')

@@ -39,6 +39,7 @@ const MessagesPage = () => {
   const [showNewMessage, setShowNewMessage] = useState(false)
   const [userSearch, setUserSearch] = useState('')
   const [searchResults, setSearchResults] = useState([])
+  const [pendingOpenUserId, setPendingOpenUserId] = useState(null)
   const messagesEndRef = useRef(null)
   const subscriptionRef = useRef(null)
   const allMessagesSubscriptionRef = useRef(null)
@@ -47,6 +48,16 @@ const MessagesPage = () => {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
+
+  // Capture the openConversationWithUserId from navigation state immediately
+  useEffect(() => {
+    const openUserId = location.state?.openConversationWithUserId
+    if (openUserId) {
+      setPendingOpenUserId(openUserId)
+      // Clear the navigation state so it doesn't persist on refresh
+      window.history.replaceState({}, document.title)
+    }
+  }, [location.state])
 
   // Load conversations on mount
   useEffect(() => {
@@ -93,38 +104,46 @@ const MessagesPage = () => {
     scrollToBottom()
   }, [messages])
 
-  // Handle opening a conversation from profile page
+  // Handle opening a conversation when we have a pending user ID
+  // This runs after conversations are loaded OR immediately for new conversations
   useEffect(() => {
-    const openConversationWithUserId = location.state?.openConversationWithUserId
-    if (openConversationWithUserId && conversations.length > 0) {
-      // Check if conversation already exists
-      const existing = conversations.find(c => c.otherUser.id === openConversationWithUserId)
+    if (!pendingOpenUserId || loading) return
+
+    const openConversation = async () => {
+      // Check if conversation already exists in loaded conversations
+      const existing = conversations.find(c => c.otherUser.id === pendingOpenUserId)
 
       if (existing) {
         setSelectedConversation(existing)
+        setPendingOpenUserId(null) // Clear the pending ID
       } else {
-        // Load user profile and create new conversation
-        const loadUserAndStartConversation = async () => {
-          try {
-            const profile = await getProfile(openConversationWithUserId)
+        // No existing conversation - load user profile and create new conversation
+        try {
+          const profile = await getProfile(pendingOpenUserId)
+          if (profile) {
             const otherUser = {
               id: profile.id,
-              display_name: profile.display_name,
+              display_name: profile.display_name || 'Unknown User',
               avatar_url: profile.avatar_url,
               role: profile.role
             }
-            handleStartNewConversation(otherUser)
-          } catch (error) {
-            console.error('Failed to load user profile:', error)
+            // Create new conversation preview (conversation is created when first message is sent)
+            setSelectedConversation({
+              otherUser,
+              lastMessage: null,
+              unreadCount: 0
+            })
+            setMessages([])
           }
+        } catch (error) {
+          console.error('Failed to load user profile:', error)
         }
-        loadUserAndStartConversation()
+        setPendingOpenUserId(null) // Clear the pending ID
       }
-
-      // Clear the state so it doesn't trigger again
-      window.history.replaceState({}, document.title)
     }
-  }, [location.state, conversations])
+
+    openConversation()
+  }, [pendingOpenUserId, loading, conversations])
 
   const loadConversations = async () => {
     setLoading(true)

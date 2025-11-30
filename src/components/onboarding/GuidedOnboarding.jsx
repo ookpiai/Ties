@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
-import { ChevronRight, ChevronLeft, Check, User, Building, MapPin, Users, Briefcase } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Check, User, Building, MapPin, Users, Briefcase, Loader2, Shield } from 'lucide-react';
+import { HelpTooltip } from '@/components/ui/HelpTooltip';
+import { helpContent } from '../../constants/helpContent';
 
 const GuidedOnboarding = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [userType, setUserType] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     userType: '',
     roles: [],
@@ -73,6 +77,13 @@ const GuidedOnboarding = ({ onComplete }) => {
       description: 'Creative agency, band, or group',
       icon: Users,
       color: 'bg-pink-500'
+    },
+    {
+      id: 'agent',
+      title: 'Agent / Talent Manager',
+      description: 'Represent and manage creative freelancers',
+      icon: Shield,
+      color: 'bg-indigo-500'
     }
   ];
 
@@ -104,6 +115,11 @@ const GuidedOnboarding = ({ onComplete }) => {
       'Design Studio', 'Marketing Agency', 'Event Planning Company',
       'Photography Collective', 'Art Collective', 'Theater Group',
       'Dance Company', 'Film Crew', 'Podcast Network'
+    ],
+    agent: [
+      'Music', 'DJ', 'Photography', 'Videography', 'Entertainment',
+      'Events', 'Corporate', 'Weddings', 'Modeling', 'Acting',
+      'Voice Over', 'Dance', 'Comedy', 'Magic', 'Other'
     ]
   };
 
@@ -120,11 +136,52 @@ const GuidedOnboarding = ({ onComplete }) => {
     setFormData(prev => ({ ...prev, userType: type }));
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      onComplete(formData);
+      // Map onboarding data to profile fields that exist in the database
+      // Aligned with RegisterPage.jsx role mappings
+      const roleMapping = {
+        'individual': 'Artist',      // Individual freelancers
+        'vendor': 'Crew',            // Vendors/Crew members
+        'venue': 'Venue',            // Venues
+        'client': 'Organiser',       // Event organisers/clients
+        'collective': 'Artist',      // Collectives
+        'agent': 'Artist'            // Agents (use Artist, set is_agent flag separately)
+      };
+
+      // Check if user selected Agent type
+      const isAgent = formData.userType === 'agent';
+
+      // Get the first selected role as specialty if available
+      const selectedSpecialty = formData.roles.length > 0 ? formData.roles[0] : null;
+
+      const onboardingData = {
+        role: roleMapping[formData.userType] || 'Freelancer',
+        city: formData.location || null,
+        specialty: selectedSpecialty ? selectedSpecialty.toLowerCase().replace(/\s+/g, '_') : null,
+        specialty_display_name: selectedSpecialty,
+        bio: formData.roles.length > 1 ? `Specializing in: ${formData.roles.join(', ')}` : null,
+        onboarding_completed: true,
+        // Agent-specific fields
+        is_agent: isAgent,
+        agent_industry_tags: isAgent ? formData.roles : null,
+        // Agent verification status starts as not_submitted - they need to verify separately
+        agent_verification_status: isAgent ? 'not_submitted' : null
+      };
+
+      setIsSubmitting(true);
+      setError('');
+
+      try {
+        console.log('Completing onboarding with data:', onboardingData);
+        await onComplete(onboardingData);
+      } catch (err) {
+        console.error('Onboarding error:', err);
+        setError('Failed to complete setup. Please try again.');
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -271,44 +328,85 @@ const GuidedOnboarding = ({ onComplete }) => {
     </div>
   );
 
-  const renderFinalStep = () => (
-    <div className="text-center space-y-6">
-      <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto">
-        <Check className="text-primary-foreground" size={40} />
-      </div>
-      
-      <div>
-        <h3 className="section-header mb-2">Welcome to TIES Together!</h3>
-        <p className="body-text text-muted-foreground">
-          Your profile is set up and you're ready to start connecting with the creative community.
-        </p>
-      </div>
+  const renderFinalStep = () => {
+    const isAgentUser = userType === 'agent';
 
-      <div className="bg-card p-6 rounded-lg border text-left">
-        <h4 className="card-title mb-4">What's next?</h4>
-        <div className="space-y-3">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-              <span className="text-primary font-medium text-sm">1</span>
-            </div>
-            <span className="body-text">Complete your profile with portfolio items</span>
-          </div>
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-              <span className="text-primary font-medium text-sm">2</span>
-            </div>
-            <span className="body-text">Explore and connect with other creatives</span>
-          </div>
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-              <span className="text-primary font-medium text-sm">3</span>
-            </div>
-            <span className="body-text">Start collaborating on exciting projects</span>
+    return (
+      <div className="text-center space-y-6">
+        <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto">
+          <Check className="text-primary-foreground" size={40} />
+        </div>
+
+        <div>
+          <h3 className="section-header mb-2">Welcome to TIES Together!</h3>
+          <p className="body-text text-muted-foreground">
+            {isAgentUser
+              ? 'Your agent profile is set up! Complete verification to unlock all agent features.'
+              : 'Your profile is set up and you\'re ready to start connecting with the creative community.'
+            }
+          </p>
+        </div>
+
+        <div className="bg-card p-6 rounded-lg border text-left">
+          <h4 className="card-title mb-4">What's next?</h4>
+          <div className="space-y-3">
+            {isAgentUser ? (
+              <>
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                    <span className="text-indigo-600 font-medium text-sm">1</span>
+                  </div>
+                  <span className="body-text">Complete agent verification (website + evidence)</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                    <span className="text-indigo-600 font-medium text-sm">2</span>
+                  </div>
+                  <span className="body-text">Connect with freelancers to represent</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                    <span className="text-indigo-600 font-medium text-sm">3</span>
+                  </div>
+                  <span className="body-text">Use Agent Dashboard to manage your talent roster</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                    <span className="text-primary font-medium text-sm">1</span>
+                  </div>
+                  <span className="body-text">Complete your profile with portfolio items</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                    <span className="text-primary font-medium text-sm">2</span>
+                  </div>
+                  <span className="body-text">Explore and connect with other creatives</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                    <span className="text-primary font-medium text-sm">3</span>
+                  </div>
+                  <span className="body-text">Start collaborating on exciting projects</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
+
+        {isAgentUser && (
+          <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-lg text-left">
+            <p className="text-sm text-indigo-800">
+              <strong>Note:</strong> Agent verification is required to represent freelancers and access full agent features.
+              Visit your Agent Dashboard after setup to complete verification.
+            </p>
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   const canProceed = () => {
     switch (currentStep) {
@@ -354,7 +452,25 @@ const GuidedOnboarding = ({ onComplete }) => {
         {/* Content */}
         <div className="bg-card rounded-lg border p-8">
           <div className="text-center mb-8">
-            <h1 className="page-title mb-2">{steps[currentStep].title}</h1>
+            <h1 className="page-title mb-2 flex items-center justify-center gap-2">
+              {steps[currentStep].title}
+              {currentStep === 0 && (
+                <HelpTooltip
+                  content={helpContent.onboarding.userType.description}
+                  title={helpContent.onboarding.userType.title}
+                  variant="info"
+                  size="sm"
+                />
+              )}
+              {currentStep === 2 && (
+                <HelpTooltip
+                  content={helpContent.onboarding.location.description}
+                  title={helpContent.onboarding.location.title}
+                  variant="info"
+                  size="sm"
+                />
+              )}
+            </h1>
             <p className="body-text text-muted-foreground">{steps[currentStep].subtitle}</p>
           </div>
 
@@ -365,11 +481,18 @@ const GuidedOnboarding = ({ onComplete }) => {
             {currentStep === 3 && renderFinalStep()}
           </div>
 
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
           {/* Navigation */}
           <div className="flex justify-between">
             <button
               onClick={handleBack}
-              disabled={currentStep === 0}
+              disabled={currentStep === 0 || isSubmitting}
               className="btn-secondary px-6 py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
               <ChevronLeft size={20} />
@@ -378,11 +501,20 @@ const GuidedOnboarding = ({ onComplete }) => {
 
             <button
               onClick={handleNext}
-              disabled={!canProceed()}
+              disabled={!canProceed() || isSubmitting}
               className="btn-primary px-6 py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
-              <span>{currentStep === steps.length - 1 ? 'Get Started' : 'Continue'}</span>
-              <ChevronRight size={20} />
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={20} className="animate-spin" />
+                  <span>Setting up...</span>
+                </>
+              ) : (
+                <>
+                  <span>{currentStep === steps.length - 1 ? 'Get Started' : 'Continue'}</span>
+                  <ChevronRight size={20} />
+                </>
+              )}
             </button>
           </div>
         </div>

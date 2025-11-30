@@ -1,13 +1,17 @@
 import React, { createContext, useContext, useState, useEffect, Component } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { HelmetProvider } from 'react-helmet-async'
 import { supabase } from './lib/supabase'
 import AppLayout from './components/layout/AppLayout'
 import LandingPage from './components/LandingPage'
 import LoginPage from './components/auth/LoginPage'
 import RegisterPage from './components/auth/RegisterPage'
+import ForgotPasswordPage from './components/auth/ForgotPasswordPage'
+import ResetPasswordPage from './components/auth/ResetPasswordPage'
 import { ConfirmEmail } from './routes/ConfirmEmail'
 import { AuthCallback } from './routes/AuthCallback'
 import { EmailNotConfirmed } from './routes/EmailNotConfirmed'
+import PublicBookingPage from './components/booking/PublicBookingPage'
 
 // ErrorBoundary Component
 class ErrorBoundary extends Component {
@@ -61,6 +65,10 @@ import CreateJobPage from './components/jobs/CreateJobPage'
 import MyApplicationsPage from './components/jobs/MyApplicationsPage'
 import JobApplicantsPage from './components/jobs/JobApplicantsPage'
 import MyJobsPage from './components/jobs/MyJobsPage'
+import AgentDashboard from './components/agent/AgentDashboard'
+import VenuePortfolio from './components/venue/VenuePortfolio'
+import { BadgeRulesPage } from './components/profile/badges'
+import TestAccountsPage from './components/dev/TestAccountsPage'
 import { LiveRegionManager, initFocusVisible, createSkipLink } from './utils/accessibility'
 import useKeyboardShortcuts from './hooks/useKeyboardShortcuts'
 import KeyboardShortcutsModal from './components/ui/KeyboardShortcutsModal'
@@ -84,29 +92,16 @@ const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
   const [needsOnboarding, setNeedsOnboarding] = useState(false)
 
-  // Mock user data for testing - COMPLETED USER FOR DASHBOARD TESTING
-  const mockUser = {
-    id: 1,
-    username: 'charliewhite',
-    email: 'charlie.white@example.com',
-    first_name: 'Charlie',
-    last_name: 'White',
-    role: 'freelancer',
-    is_admin: false,
-    bio: 'Local DJ and music producer specializing in electronic and house music.',
-    location: 'Sydney, Australia',
-    subscription_type: 'pro',
-    created_at: '2024-01-15T10:00:00Z',
-    onboarding_completed: true // COMPLETED USER CAN ACCESS DASHBOARD
-  }
-
   // Check authentication status on app load
   useEffect(() => {
     checkAuth()
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
+    // Listen for auth changes (login, logout, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setUser(null)
+        setLoading(false)
+      } else if (session?.user) {
         loadUserProfile(session.user.id)
       } else {
         setUser(null)
@@ -119,22 +114,40 @@ const AuthProvider = ({ children }) => {
 
   const loadUserProfile = async (userId) => {
     try {
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single()
 
+      if (error && error.code !== 'PGRST116') {
+        // Real error (not just "not found")
+        throw error
+      }
+
       if (profile) {
         setUser({
           id: userId,
           ...profile,
-          onboarding_completed: true
+          onboarding_completed: profile.onboarding_completed ?? false
         })
+        setNeedsOnboarding(!profile.onboarding_completed)
+      } else {
+        // User exists in auth but no profile yet - needs onboarding
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        if (authUser) {
+          setUser({
+            id: userId,
+            email: authUser.email,
+            onboarding_completed: false
+          })
+          setNeedsOnboarding(true)
+        }
       }
       setLoading(false)
     } catch (error) {
-      console.error('Error loading profile:', error)
+      // Silent fail - don't expose errors to console in production
+      setUser(null)
       setLoading(false)
     }
   }
@@ -148,7 +161,7 @@ const AuthProvider = ({ children }) => {
         setLoading(false)
       }
     } catch (error) {
-      console.error('Auth check failed:', error)
+      // Silent fail - don't expose auth errors
       setLoading(false)
     }
   }
@@ -180,21 +193,61 @@ const AuthProvider = ({ children }) => {
 
   const completeOnboarding = async (onboardingData) => {
     try {
-      // Mock onboarding completion - in production this would call the backend
-      console.log('Onboarding completion:', onboardingData)
-      
-      // Update user with onboarding data
-      const updatedUser = {
-        ...user,
-        ...onboardingData,
-        onboarding_completed: true
+      // Ensure we have a user ID
+      if (!user?.id) {
+        // Try to get user from session
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.user?.id) {
+          return { success: false, error: 'No authenticated user found. Please log in again.' }
+        }
+        // Use session user ID
+        const userId = session.user.id
+
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            ...onboardingData,
+            onboarding_completed: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId)
+
+        if (error) throw error
+
+        // Update local user state
+        setUser({
+          id: userId,
+          email: session.user.email,
+          ...onboardingData,
+          onboarding_completed: true
+        })
+      } else {
+        // Update profile in database
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            ...onboardingData,
+            onboarding_completed: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id)
+
+        if (error) throw error
+
+        // Update local user state
+        const updatedUser = {
+          ...user,
+          ...onboardingData,
+          onboarding_completed: true
+        }
+        setUser(updatedUser)
       }
-      
-      setUser(updatedUser)
+
       setNeedsOnboarding(false)
       return { success: true }
     } catch (error) {
-      return { success: false, error: 'Network error' }
+      console.error('Onboarding error:', error)
+      return { success: false, error: 'Failed to complete onboarding. Please try again.' }
     }
   }
 
@@ -202,9 +255,10 @@ const AuthProvider = ({ children }) => {
     try {
       await supabase.auth.signOut()
     } catch (error) {
-      console.error('Logout error:', error)
+      // Silent fail - user will be logged out regardless
     } finally {
       setUser(null)
+      setNeedsOnboarding(false)
     }
   }
 
@@ -226,28 +280,30 @@ const AuthProvider = ({ children }) => {
   )
 }
 
-// Protected Route Component
+// Protected Route Component - SECURE (no bypass)
 const ProtectedRoute = ({ children }) => {
   const { user, loading, needsOnboarding } = useAuth()
 
-  // TEMPORARY: Bypass auth for testing - REMOVE IN PRODUCTION
-  return children
-
+  // Show loading spinner while checking auth status
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center bg-app">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <p className="text-muted-foreground text-sm">Loading...</p>
+        </div>
       </div>
     )
   }
 
+  // Redirect to login if not authenticated
   if (!user) {
-    return <Navigate to="/login" />
+    return <Navigate to="/login" replace />
   }
 
   // If user needs onboarding, redirect to onboarding
   if (needsOnboarding || (!user.onboarding_completed && user.onboarding_completed !== undefined)) {
-    return <Navigate to="/onboarding" />
+    return <Navigate to="/onboarding" replace />
   }
 
   return children
@@ -256,9 +312,20 @@ const ProtectedRoute = ({ children }) => {
 // Onboarding Wrapper Component
 const OnboardingWrapper = () => {
   const { completeOnboarding } = useAuth()
-  
+  const navigate = useNavigate()
+
+  const handleComplete = async (data) => {
+    const result = await completeOnboarding(data)
+    if (result.success) {
+      navigate('/dashboard')
+    } else {
+      // Throw error so GuidedOnboarding can catch and display it
+      throw new Error(result.error || 'Failed to complete onboarding')
+    }
+  }
+
   return (
-    <GuidedOnboarding onComplete={completeOnboarding} />
+    <GuidedOnboarding onComplete={handleComplete} />
   )
 }
 
@@ -312,6 +379,12 @@ function AppRoutes() {
               <RegisterPage />
             </PublicRoute>
           } />
+          <Route path="/forgot-password" element={
+            <PublicRoute>
+              <ForgotPasswordPage />
+            </PublicRoute>
+          } />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           {/* Email Confirmation Routes */}
           <Route path="/confirm-email" element={<ConfirmEmail />} />
@@ -320,6 +393,12 @@ function AppRoutes() {
 
           {/* Onboarding Route */}
           <Route path="/onboarding" element={<OnboardingWrapper />} />
+
+          {/* Public Booking Page (SEO-optimized, vanity URL) */}
+          <Route path="/book/:username" element={<PublicBookingPage />} />
+
+          {/* Test Accounts Page (Development only) */}
+          <Route path="/test-accounts" element={<TestAccountsPage />} />
 
           {/* Protected Routes - With AppLayout */}
           <Route path="/dashboard" element={
@@ -363,6 +442,20 @@ function AppRoutes() {
             <ProtectedRoute>
               <AppLayout>
                 <BookingsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/agent" element={
+            <ProtectedRoute>
+              <AppLayout>
+                <AgentDashboard />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/venue" element={
+            <ProtectedRoute>
+              <AppLayout>
+                <VenuePortfolio />
               </AppLayout>
             </ProtectedRoute>
           } />
@@ -448,6 +541,13 @@ function AppRoutes() {
               </AppLayout>
             </ProtectedRoute>
           } />
+          <Route path="/badges" element={
+            <ProtectedRoute>
+              <AppLayout>
+                <BadgeRulesPage />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
 
           {/* Catch all route */}
           <Route path="*" element={<Navigate to="/" />} />
@@ -493,11 +593,13 @@ function App() {
   }, [])
 
   return (
-    <AuthProvider>
-      <Router>
-        <AppRoutes />
-      </Router>
-    </AuthProvider>
+    <HelmetProvider>
+      <AuthProvider>
+        <Router>
+          <AppRoutes />
+        </Router>
+      </AuthProvider>
+    </HelmetProvider>
   )
 }
 

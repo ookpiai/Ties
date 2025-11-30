@@ -9,6 +9,7 @@
 -- Drop existing policies (if any)
 DROP POLICY IF EXISTS "Users can view all profiles" ON profiles;
 DROP POLICY IF EXISTS "Users can view profiles" ON profiles;
+DROP POLICY IF EXISTS "Anyone can view profiles" ON profiles;
 DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
 DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
 DROP POLICY IF EXISTS "Users can delete own profile" ON profiles;

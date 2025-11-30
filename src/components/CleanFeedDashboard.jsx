@@ -16,6 +16,8 @@ import {
 import { getBookings } from '../api/bookings'
 import { getMyConversations } from '../api/messages'
 import { getJobPostings, getMyApplications } from '../api/jobs'
+import { HelpTooltip } from '@/components/ui/HelpTooltip'
+import { helpContent } from '../constants/helpContent'
 
 const CleanFeedDashboard = () => {
   const { user } = useAuth()
@@ -209,7 +211,15 @@ const CleanFeedDashboard = () => {
       <div className="feed-content dark:bg-[#0B0B0B]">
         {/* Feed Header */}
         <div className="flex items-center justify-between mb-6">
-          <h1 className="section-header text-[var(--foreground)]">Your Feed</h1>
+          <h1 className="section-header text-[var(--foreground)] flex items-center gap-2">
+            Your Feed
+            <HelpTooltip
+              content={helpContent.dashboard.overview.description}
+              title={helpContent.dashboard.overview.title}
+              variant="info"
+              size="sm"
+            />
+          </h1>
           <button onClick={() => navigate('/profile')} className="btn flex items-center gap-2">
             <Plus size={16} />
             Update Profile

@@ -8,7 +8,7 @@ import { Loader2, Calendar as CalendarIcon, AlertCircle, Check } from 'lucide-re
 import {
   getCalendarBlocks,
   areDatesAvailable
-} from '../../api/availability'
+} from '../../api/calendarUnified'
 import 'react-calendar/dist/Calendar.css'
 import './AvailabilityCalendar.css'
 
@@ -103,12 +103,8 @@ const DatePicker = ({
   const handleConfirmSelection = () => {
     if (!startDate || !endDate || !isAvailable) return
 
-    onDateSelect({
-      startDate,
-      endDate,
-      totalDays,
-      totalCost
-    })
+    // Pass as array [startDate, endDate] for compatibility with BookingRequestModal
+    onDateSelect([startDate, endDate])
   }
 
   // Calculate total days and cost

@@ -19,7 +19,7 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN
 
-const VenueMapView = () => {
+const VenueMapView = ({ profiles = null, selectedRole = 'all', searchQuery = '', selectedLocation = '' }) => {
   const navigate = useNavigate()
   const mapRef = useRef()
 
@@ -40,10 +40,63 @@ const VenueMapView = () => {
   const [selectedVenue, setSelectedVenue] = useState(null)
   const [popupInfo, setPopupInfo] = useState(null)
 
-  // Load venues from Supabase
+  // Load venues from Supabase or use passed profiles
   useEffect(() => {
-    loadVenues()
-  }, [])
+    if (profiles) {
+      // Use profiles passed from parent (already filtered)
+      geocodeProfiles(profiles)
+    } else {
+      loadVenues()
+    }
+  }, [profiles, selectedRole, searchQuery, selectedLocation])
+
+  // Geocode profiles passed from parent
+  const geocodeProfiles = async (profileList) => {
+    setIsLoading(true)
+    setError('')
+
+    try {
+      const geocodedProfiles = await Promise.all(
+        profileList.map(async (profile) => {
+          const locationString = profile.location || profile.city || ''
+
+          const coords = await geocodeLocation(locationString)
+
+          if (coords) {
+            return {
+              id: profile.id,
+              name: profile.name || profile.display_name || 'Anonymous User',
+              role: profile.originalRole || profile.role,
+              specialty: profile.specialty,
+              location: locationString || 'Location not specified',
+              avatar: profile.avatar || profile.avatar_url,
+              bio: profile.bio || 'No description available',
+              longitude: coords.longitude,
+              latitude: coords.latitude
+            }
+          }
+          return null
+        })
+      )
+
+      const validVenues = geocodedProfiles.filter(venue => venue !== null)
+      setVenues(validVenues)
+
+      if (validVenues.length > 0) {
+        setViewState(prev => ({
+          ...prev,
+          longitude: validVenues[0].longitude,
+          latitude: validVenues[0].latitude,
+          zoom: 10
+        }))
+      }
+    } catch (err) {
+      console.error('Failed to geocode profiles:', err)
+      setError('Failed to load map locations.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const loadVenues = async () => {
     setIsLoading(true)
@@ -51,11 +104,11 @@ const VenueMapView = () => {
 
     try {
       // Search for all user profiles (all roles)
-      const profiles = await searchProfiles({})
+      const profilesData = await searchProfiles({})
 
       // Geocode all user locations in parallel
       const geocodedProfiles = await Promise.all(
-        profiles.map(async (profile) => {
+        profilesData.map(async (profile) => {
           const locationString = profile.city || ''
 
           // Try to geocode the location
@@ -68,6 +121,7 @@ const VenueMapView = () => {
               id: profile.id,
               name: profile.display_name || 'Anonymous User',
               role: profile.role,
+              specialty: profile.specialty,
               location: profile.city || 'Location not specified',
               avatar: profile.avatar_url,
               bio: profile.bio || 'No description available',
@@ -139,9 +193,11 @@ const VenueMapView = () => {
   // Get marker color based on user role
   const getMarkerColor = (role) => {
     const colorMap = {
-      'Artist': 'bg-purple-500',      // Freelancers - Purple
-      'Crew': 'bg-blue-500',          // Freelancers - Blue
-      'Venue': 'bg-green-500',        // Venues - Green
+      'Artist': 'bg-purple-500',      // Freelancers/Artists - Purple
+      'Freelancer': 'bg-purple-500',  // Freelancers - Purple
+      'Crew': 'bg-blue-500',          // Crew - Blue
+      'Vendor': 'bg-emerald-500',     // Vendors - Emerald
+      'Venue': 'bg-sky-500',          // Venues - Sky Blue
       'Organiser': 'bg-orange-500'    // Organisers - Orange
     }
     return colorMap[role] || 'bg-gray-500'
@@ -150,8 +206,10 @@ const VenueMapView = () => {
   // Get role display name
   const getRoleDisplay = (role) => {
     const roleMap = {
-      'Artist': 'Artist',
+      'Artist': 'Freelancer',
+      'Freelancer': 'Freelancer',
       'Crew': 'Crew',
+      'Vendor': 'Vendor',
       'Venue': 'Venue',
       'Organiser': 'Organiser'
     }
@@ -297,31 +355,31 @@ const VenueMapView = () => {
       <div className="absolute bottom-4 right-4 z-10">
         <Card className="p-3">
           <CardContent className="p-0">
-            <h4 className="text-xs font-semibold mb-2 text-gray-700">Map Legend</h4>
+            <h4 className="text-xs font-semibold mb-2 text-gray-700 dark:text-gray-300">Map Legend</h4>
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <div className="bg-purple-500 rounded-full p-1">
                   <MapPin className="w-3 h-3 text-white" />
                 </div>
-                <span className="text-xs text-gray-600">Artist</span>
+                <span className="text-xs text-gray-600 dark:text-gray-400">Freelancer</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="bg-blue-500 rounded-full p-1">
+                <div className="bg-emerald-500 rounded-full p-1">
                   <MapPin className="w-3 h-3 text-white" />
                 </div>
-                <span className="text-xs text-gray-600">Crew</span>
+                <span className="text-xs text-gray-600 dark:text-gray-400">Vendor</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="bg-green-500 rounded-full p-1">
+                <div className="bg-sky-500 rounded-full p-1">
                   <MapPin className="w-3 h-3 text-white" />
                 </div>
-                <span className="text-xs text-gray-600">Venue</span>
+                <span className="text-xs text-gray-600 dark:text-gray-400">Venue</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="bg-orange-500 rounded-full p-1">
                   <MapPin className="w-3 h-3 text-white" />
                 </div>
-                <span className="text-xs text-gray-600">Organiser</span>
+                <span className="text-xs text-gray-600 dark:text-gray-400">Organiser</span>
               </div>
             </div>
           </CardContent>

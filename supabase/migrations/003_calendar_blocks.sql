@@ -35,6 +35,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS calendar_blocks_updated_at ON public.calendar_blocks;
 CREATE TRIGGER calendar_blocks_updated_at
     BEFORE UPDATE ON public.calendar_blocks
     FOR EACH ROW
@@ -44,18 +45,21 @@ CREATE TRIGGER calendar_blocks_updated_at
 ALTER TABLE public.calendar_blocks ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Users can view all calendar blocks (for checking availability)
+DROP POLICY IF EXISTS "Anyone can view calendar blocks" ON public.calendar_blocks;
 CREATE POLICY "Anyone can view calendar blocks"
     ON public.calendar_blocks
     FOR SELECT
     USING (true);
 
 -- Policy: Users can only insert their own calendar blocks
+DROP POLICY IF EXISTS "Users can insert their own calendar blocks" ON public.calendar_blocks;
 CREATE POLICY "Users can insert their own calendar blocks"
     ON public.calendar_blocks
     FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 
 -- Policy: Users can only update their own calendar blocks
+DROP POLICY IF EXISTS "Users can update their own calendar blocks" ON public.calendar_blocks;
 CREATE POLICY "Users can update their own calendar blocks"
     ON public.calendar_blocks
     FOR UPDATE
@@ -63,6 +67,7 @@ CREATE POLICY "Users can update their own calendar blocks"
     WITH CHECK (auth.uid() = user_id);
 
 -- Policy: Users can only delete their own calendar blocks
+DROP POLICY IF EXISTS "Users can delete their own calendar blocks" ON public.calendar_blocks;
 CREATE POLICY "Users can delete their own calendar blocks"
     ON public.calendar_blocks
     FOR DELETE

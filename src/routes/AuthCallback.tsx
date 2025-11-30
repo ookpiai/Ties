@@ -40,12 +40,12 @@ export function AuthCallback() {
             .eq('id', session.user.id)
             .single()
 
-          if (profile) {
-            // Profile exists - go to dashboard
+          if (profile && profile.onboarding_completed) {
+            // Profile exists and onboarding complete - go to dashboard
             navigate('/dashboard')
           } else {
-            // No profile yet - go to profile setup
-            navigate('/profile/setup')
+            // No profile or onboarding not complete - go to onboarding
+            navigate('/onboarding')
           }
         } else {
           // No session - redirect to login
