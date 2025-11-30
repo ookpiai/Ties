@@ -35,6 +35,9 @@ import {
 // Common password for all test users
 const TEST_PASSWORD = 'TestPassword123!'
 
+// Dev team password
+const DEV_PASSWORD = 'DevTest123!'
+
 // Australian cities for variety
 const CITIES = [
   'Sydney, NSW', 'Melbourne, VIC', 'Brisbane, QLD', 'Perth, WA',
@@ -44,6 +47,11 @@ const CITIES = [
 
 // Test user data - matching seed script with realistic names
 const TEST_USERS = [
+  // DEV TEAM (3 users) - These use DEV_PASSWORD
+  { email: 'oscar@tiestogether.com', name: 'Oscar (Dev)', username: 'oscar_dev', role: 'Organiser', specialty: null, city: 0, isDev: true },
+  { email: 'charlie@tiestogether.com', name: 'Charlie (Dev)', username: 'charlie_dev', role: 'Organiser', specialty: null, city: 0, isDev: true },
+  { email: 'holly@tiestogether.com', name: 'Holly (Dev)', username: 'holly_dev', role: 'Organiser', specialty: null, city: 0, isDev: true },
+
   // FREELANCERS (20 users)
   // DJs (5)
   { email: 'alex.thompson.dj@gmail.com', name: 'Alex Thompson', username: 'alexthompson', role: 'Artist', specialty: 'dj', city: 0 },
@@ -153,11 +161,12 @@ const formatSpecialty = (specialty) => {
 // Group users by category
 const groupUsersByCategory = (users) => {
   const groups = {
-    freelancers: users.filter(u => u.role === 'Artist' && !u.isAgent),
+    devTeam: users.filter(u => u.isDev),
+    freelancers: users.filter(u => u.role === 'Artist' && !u.isAgent && !u.isDev),
     vendors: users.filter(u => u.role === 'Vendor'),
     venues: users.filter(u => u.role === 'Venue'),
     agents: users.filter(u => u.isAgent),
-    organisers: users.filter(u => u.role === 'Organiser'),
+    organisers: users.filter(u => u.role === 'Organiser' && !u.isDev),
   }
   return groups
 }
@@ -186,7 +195,7 @@ export default function TestAccountsPage() {
   const groupedUsers = useMemo(() => groupUsersByCategory(filteredUsers), [filteredUsers])
 
   // Handle login
-  const handleLogin = async (email) => {
+  const handleLogin = async (email, isDev = false) => {
     setLoggingIn(email)
     setError(null)
 
@@ -194,10 +203,13 @@ export default function TestAccountsPage() {
       // Sign out first to clear any existing session
       await supabase.auth.signOut()
 
+      // Use dev password for dev accounts, test password for others
+      const password = isDev ? DEV_PASSWORD : TEST_PASSWORD
+
       // Sign in with test credentials
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
-        password: TEST_PASSWORD,
+        password,
       })
 
       if (signInError) {
@@ -225,18 +237,18 @@ export default function TestAccountsPage() {
     const isLoggingIn = loggingIn === user.email
 
     return (
-      <Card key={user.email} className="hover:shadow-md transition-shadow">
+      <Card key={user.email} className={`hover:shadow-md transition-shadow ${user.isDev ? 'border-red-300 bg-red-50/50' : ''}`}>
         <CardContent className="p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className={`p-2 rounded-lg ${user.isAgent ? 'bg-indigo-100' : user.role === 'Venue' ? 'bg-blue-100' : user.role === 'Vendor' ? 'bg-green-100' : user.role === 'Organiser' ? 'bg-orange-100' : 'bg-purple-100'}`}>
-                <Icon className={`h-5 w-5 ${user.isAgent ? 'text-indigo-600' : user.role === 'Venue' ? 'text-blue-600' : user.role === 'Vendor' ? 'text-green-600' : user.role === 'Organiser' ? 'text-orange-600' : 'text-purple-600'}`} />
+              <div className={`p-2 rounded-lg ${user.isDev ? 'bg-red-100' : user.isAgent ? 'bg-indigo-100' : user.role === 'Venue' ? 'bg-blue-100' : user.role === 'Vendor' ? 'bg-green-100' : user.role === 'Organiser' ? 'bg-orange-100' : 'bg-purple-100'}`}>
+                <Icon className={`h-5 w-5 ${user.isDev ? 'text-red-600' : user.isAgent ? 'text-indigo-600' : user.role === 'Venue' ? 'text-blue-600' : user.role === 'Vendor' ? 'text-green-600' : user.role === 'Organiser' ? 'text-orange-600' : 'text-purple-600'}`} />
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-medium truncate">{user.name}</h3>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  <Badge variant="outline" className={getRoleBadgeClass(user.role, user.isAgent)}>
-                    {user.isAgent ? 'Agent' : user.role}
+                  <Badge variant="outline" className={user.isDev ? 'bg-red-100 text-red-800 border-red-300' : getRoleBadgeClass(user.role, user.isAgent)}>
+                    {user.isDev ? 'Dev Team' : user.isAgent ? 'Agent' : user.role}
                   </Badge>
                   {user.specialty && !user.isAgent && (
                     <span className="text-xs text-muted-foreground">
@@ -252,9 +264,9 @@ export default function TestAccountsPage() {
             <div className="flex flex-col gap-2">
               <Button
                 size="sm"
-                onClick={() => handleLogin(user.email)}
+                onClick={() => handleLogin(user.email, user.isDev)}
                 disabled={isLoggingIn}
-                className="whitespace-nowrap"
+                className={user.isDev ? 'bg-red-600 hover:bg-red-700 whitespace-nowrap' : 'whitespace-nowrap'}
               >
                 {isLoggingIn ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -355,7 +367,8 @@ export default function TestAccountsPage() {
 
       {/* Tabs for filtering */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-        <TabsList className="grid grid-cols-6 w-full max-w-2xl">
+        <TabsList className="grid grid-cols-7 w-full max-w-3xl">
+          <TabsTrigger value="dev" className="text-red-600">Dev Team</TabsTrigger>
           <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="freelancers">Freelancers</TabsTrigger>
           <TabsTrigger value="vendors">Vendors</TabsTrigger>
@@ -364,7 +377,12 @@ export default function TestAccountsPage() {
           <TabsTrigger value="organisers">Organisers</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="dev" className="mt-6">
+          {renderUserSection('Dev Team (Password: DevTest123!)', groupedUsers.devTeam, User)}
+        </TabsContent>
+
         <TabsContent value="all" className="mt-6">
+          {renderUserSection('Dev Team', groupedUsers.devTeam, User)}
           {renderUserSection('Freelancers/Artists', groupedUsers.freelancers, User)}
           {renderUserSection('Vendors', groupedUsers.vendors, Store)}
           {renderUserSection('Venues', groupedUsers.venues, Building2)}
