@@ -6,7 +6,8 @@
  * Shows different actions based on booking status and user role
  */
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -23,18 +24,70 @@ import {
   Loader2,
   MapPin,
   User,
-  CreditCard
+  CreditCard,
+  ChevronDown,
+  ChevronUp,
+  Briefcase,
+  ExternalLink,
+  Settings
 } from 'lucide-react'
 import { format, formatDistance } from 'date-fns'
 import BookingDetailsModal from './BookingDetailsModal'
 import { acceptBooking, declineBooking, cancelBooking, completeBooking } from '../../api/bookings'
 import { useToast } from '@/hooks/use-toast'
 import PaymentButton from '../payments/PaymentButton'
+import { supabase } from '../../lib/supabase'
 
 const BookingCard = ({ booking, currentUserId, onUpdate }) => {
+  const navigate = useNavigate()
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [jobInfo, setJobInfo] = useState(null)
+  const [loadingJobInfo, setLoadingJobInfo] = useState(false)
   const { toast } = useToast()
+
+  // Load related job info if booking came from a job application
+  useEffect(() => {
+    async function fetchJobInfo() {
+      if (!booking.id) return
+
+      setLoadingJobInfo(true)
+      try {
+        // Check if this booking is linked to a job selection
+        const { data: selection, error } = await supabase
+          .from('job_selections')
+          .select(`
+            *,
+            job:job_postings!job_id(
+              id,
+              title,
+              description,
+              location,
+              event_type,
+              start_date,
+              end_date,
+              status,
+              organiser_id,
+              organiser:profiles!organiser_id(id, display_name, avatar_url)
+            ),
+            role:job_roles!job_role_id(id, role_title, role_type, budget)
+          `)
+          .eq('booking_id', booking.id)
+          .maybeSingle()
+
+        if (!error && selection) {
+          setJobInfo(selection)
+        }
+      } catch (err) {
+        console.error('Error fetching job info:', err)
+      } finally {
+        setLoadingJobInfo(false)
+      }
+    }
+
+    fetchJobInfo()
+  }, [booking.id])
 
   // Determine if current user is client or freelancer
   const isClient = booking.client_id === currentUserId
@@ -328,8 +381,14 @@ const BookingCard = ({ booking, currentUserId, onUpdate }) => {
               {/* Role Context Badge */}
               <div className="mt-2 flex flex-wrap gap-1">
                 <Badge variant="outline" className="text-xs h-5 border-slate-300 dark:border-slate-600">
-                  {isClient ? 'You booked' : 'Requested from you'}
+                  {isClient ? 'You hired them' : 'They hired you'}
                 </Badge>
+                {jobInfo && (
+                  <Badge variant="outline" className="text-xs h-5 border-blue-300 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
+                    <Briefcase className="h-3 w-3 mr-1" />
+                    Job Gig
+                  </Badge>
+                )}
                 {isAgentManaged && (
                   <Badge variant="outline" className="text-xs h-5 border-purple-300 dark:border-purple-600 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300">
                     Managed by Agent
@@ -376,6 +435,130 @@ const BookingCard = ({ booking, currentUserId, onUpdate }) => {
               <p className="text-xs text-slate-700 dark:text-slate-300 line-clamp-2">
                 {booking.service_description}
               </p>
+            </div>
+          )}
+
+          {/* Related Job Info - Expandable Section */}
+          {(jobInfo || loadingJobInfo) && (
+            <div className="mb-3">
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="w-full flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Briefcase className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                    {loadingJobInfo ? 'Loading job info...' : `From Job: ${jobInfo?.job?.title}`}
+                  </span>
+                </div>
+                {isExpanded ? (
+                  <ChevronUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                )}
+              </button>
+
+              {/* Expanded Job Details */}
+              {isExpanded && jobInfo && (
+                <div className="mt-2 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                  <div className="space-y-3">
+                    {/* Job Title and Role */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {jobInfo.job?.title}
+                      </h4>
+                      {jobInfo.role && (
+                        <Badge variant="outline" className="mt-1 text-xs">
+                          {jobInfo.role.role_title} ({jobInfo.role.role_type})
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Job Description */}
+                    {jobInfo.job?.description && (
+                      <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-3">
+                        {jobInfo.job.description}
+                      </p>
+                    )}
+
+                    {/* Job Details Grid */}
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {jobInfo.job?.location && (
+                        <div className="flex items-center gap-1 text-slate-600 dark:text-slate-400">
+                          <MapPin className="h-3 w-3" />
+                          <span>{jobInfo.job.location}</span>
+                        </div>
+                      )}
+                      {jobInfo.job?.event_type && (
+                        <div className="flex items-center gap-1 text-slate-600 dark:text-slate-400">
+                          <Calendar className="h-3 w-3" />
+                          <span>{jobInfo.job.event_type}</span>
+                        </div>
+                      )}
+                      {jobInfo.role?.budget && (
+                        <div className="flex items-center gap-1 text-slate-600 dark:text-slate-400">
+                          <DollarSign className="h-3 w-3" />
+                          <span>Role Budget: ${jobInfo.role.budget}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Organiser Info */}
+                    {jobInfo.job?.organiser && (
+                      <div className="flex items-center gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={jobInfo.job.organiser.avatar_url} />
+                          <AvatarFallback className="text-xs">
+                            {jobInfo.job.organiser.display_name?.charAt(0) || 'O'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs text-slate-600 dark:text-slate-400">
+                          Posted by {jobInfo.job.organiser.display_name}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      {/* Check if current user is the job organiser */}
+                      {jobInfo.job?.organiser_id === currentUserId ? (
+                        // User owns this job - Go to Studio
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => navigate(`/studio?job=${jobInfo.job.id}`)}
+                          className="text-xs"
+                        >
+                          <Settings className="h-3 w-3 mr-1" />
+                          Manage in Studio
+                        </Button>
+                      ) : (
+                        // User doesn't own this job - View organiser profile
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => navigate(`/profile/${jobInfo.job?.organiser_id}`)}
+                          className="text-xs"
+                        >
+                          <User className="h-3 w-3 mr-1" />
+                          View Organiser
+                        </Button>
+                      )}
+
+                      {/* View Full Job Details */}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => navigate(`/jobs/${jobInfo.job?.id}`)}
+                        className="text-xs"
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        View Job
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

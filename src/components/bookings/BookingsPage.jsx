@@ -110,14 +110,14 @@ const BookingsPage = () => {
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
           Bookings
           <HelpTooltip
-            content="View and manage all your bookings. As a client, see services you've booked. As a freelancer, see jobs you've been hired for."
+            content="View and manage all your bookings. 'Hired Others' shows services you've booked from others. 'Got Hired' shows gigs where you've been hired. Click on bookings to expand job details when applicable."
             title="Your Bookings"
             variant="info"
             size="sm"
           />
         </h1>
         <p className="text-muted-foreground">
-          Manage your bookings and requests
+          Track who you've hired and who's hired you
         </p>
       </div>
 
@@ -135,7 +135,7 @@ const BookingsPage = () => {
                 {stats.as_client.total}
               </div>
               <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                As Client
+                Hired Others
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-500">
                 ${stats.as_client.total_spent.toFixed(2)} spent
@@ -154,7 +154,7 @@ const BookingsPage = () => {
                 {stats.as_freelancer.total}
               </div>
               <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                As Freelancer
+                Got Hired
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-500">
                 ${stats.as_freelancer.total_earned.toFixed(2)} earned
@@ -215,31 +215,35 @@ const BookingsPage = () => {
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="as-client">
-                As Client
+              <TabsTrigger value="as-client" className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-1">
+                <span className="hidden sm:inline">Hired Others</span>
+                <span className="sm:hidden text-xs">Hired</span>
                 {stats && stats.as_client.total > 0 && (
-                  <Badge variant="secondary" className="ml-2">
+                  <Badge variant="secondary" className="ml-1 sm:ml-2">
                     {stats.as_client.total}
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="as-freelancer">
-                As Freelancer
+              <TabsTrigger value="as-freelancer" className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-1">
+                <span className="hidden sm:inline">Got Hired</span>
+                <span className="sm:hidden text-xs">Gigs</span>
                 {stats && stats.as_freelancer.total > 0 && (
-                  <Badge variant="secondary" className="ml-2">
+                  <Badge variant="secondary" className="ml-1 sm:ml-2">
                     {stats.as_freelancer.total}
                   </Badge>
                 )}
               </TabsTrigger>
               <TabsTrigger value="schedule">
                 <CalendarDays className="w-4 h-4 mr-1" />
-                Schedule
+                <span className="hidden sm:inline">Schedule</span>
+                <span className="sm:hidden">Cal</span>
               </TabsTrigger>
               <TabsTrigger value="requests">
                 <CalendarCheck className="w-4 h-4 mr-1" />
-                Requests
+                <span className="hidden sm:inline">Requests</span>
+                <span className="sm:hidden">Req</span>
                 {pendingRequestsCount > 0 && (
-                  <Badge variant="destructive" className="ml-2">
+                  <Badge variant="destructive" className="ml-1 sm:ml-2">
                     {pendingRequestsCount}
                   </Badge>
                 )}

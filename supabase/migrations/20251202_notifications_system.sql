@@ -359,6 +359,7 @@ CREATE TRIGGER trigger_notify_booking_status
   EXECUTE FUNCTION notify_booking_status_change();
 
 -- Trigger: Notify on new message
+-- Note: messages table uses from_id/to_id and body columns
 CREATE OR REPLACE FUNCTION notify_new_message()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -367,14 +368,14 @@ AS $$
 BEGIN
   -- Notify the recipient
   PERFORM create_notification(
-    NEW.receiver_id,
+    NEW.to_id,
     'message_received',
     'New Message',
-    LEFT(NEW.content, 100) || CASE WHEN LENGTH(NEW.content) > 100 THEN '...' ELSE '' END,
+    LEFT(NEW.body, 100) || CASE WHEN LENGTH(NEW.body) > 100 THEN '...' ELSE '' END,
     NEW.id,
     'message',
     '/messages',
-    NEW.sender_id
+    NEW.from_id
   );
 
   RETURN NEW;
