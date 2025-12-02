@@ -26,6 +26,7 @@ import {
   SheetContent,
   SheetTrigger,
 } from '@/components/ui/sheet'
+import NotificationBell from '../notifications/NotificationBell'
 
 const AppLayout = ({ children }) => {
   const location = useLocation()
@@ -238,7 +239,7 @@ const AppLayout = ({ children }) => {
             TIES Together
           </Link>
 
-          <div className="w-10" /> {/* Spacer for alignment */}
+          <NotificationBell />
         </div>
       </header>
 

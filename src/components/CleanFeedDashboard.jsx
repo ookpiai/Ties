@@ -18,6 +18,7 @@ import { getMyConversations } from '../api/messages'
 import { getJobPostings, getMyApplications } from '../api/jobs'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import { helpContent } from '../constants/helpContent'
+import OnboardingChecklist from './onboarding/OnboardingChecklist'
 
 const CleanFeedDashboard = () => {
   const { user } = useAuth()
@@ -209,6 +210,11 @@ const CleanFeedDashboard = () => {
     <div className="feed-main dark:bg-[#0B0B0B]">
       {/* Feed Content */}
       <div className="feed-content dark:bg-[#0B0B0B]">
+        {/* Onboarding Checklist */}
+        <div className="mb-6">
+          <OnboardingChecklist profile={user} />
+        </div>
+
         {/* Feed Header */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="section-header text-[var(--foreground)] flex items-center gap-2">
