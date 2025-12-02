@@ -65,7 +65,6 @@ import CreateJobPage from './components/jobs/CreateJobPage'
 import MyApplicationsPage from './components/jobs/MyApplicationsPage'
 import JobApplicantsPage from './components/jobs/JobApplicantsPage'
 import MyJobsPage from './components/jobs/MyJobsPage'
-import EditJobPage from './components/jobs/EditJobPage'
 import AgentDashboard from './components/agent/AgentDashboard'
 import VenuePortfolio from './components/venue/VenuePortfolio'
 import { BadgeRulesPage } from './components/profile/badges'
@@ -483,13 +482,6 @@ function AppRoutes() {
             <ProtectedRoute>
               <AppLayout>
                 <JobApplicantsPage />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/jobs/:jobId/edit" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <EditJobPage />
               </AppLayout>
             </ProtectedRoute>
           } />
