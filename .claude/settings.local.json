@@ -44,7 +44,13 @@
       "WebFetch(domain:surreal.com)",
       "WebFetch(domain:www.surreal.com)",
       "Bash(SUPABASE_SERVICE_ROLE_KEY=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhcWl3Y3JubHR1cXZoa216cnhwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MjE0MDgzNiwiZXhwIjoyMDc3NzE2ODM2fQ.vnS9Js0-kSV4uL2-RohYDU53-p2dymuMMLV4RtpXrpA\" node scripts/populate-test-data.cjs)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(git remote remove:*)",
+      "Bash(git remote add:*)",
+      "Bash(git rm:*)",
+      "Bash(done)",
+      "Bash(node:*)",
+      "Bash(git -C /mnt/c/Users/oo/Desktop/ties-together/TIES-Together-V2 log --oneline)"
     ],
     "deny": [],
     "ask": []

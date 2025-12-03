@@ -3,7 +3,7 @@
  * Day 27 - Phase 4A
  *
  * Displays user's bookings (as client and as freelancer)
- * Replaced mock data with real API calls
+ * Updated with modern FilterBar component
  */
 
 import React, { useState, useEffect, useMemo } from 'react'
@@ -13,7 +13,8 @@ import { Badge } from '@/components/ui/badge'
 import StatusBadge from '@/components/ui/StatusBadge'
 import { Button } from '@/components/ui/button'
 import EmptyState from '@/components/ui/EmptyState'
-import { Loader2, Calendar, Inbox, TrendingUp, DollarSign, Clock, CheckCircle, Search, CalendarCheck, CalendarDays, Lock, AlertCircle, ChevronRight } from 'lucide-react'
+import FilterBar from '@/components/ui/FilterBar'
+import { Loader2, Calendar, Inbox, TrendingUp, DollarSign, Clock, CheckCircle, Search, CalendarCheck, CalendarDays, Lock, AlertCircle, ChevronRight, XCircle, PlayCircle, CreditCard } from 'lucide-react'
 import { useAuth } from '../../App'
 import { getBookings, getBookingStats } from '../../api/bookings'
 import BookingCard from './BookingCard'
@@ -32,6 +33,7 @@ const BookingsPage = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [statusFilter, setStatusFilter] = useState('all')
+  const [searchQuery, setSearchQuery] = useState('')
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0)
   const [showBlockModal, setShowBlockModal] = useState(false)
   const [isBlockingDates, setIsBlockingDates] = useState(false)
@@ -93,11 +95,24 @@ const BookingsPage = () => {
     }
   }
 
-  // Filter bookings by status
-  const filteredBookings = bookings.filter(booking => {
-    if (statusFilter === 'all') return true
-    return booking.status === statusFilter
-  })
+  // Filter bookings by status and search
+  const filteredBookings = useMemo(() => {
+    return bookings.filter(booking => {
+      // Status filter
+      if (statusFilter !== 'all' && booking.status !== statusFilter) {
+        return false
+      }
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase()
+        const freelancerName = booking.freelancer?.display_name?.toLowerCase() || ''
+        const clientName = booking.client?.display_name?.toLowerCase() || ''
+        const notes = booking.notes?.toLowerCase() || ''
+        return freelancerName.includes(query) || clientName.includes(query) || notes.includes(query)
+      }
+      return true
+    })
+  }, [bookings, statusFilter, searchQuery])
 
   // Get status counts
   const getStatusCount = (status) => {
@@ -119,6 +134,34 @@ const BookingsPage = () => {
       new Date(booking.start_date) >= now
     ).sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
   }, [bookings])
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setStatusFilter('all')
+    setSearchQuery('')
+  }
+
+  // Filter configuration for FilterBar
+  const filterConfig = [
+    {
+      key: 'status',
+      label: 'Status',
+      type: 'select',
+      value: statusFilter,
+      onChange: setStatusFilter,
+      icon: Clock,
+      options: [
+        { value: 'all', label: 'All Statuses', count: bookings.length },
+        { value: 'pending', label: 'Pending', icon: Clock, count: getStatusCount('pending') },
+        { value: 'confirmed', label: 'Confirmed', icon: CheckCircle, count: getStatusCount('confirmed') },
+        { value: 'accepted', label: 'Accepted', icon: CheckCircle, count: getStatusCount('accepted') },
+        { value: 'paid', label: 'Paid', icon: CreditCard, count: getStatusCount('paid') },
+        { value: 'in_progress', label: 'In Progress', icon: PlayCircle, count: getStatusCount('in_progress') },
+        { value: 'completed', label: 'Completed', icon: CheckCircle, count: getStatusCount('completed') },
+        { value: 'cancelled', label: 'Cancelled', icon: XCircle, count: getStatusCount('cancelled') }
+      ]
+    }
+  ]
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -319,58 +362,20 @@ const BookingsPage = () => {
               </TabsTrigger>
             </TabsList>
 
-            {/* Status Filter Badges */}
-            <div className="flex flex-wrap gap-2 mb-6">
-              <Button
-                size="sm"
-                variant={statusFilter === 'all' ? 'default' : 'outline'}
-                onClick={() => setStatusFilter('all')}
-              >
-                All {bookings.length > 0 && `(${bookings.length})`}
-              </Button>
-              <Button
-                size="sm"
-                variant={statusFilter === 'pending' ? 'default' : 'outline'}
-                onClick={() => setStatusFilter('pending')}
-              >
-                Pending {getStatusCount('pending') > 0 && `(${getStatusCount('pending')})`}
-              </Button>
-              <Button
-                size="sm"
-                variant={statusFilter === 'confirmed' ? 'default' : 'outline'}
-                onClick={() => setStatusFilter('confirmed')}
-              >
-                Confirmed {getStatusCount('confirmed') > 0 && `(${getStatusCount('confirmed')})`}
-              </Button>
-              <Button
-                size="sm"
-                variant={statusFilter === 'accepted' ? 'default' : 'outline'}
-                onClick={() => setStatusFilter('accepted')}
-              >
-                Accepted {getStatusCount('accepted') > 0 && `(${getStatusCount('accepted')})`}
-              </Button>
-              <Button
-                size="sm"
-                variant={statusFilter === 'paid' ? 'default' : 'outline'}
-                onClick={() => setStatusFilter('paid')}
-              >
-                Paid {getStatusCount('paid') > 0 && `(${getStatusCount('paid')})`}
-              </Button>
-              <Button
-                size="sm"
-                variant={statusFilter === 'in_progress' ? 'default' : 'outline'}
-                onClick={() => setStatusFilter('in_progress')}
-              >
-                In Progress {getStatusCount('in_progress') > 0 && `(${getStatusCount('in_progress')})`}
-              </Button>
-              <Button
-                size="sm"
-                variant={statusFilter === 'completed' ? 'default' : 'outline'}
-                onClick={() => setStatusFilter('completed')}
-              >
-                Completed {getStatusCount('completed') > 0 && `(${getStatusCount('completed')})`}
-              </Button>
-            </div>
+            {/* Modern Filter Bar - Only show on booking tabs */}
+            {['all', 'as-client', 'as-freelancer'].includes(activeTab) && (
+              <FilterBar
+                searchValue={searchQuery}
+                onSearchChange={setSearchQuery}
+                searchPlaceholder="Search by name or notes..."
+                filters={filterConfig}
+                onClearAll={clearAllFilters}
+                resultCount={filteredBookings.length}
+                resultLabel="booking"
+                showActivePills={true}
+                bordered={false}
+              />
+            )}
 
             {/* Loading State */}
             {isLoading && (
