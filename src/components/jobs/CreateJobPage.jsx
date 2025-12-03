@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { createJobPosting } from '../../api/jobs'
 import { useAuth } from '../../App'
 import { Button } from '../ui/button'
-import { ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CheckCircle, Info, Lightbulb, Eye, Users, Briefcase, ClipboardList } from 'lucide-react'
 import JobBasicDetailsForm from './JobBasicDetailsForm'
 import JobRolesManager from './JobRolesManager'
 
@@ -32,6 +32,30 @@ const CreateJobPage = () => {
     { number: 1, title: 'Basic Details', description: 'Job information' },
     { number: 2, title: 'Add Roles', description: 'Define roles needed' },
     { number: 3, title: 'Review', description: 'Review and post' }
+  ]
+
+  // How it works information
+  const howItWorks = [
+    {
+      icon: Eye,
+      title: 'Your job appears in the Jobs Feed',
+      description: 'All users can browse and discover your job posting'
+    },
+    {
+      icon: Users,
+      title: 'People apply to your roles',
+      description: 'Freelancers, venues, and vendors submit applications with their rates'
+    },
+    {
+      icon: ClipboardList,
+      title: 'Review and accept applicants',
+      description: 'Choose the best fits and accept them into your project'
+    },
+    {
+      icon: Briefcase,
+      title: 'Manage in Studio',
+      description: 'Once accepted, the project appears in Studio for full project management'
+    }
   ]
 
   // Calculate total budget from all roles
@@ -116,25 +140,51 @@ const CreateJobPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0B0B0B] py-8">
+      <div className="max-w-5xl mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
           <button
             onClick={() => navigate('/jobs')}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
+            className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Jobs
+            Back to Jobs Feed
           </button>
-          <h1 className="text-3xl font-bold text-gray-900">Post a New Job</h1>
-          <p className="text-gray-600 mt-2">
-            Create a job posting and find the perfect people for your event
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Post a New Job</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
+            Create a job posting to find freelancers, venues, or vendors for your event
           </p>
         </div>
 
+        {/* How It Works Banner - Only show on step 1 */}
+        {currentStep === 1 && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6 mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Lightbulb className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <h3 className="font-semibold text-blue-900 dark:text-blue-300">How Job Posting Works</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {howItWorks.map((step, index) => {
+                const Icon = step.icon
+                return (
+                  <div key={index} className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                      <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{index + 1}</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{step.title}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">{step.description}</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Progress Steps */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
           <div className="flex items-center justify-between">
             {steps.map((step, index) => (
               <div key={step.number} className="flex items-center flex-1">
@@ -155,8 +205,8 @@ const CreateJobPage = () => {
                     )}
                   </div>
                   <div className="text-center mt-2">
-                    <p className="text-sm font-medium text-gray-900">{step.title}</p>
-                    <p className="text-xs text-gray-500">{step.description}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{step.title}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{step.description}</p>
                   </div>
                 </div>
                 {index < steps.length - 1 && (
@@ -179,7 +229,7 @@ const CreateJobPage = () => {
         )}
 
         {/* Step Content */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
           {currentStep === 1 && (
             <JobBasicDetailsForm
               jobData={jobData}

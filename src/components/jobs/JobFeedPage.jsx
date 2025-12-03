@@ -153,23 +153,24 @@ const JobFeedPage = () => {
   ]
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0B0B0B]">
+      <div className="container mx-auto px-4 py-8">
       {/* Header */}
-      <div className="flex justify-between items-start mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Find Jobs</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
-            Browse available opportunities and apply to jobs that match your skills
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Jobs Feed</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2 max-w-xl">
+            Browse and apply to available jobs. Once you're selected for a job, it will appear in your Studio workspace for project management.
           </p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline" onClick={() => navigate('/studio')}>
             <Briefcase className="h-4 w-4 mr-2" />
-            My Posted Jobs
+            Go to Studio
           </Button>
           <Button onClick={() => navigate('/jobs/create')}>
             <Plus className="h-4 w-4 mr-2" />
-            Post New Job
+            Post a Job
           </Button>
         </div>
       </div>
@@ -320,6 +321,7 @@ const JobFeedPage = () => {
         isOpen={isModalOpen}
         onClose={closeJobDetails}
       />
+      </div>
     </div>
   )
 }

@@ -484,6 +484,58 @@ export async function getMyApplications() {
 }
 
 /**
+ * Get jobs where the current user has been accepted (selected)
+ * These are the jobs that appear in Studio for project management
+ */
+export async function getMyAcceptedJobs() {
+  try {
+    const userId = await getCurrentUserId()
+
+    // Get applications where user was selected
+    const { data, error } = await supabase
+      .from('job_applications')
+      .select(`
+        *,
+        job:job_postings!job_id(
+          *,
+          organiser:profiles!organiser_id(id, display_name, avatar_url, role, email),
+          roles:job_roles(*)
+        ),
+        role:job_roles!job_role_id(*)
+      `)
+      .eq('applicant_id', userId)
+      .eq('status', 'selected')
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    // Transform data to return job-centric view with user's role info
+    const acceptedJobs = data?.map(application => ({
+      ...application.job,
+      my_role: application.role,
+      my_application: {
+        id: application.id,
+        proposed_rate: application.proposed_rate,
+        cover_letter: application.cover_letter,
+        created_at: application.created_at
+      }
+    })) || []
+
+    return {
+      success: true,
+      data: acceptedJobs
+    }
+  } catch (error: any) {
+    console.error('Error fetching my accepted jobs:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch accepted jobs',
+      data: []
+    }
+  }
+}
+
+/**
  * Withdraw an application
  */
 export async function withdrawApplication(applicationId: string) {
@@ -1592,6 +1644,7 @@ export default {
   applyToJobRole,
   getApplicationsForJob,
   getMyApplications,
+  getMyAcceptedJobs,
   withdrawApplication,
   selectApplicant,
   checkAllRolesFilled,
