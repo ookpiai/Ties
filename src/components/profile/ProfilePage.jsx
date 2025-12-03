@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../App'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import AvailabilityCalendar from '../calendar/AvailabilityCalendar'
@@ -55,7 +56,7 @@ import {
 import { updateProfile, getProfile } from '../../api/profiles'
 import { uploadAvatar } from '../../api/storage'
 import ServicesPage from './ServicesPage'
-import { PortfolioGallery, AddPortfolioItemModal } from './portfolio'
+import { PortfolioGallery } from './portfolio'
 import { ServicePackagesDisplay, PackageEditorModal } from './packages'
 import { SkillsCard, SkillsEditorModal } from './skills'
 import { BadgeGrid, VerificationRow, AvailableBadges } from './badges'
@@ -70,6 +71,7 @@ import { FeatureHotspot } from '@/components/ui/FeatureHotspot'
 import { helpContent, featureHotspots } from '../../constants/helpContent'
 
 const ProfilePage = () => {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -107,7 +109,6 @@ const ProfilePage = () => {
   const [profileStrength, setProfileStrength] = useState(null)
 
   // Modal states
-  const [showPortfolioModal, setShowPortfolioModal] = useState(false)
   const [showSkillsModal, setShowSkillsModal] = useState(false)
   const [showPackageModal, setShowPackageModal] = useState(false)
   const [editingPackage, setEditingPackage] = useState(null)
@@ -898,7 +899,7 @@ const ProfilePage = () => {
             </div>
           </TabsContent>
 
-          {/* Portfolio Tab (Dribbble-inspired) */}
+          {/* Portfolio Tab (View Only - Edit in Create Page) */}
           <TabsContent value="portfolio">
             <div className="space-y-6">
               <div className="flex items-center justify-between">
@@ -906,18 +907,36 @@ const ProfilePage = () => {
                   <h2 className="text-xl font-semibold">Portfolio</h2>
                   <p className="text-sm text-slate-500">Showcase your best work</p>
                 </div>
-                <Button onClick={() => setShowPortfolioModal(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Item
+                <Button onClick={() => navigate('/create')}>
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Portfolio
                 </Button>
               </div>
 
-              <PortfolioGallery
-                userId={user?.id}
-                items={portfolio}
-                isOwner={true}
-                onRefresh={refreshPortfolio}
-              />
+              {portfolio.length === 0 ? (
+                <div className="text-center py-12 bg-slate-50 dark:bg-slate-800 rounded-xl">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
+                    <Briefcase className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                    Your portfolio is empty
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-400 mb-4 max-w-md mx-auto">
+                    Head over to the Portfolio Studio to start adding your best work!
+                  </p>
+                  <Button onClick={() => navigate('/create')}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Go to Portfolio Studio
+                  </Button>
+                </div>
+              ) : (
+                <PortfolioGallery
+                  userId={user?.id}
+                  items={portfolio}
+                  isOwner={false}
+                  onRefresh={refreshPortfolio}
+                />
+              )}
             </div>
           </TabsContent>
 
@@ -984,16 +1003,6 @@ const ProfilePage = () => {
       </div>
 
       {/* Modals */}
-      <AddPortfolioItemModal
-        isOpen={showPortfolioModal}
-        onClose={() => setShowPortfolioModal(false)}
-        userId={user?.id}
-        onSuccess={() => {
-          setShowPortfolioModal(false)
-          refreshPortfolio()
-        }}
-      />
-
       <SkillsEditorModal
         isOpen={showSkillsModal}
         onClose={() => setShowSkillsModal(false)}
