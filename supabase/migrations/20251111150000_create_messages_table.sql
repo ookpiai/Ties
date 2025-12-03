@@ -34,14 +34,14 @@ CREATE TABLE IF NOT EXISTS messages (
 -- ============================================
 
 -- Index for fetching user's conversations
-CREATE INDEX idx_messages_from_id ON messages(from_id);
-CREATE INDEX idx_messages_to_id ON messages(to_id);
+CREATE INDEX IF NOT EXISTS idx_messages_from_id ON messages(from_id);
+CREATE INDEX IF NOT EXISTS idx_messages_to_id ON messages(to_id);
 
 -- Composite index for conversation queries
-CREATE INDEX idx_messages_conversation ON messages(from_id, to_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(from_id, to_id, created_at DESC);
 
 -- Index for unread messages
-CREATE INDEX idx_messages_unread ON messages(to_id, read) WHERE read = FALSE;
+CREATE INDEX IF NOT EXISTS idx_messages_unread ON messages(to_id, read) WHERE read = FALSE;
 
 -- ============================================
 -- ROW LEVEL SECURITY
@@ -50,6 +50,7 @@ CREATE INDEX idx_messages_unread ON messages(to_id, read) WHERE read = FALSE;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 
 -- Users can view messages they sent or received
+DROP POLICY IF EXISTS "Users can view their messages" ON messages;
 CREATE POLICY "Users can view their messages"
   ON messages FOR SELECT
   USING (
@@ -57,6 +58,7 @@ CREATE POLICY "Users can view their messages"
   );
 
 -- Users can send messages to anyone
+DROP POLICY IF EXISTS "Users can send messages" ON messages;
 CREATE POLICY "Users can send messages"
   ON messages FOR INSERT
   WITH CHECK (
@@ -64,12 +66,14 @@ CREATE POLICY "Users can send messages"
   );
 
 -- Users can mark their received messages as read
+DROP POLICY IF EXISTS "Users can update their received messages" ON messages;
 CREATE POLICY "Users can update their received messages"
   ON messages FOR UPDATE
   USING (auth.uid() = to_id)
   WITH CHECK (auth.uid() = to_id);
 
 -- Users can delete messages they sent
+DROP POLICY IF EXISTS "Users can delete their sent messages" ON messages;
 CREATE POLICY "Users can delete their sent messages"
   ON messages FOR DELETE
   USING (auth.uid() = from_id);
@@ -90,6 +94,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to update read_at when message is marked as read
+DROP TRIGGER IF EXISTS trigger_update_message_read_at ON messages;
 CREATE TRIGGER trigger_update_message_read_at
   BEFORE UPDATE ON messages
   FOR EACH ROW

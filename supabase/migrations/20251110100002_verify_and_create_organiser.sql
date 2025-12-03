@@ -37,8 +37,7 @@ END $$;
 SELECT
   id,
   display_name,
-  role,
-  email
+  role
 FROM profiles
 ORDER BY created_at DESC
 LIMIT 5;
@@ -83,7 +82,6 @@ SELECT
   id,
   display_name,
   role,
-  email,
   created_at
 FROM profiles
 WHERE role = 'organiser'

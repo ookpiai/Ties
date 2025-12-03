@@ -99,9 +99,9 @@ CREATE TABLE IF NOT EXISTS freelancer_agent_links (
   UNIQUE(agent_id, freelancer_id)
 );
 
-CREATE INDEX idx_agent_links_agent_id ON freelancer_agent_links(agent_id);
-CREATE INDEX idx_agent_links_freelancer_id ON freelancer_agent_links(freelancer_id);
-CREATE INDEX idx_agent_links_status ON freelancer_agent_links(status);
+CREATE INDEX IF NOT EXISTS idx_agent_links_agent_id ON freelancer_agent_links(agent_id);
+CREATE INDEX IF NOT EXISTS idx_agent_links_freelancer_id ON freelancer_agent_links(freelancer_id);
+CREATE INDEX IF NOT EXISTS idx_agent_links_status ON freelancer_agent_links(status);
 
 -- =====================================================
 -- CALENDAR BLOCKS TABLE
@@ -123,11 +123,11 @@ CREATE TABLE IF NOT EXISTS calendar_blocks (
   CONSTRAINT valid_time_range CHECK (end_time > start_time)
 );
 
-CREATE INDEX idx_calendar_blocks_owner_id ON calendar_blocks(owner_id);
-CREATE INDEX idx_calendar_blocks_booking_id ON calendar_blocks(booking_id);
-CREATE INDEX idx_calendar_blocks_start_time ON calendar_blocks(start_time);
-CREATE INDEX idx_calendar_blocks_end_time ON calendar_blocks(end_time);
-CREATE INDEX idx_calendar_blocks_type ON calendar_blocks(block_type);
+CREATE INDEX IF NOT EXISTS idx_calendar_blocks_owner_id ON calendar_blocks(owner_id);
+CREATE INDEX IF NOT EXISTS idx_calendar_blocks_booking_id ON calendar_blocks(booking_id);
+CREATE INDEX IF NOT EXISTS idx_calendar_blocks_start_time ON calendar_blocks(start_time);
+CREATE INDEX IF NOT EXISTS idx_calendar_blocks_end_time ON calendar_blocks(end_time);
+CREATE INDEX IF NOT EXISTS idx_calendar_blocks_type ON calendar_blocks(block_type);
 
 -- =====================================================
 -- UPDATE BOOKINGS TABLE
@@ -170,16 +170,19 @@ ALTER TABLE profiles
 -- Calendar Blocks RLS
 ALTER TABLE calendar_blocks ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own calendar blocks" ON calendar_blocks;
 CREATE POLICY "Users can view own calendar blocks"
   ON calendar_blocks FOR SELECT
   USING (auth.uid() = owner_id);
 
+DROP POLICY IF EXISTS "Users can manage own calendar blocks" ON calendar_blocks;
 CREATE POLICY "Users can manage own calendar blocks"
   ON calendar_blocks FOR ALL
   USING (auth.uid() = owner_id)
   WITH CHECK (auth.uid() = owner_id);
 
 -- Agents can view their talent's calendar blocks (read only)
+DROP POLICY IF EXISTS "Agents can view talent calendar blocks" ON calendar_blocks;
 CREATE POLICY "Agents can view talent calendar blocks"
   ON calendar_blocks FOR SELECT
   USING (
@@ -192,19 +195,23 @@ CREATE POLICY "Agents can view talent calendar blocks"
 -- Freelancer Agent Links RLS
 ALTER TABLE freelancer_agent_links ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own agent links" ON freelancer_agent_links;
 CREATE POLICY "Users can view own agent links"
   ON freelancer_agent_links FOR SELECT
   USING (auth.uid() = agent_id OR auth.uid() = freelancer_id);
 
+DROP POLICY IF EXISTS "Agents can create link requests" ON freelancer_agent_links;
 CREATE POLICY "Agents can create link requests"
   ON freelancer_agent_links FOR INSERT
   WITH CHECK (auth.uid() = agent_id);
 
+DROP POLICY IF EXISTS "Freelancers can update link status" ON freelancer_agent_links;
 CREATE POLICY "Freelancers can update link status"
   ON freelancer_agent_links FOR UPDATE
   USING (auth.uid() = freelancer_id)
   WITH CHECK (auth.uid() = freelancer_id);
 
+DROP POLICY IF EXISTS "Either party can delete link" ON freelancer_agent_links;
 CREATE POLICY "Either party can delete link"
   ON freelancer_agent_links FOR DELETE
   USING (auth.uid() = agent_id OR auth.uid() = freelancer_id);

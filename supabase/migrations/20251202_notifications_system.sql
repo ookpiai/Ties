@@ -110,28 +110,34 @@ ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;
 
 -- Notifications: users can only see their own
+DROP POLICY IF EXISTS "Users can view own notifications" ON notifications;
 CREATE POLICY "Users can view own notifications"
   ON notifications FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update own notifications" ON notifications;
 CREATE POLICY "Users can update own notifications"
   ON notifications FOR UPDATE
   USING (auth.uid() = user_id);
 
 -- System can insert notifications for any user
+DROP POLICY IF EXISTS "System can insert notifications" ON notifications;
 CREATE POLICY "System can insert notifications"
   ON notifications FOR INSERT
   WITH CHECK (TRUE);
 
 -- Notification preferences
+DROP POLICY IF EXISTS "Users can view own preferences" ON notification_preferences;
 CREATE POLICY "Users can view own preferences"
   ON notification_preferences FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update own preferences" ON notification_preferences;
 CREATE POLICY "Users can update own preferences"
   ON notification_preferences FOR UPDATE
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert own preferences" ON notification_preferences;
 CREATE POLICY "Users can insert own preferences"
   ON notification_preferences FOR INSERT
   WITH CHECK (auth.uid() = user_id);
@@ -425,4 +431,12 @@ CREATE TRIGGER trigger_notify_job_application
   EXECUTE FUNCTION notify_job_application();
 
 -- 6. Enable realtime for notifications
-ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'notifications'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+  END IF;
+END $$;

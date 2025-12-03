@@ -22,21 +22,25 @@ ALTER TABLE favorites ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
 -- Users can only see their own favorites
+DROP POLICY IF EXISTS "Users can view own favorites" ON favorites;
 CREATE POLICY "Users can view own favorites"
   ON favorites FOR SELECT
   USING (auth.uid() = user_id);
 
 -- Users can add favorites
+DROP POLICY IF EXISTS "Users can add favorites" ON favorites;
 CREATE POLICY "Users can add favorites"
   ON favorites FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
 -- Users can remove their own favorites
+DROP POLICY IF EXISTS "Users can remove own favorites" ON favorites;
 CREATE POLICY "Users can remove own favorites"
   ON favorites FOR DELETE
   USING (auth.uid() = user_id);
 
 -- Users can update their own favorite notes
+DROP POLICY IF EXISTS "Users can update own favorite notes" ON favorites;
 CREATE POLICY "Users can update own favorite notes"
   ON favorites FOR UPDATE
   USING (auth.uid() = user_id)

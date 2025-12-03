@@ -220,7 +220,7 @@ const BookingCard = ({ booking, currentUserId, onUpdate }) => {
   const getActions = () => {
     const actions = []
 
-    // Pending - Freelancer can accept/decline
+    // Pending - Freelancer can accept/decline (prominent buttons)
     if (booking.status === 'pending' && isFreelancer) {
       actions.push(
         <Button
@@ -228,10 +228,10 @@ const BookingCard = ({ booking, currentUserId, onUpdate }) => {
           size="sm"
           onClick={handleAccept}
           disabled={isProcessing}
-          className="bg-green-600 hover:bg-green-700"
+          className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 shadow-sm"
         >
-          {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-1" />}
-          Accept
+          {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-1.5" />}
+          Accept Job
         </Button>,
         <Button
           key="decline"
@@ -239,8 +239,9 @@ const BookingCard = ({ booking, currentUserId, onUpdate }) => {
           variant="outline"
           onClick={handleDecline}
           disabled={isProcessing}
+          className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
         >
-          <XCircle className="h-4 w-4 mr-1" />
+          <XCircle className="h-4 w-4 mr-1.5" />
           Decline
         </Button>
       )
@@ -255,9 +256,10 @@ const BookingCard = ({ booking, currentUserId, onUpdate }) => {
           variant="outline"
           onClick={handleCancel}
           disabled={isProcessing}
+          className="border-orange-300 text-orange-600 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-400"
         >
           <Ban className="h-4 w-4 mr-1" />
-          Cancel
+          Cancel Request
         </Button>
       )
     }
@@ -321,9 +323,10 @@ const BookingCard = ({ booking, currentUserId, onUpdate }) => {
           variant="outline"
           onClick={handleCancel}
           disabled={isProcessing}
+          className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
         >
           <Ban className="h-4 w-4 mr-1" />
-          Cancel
+          Cancel Booking
         </Button>
       )
     }
@@ -344,9 +347,28 @@ const BookingCard = ({ booking, currentUserId, onUpdate }) => {
     return actions
   }
 
+  // Check if this booking needs immediate action from the current user
+  const needsAction = booking.status === 'pending' && isFreelancer
+
   return (
     <>
-      <Card className="hover:shadow-lg transition-all hover:border-primary/30 rounded-xl bg-surface border border-app">
+      <Card className={`hover:shadow-lg transition-all rounded-xl bg-surface border ${needsAction ? 'border-orange-400 ring-2 ring-orange-100 dark:ring-orange-900/30' : 'border-app hover:border-primary/30'}`}>
+        {/* Action Required Banner for pending bookings */}
+        {needsAction && (
+          <div className="px-4 py-2.5 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-b border-orange-200 dark:border-orange-800 rounded-t-xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+                <span className="text-sm font-semibold text-orange-700 dark:text-orange-300">
+                  Action Required
+                </span>
+                <span className="text-xs text-orange-600 dark:text-orange-400">
+                  — Review and respond to this booking request
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
         <CardContent className="p-4">
           {/* Header Row */}
           <div className="flex items-start gap-3 mb-3">

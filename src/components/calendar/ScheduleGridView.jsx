@@ -43,6 +43,7 @@ import {
 } from 'date-fns'
 import { getBookings } from '../../api/bookings'
 import { getCalendarBlocks } from '../../api/calendarUnified'
+import { getPendingRequests } from '../../api/availabilityRequests'
 import { useAuth } from '../../App'
 
 // Status colors matching Surreal's style
@@ -58,7 +59,11 @@ const STATUS_COLORS = {
   // Calendar blocks
   booking: 'bg-purple-500 text-white',
   manual: 'bg-slate-500 text-white',
-  unavailable: 'bg-red-300 text-red-800'
+  unavailable: 'bg-red-300 text-red-800',
+  // Availability requests
+  availability_request: 'bg-amber-400 text-amber-900',
+  available: 'bg-green-400 text-green-900',
+  request_unavailable: 'bg-red-200 text-red-800'
 }
 
 const STATUS_LABELS = {
@@ -86,6 +91,7 @@ const ScheduleGridView = ({
   const [currentDate, setCurrentDate] = useState(new Date())
   const [bookings, setBookings] = useState([])
   const [blocks, setBlocks] = useState([])
+  const [availabilityRequests, setAvailabilityRequests] = useState([])
   const [isLoading, setIsLoading] = useState(true)
 
   // Calculate date range based on view mode
@@ -118,9 +124,10 @@ const ScheduleGridView = ({
   const loadData = async () => {
     setIsLoading(true)
     try {
-      const [bookingsData, blocksData] = await Promise.all([
+      const [bookingsData, blocksData, requestsData] = await Promise.all([
         getBookings(targetUserId, 'both'),
-        getCalendarBlocks(targetUserId, dateRange.start, dateRange.end)
+        getCalendarBlocks(targetUserId, dateRange.start, dateRange.end),
+        getPendingRequests(targetUserId).catch(() => []) // Graceful fallback if API fails
       ])
 
       // Filter bookings to current date range
@@ -129,8 +136,15 @@ const ScheduleGridView = ({
         return startDate >= dateRange.start && startDate <= dateRange.end
       })
 
+      // Filter availability requests to current date range
+      const filteredRequests = (requestsData || []).filter(r => {
+        const requestedDate = parseISO(r.requested_date)
+        return requestedDate >= dateRange.start && requestedDate <= dateRange.end
+      })
+
       setBookings(filteredBookings)
       setBlocks(blocksData || [])
+      setAvailabilityRequests(filteredRequests)
     } catch (err) {
       console.error('Failed to load schedule data:', err)
     } finally {
@@ -171,6 +185,23 @@ const ScheduleGridView = ({
           title: block.notes || 'Blocked',
           visibilityMessage: block.visibility_message,
           data: block
+        })
+      }
+    })
+
+    // Add availability requests
+    availabilityRequests.forEach(request => {
+      const requestedDate = parseISO(request.requested_date)
+      if (isSameDay(requestedDate, day)) {
+        events.push({
+          type: 'availability_request',
+          id: request.id,
+          status: 'availability_request',
+          title: `Request: ${request.requester_profile?.display_name || 'Client'}`,
+          time: request.requested_start_time?.slice(0, 5) || null,
+          requester: request.requester_profile?.display_name,
+          message: request.message,
+          data: request
         })
       }
     })
@@ -298,6 +329,10 @@ const ScheduleGridView = ({
             <div className="w-2.5 h-2.5 rounded bg-slate-500" />
             <span className="text-slate-600 dark:text-slate-400">Blocked</span>
           </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded bg-amber-400" />
+            <span className="text-slate-600 dark:text-slate-400">Availability Request</span>
+          </div>
         </div>
 
         {isLoading ? (
@@ -361,7 +396,7 @@ const ScheduleGridView = ({
         <div className="mt-4 pt-4 border-t flex flex-wrap items-center justify-between gap-4 text-sm">
           <div className="flex items-center gap-6">
             <div>
-              <span className="text-muted-foreground">Total Bookings:</span>
+              <span className="text-muted-foreground">Bookings:</span>
               <span className="font-semibold ml-1">{bookings.length}</span>
             </div>
             <div>
@@ -376,6 +411,14 @@ const ScheduleGridView = ({
                 {bookings.filter(b => b.status === 'pending').length}
               </span>
             </div>
+            {availabilityRequests.length > 0 && (
+              <div>
+                <span className="text-muted-foreground">Requests:</span>
+                <span className="font-semibold ml-1 text-amber-600">
+                  {availabilityRequests.length}
+                </span>
+              </div>
+            )}
           </div>
           <div>
             <span className="text-muted-foreground">Revenue:</span>

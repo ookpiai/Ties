@@ -6,14 +6,14 @@
  * Replaced mock data with real API calls
  */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import StatusBadge from '@/components/ui/StatusBadge'
 import { Button } from '@/components/ui/button'
 import EmptyState from '@/components/ui/EmptyState'
-import { Loader2, Calendar, Inbox, TrendingUp, DollarSign, Clock, CheckCircle, Search, CalendarCheck, CalendarDays, Lock } from 'lucide-react'
+import { Loader2, Calendar, Inbox, TrendingUp, DollarSign, Clock, CheckCircle, Search, CalendarCheck, CalendarDays, Lock, AlertCircle, ChevronRight } from 'lucide-react'
 import { useAuth } from '../../App'
 import { getBookings, getBookingStats } from '../../api/bookings'
 import BookingCard from './BookingCard'
@@ -104,6 +104,22 @@ const BookingsPage = () => {
     return bookings.filter(b => b.status === status).length
   }
 
+  // Get pending bookings that need the user's action (freelancer needs to accept/decline)
+  const pendingActionBookings = useMemo(() => {
+    return bookings.filter(booking =>
+      booking.status === 'pending' && booking.freelancer_id === user?.id
+    )
+  }, [bookings, user?.id])
+
+  // Get upcoming accepted bookings (for management)
+  const upcomingBookings = useMemo(() => {
+    const now = new Date()
+    return bookings.filter(booking =>
+      ['accepted', 'in_progress'].includes(booking.status) &&
+      new Date(booking.start_date) >= now
+    ).sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
+  }, [bookings])
+
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8">
@@ -120,6 +136,59 @@ const BookingsPage = () => {
           Track who you've hired and who's hired you
         </p>
       </div>
+
+      {/* Pending Actions Panel - Shows when there are bookings requiring attention */}
+      {!isLoading && pendingActionBookings.length > 0 && (
+        <Card className="mb-6 border-orange-300 dark:border-orange-700 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/10 dark:to-amber-900/10">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center">
+                  <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-orange-800 dark:text-orange-200">
+                    {pendingActionBookings.length} Booking{pendingActionBookings.length !== 1 ? 's' : ''} Awaiting Your Response
+                  </h3>
+                  <p className="text-sm text-orange-600 dark:text-orange-400">
+                    Accept or decline these booking requests to manage your schedule
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-orange-300 text-orange-700 hover:bg-orange-100 dark:border-orange-600 dark:text-orange-300"
+                onClick={() => {
+                  setActiveTab('as-freelancer')
+                  setStatusFilter('pending')
+                }}
+              >
+                View All
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+
+            {/* Quick action cards for pending bookings */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {pendingActionBookings.slice(0, 3).map((booking) => (
+                <BookingCard
+                  key={booking.id}
+                  booking={booking}
+                  currentUserId={user?.id}
+                  onUpdate={handleBookingUpdate}
+                />
+              ))}
+            </div>
+
+            {pendingActionBookings.length > 3 && (
+              <p className="text-sm text-orange-600 dark:text-orange-400 mt-3 text-center">
+                +{pendingActionBookings.length - 3} more pending bookings
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Statistics Cards - Surreal-inspired */}
       {stats && (

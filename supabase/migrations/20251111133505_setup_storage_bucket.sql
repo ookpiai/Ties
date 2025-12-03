@@ -94,19 +94,6 @@ WITH CHECK (
 );
 
 -- ============================================
--- COMMENTS
--- ============================================
-
-COMMENT ON POLICY "Job team can view job files" ON storage.objects IS
-  'Allows job organizer and selected team members to view files in their job workspace';
-
-COMMENT ON POLICY "Job team can upload job files" ON storage.objects IS
-  'Allows job organizer and selected team members to upload files to their job workspace';
-
-COMMENT ON POLICY "Uploader or organizer can delete job files" ON storage.objects IS
-  'Allows file uploader or job organizer to delete files';
-
--- ============================================
 -- MIGRATION COMPLETE
 -- ============================================
 

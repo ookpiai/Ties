@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import VenueMapView from './VenueMapView'
@@ -7,7 +7,14 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Slider } from '@/components/ui/slider'
+import { Checkbox } from '@/components/ui/checkbox'
 import EmptyState from '@/components/ui/EmptyState'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,7 +60,8 @@ import {
   Zap,
   CheckCircle,
   Crown,
-  Image
+  Image,
+  ArrowUpDown
 } from 'lucide-react'
 import { searchProfiles } from '../../api/profiles'
 import { getSpecialtyLabel } from '../../constants/specialties'
@@ -84,6 +92,9 @@ const DiscoveryPage = () => {
 
   // Badge filter state (per badge.md spec)
   const [selectedBadgeFilters, setSelectedBadgeFilters] = useState([])
+
+  // Popover open states for filter dropdowns
+  const [openPopover, setOpenPopover] = useState(null)
 
   // Map Supabase roles to component roles
   const mapSupabaseRoleToComponentRole = (supabaseRole) => {
@@ -446,9 +457,55 @@ const DiscoveryPage = () => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase()
   }
 
+  // Get active filter count for badge display
+  const getActiveFilterCount = () => {
+    let count = 0
+    if (selectedRole !== 'all') count++
+    if (selectedLocation) count++
+    if (selectedSkills.length > 0) count += selectedSkills.length
+    if (selectedBadgeFilters.length > 0) count += selectedBadgeFilters.length
+    if (priceRange[0] > 0 || priceRange[1] < 500) count++
+    return count
+  }
+
+  // Check if any filters are active
+  const hasActiveFilters = getActiveFilterCount() > 0
+
+  // Filter button component for consistent styling
+  const FilterButton = ({ label, isActive, activeCount, isOpen, onClick, children }) => (
+    <Popover open={isOpen} onOpenChange={(open) => setOpenPopover(open ? label : null)}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className={`h-10 px-4 rounded-full border-2 transition-all duration-200 ${
+            isActive || activeCount > 0
+              ? 'border-primary bg-primary/5 text-primary hover:bg-primary/10'
+              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+          } ${isOpen ? 'ring-2 ring-primary/20' : ''}`}
+        >
+          <span className="font-medium">{label}</span>
+          {activeCount > 0 && (
+            <span className="ml-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+              {activeCount}
+            </span>
+          )}
+          <ChevronDown className={`ml-1.5 h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-80 p-0 shadow-xl border-slate-200 dark:border-slate-700"
+        align="start"
+        sideOffset={8}
+      >
+        {children}
+      </PopoverContent>
+    </Popover>
+  )
+
   return (
     <div className="min-h-screen bg-app text-app transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -466,282 +523,373 @@ const DiscoveryPage = () => {
         </div>
 
         {/* Search Bar */}
-        <div className="mb-6">
+        <div className="mb-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by name, skills, or services..."
-              className="pl-10 pr-4 py-3"
+              className="pl-12 pr-4 h-12 text-base rounded-full border-2 border-slate-200 dark:border-slate-700 focus:border-primary"
             />
           </div>
         </div>
 
-        {/* Main Layout: Sidebar + Content */}
-        <div className="flex gap-6">
-          {/* Filter Sidebar - Surreal Style */}
-          <aside className={`${showFilters ? 'block' : 'hidden'} lg:block w-full lg:w-64 flex-shrink-0`}>
-            <Card className="sticky top-4 bg-surface border border-app rounded-xl">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base font-semibold flex items-center">
-                    <SlidersHorizontal className="w-4 h-4 mr-2" />
-                    Filters
-                  </CardTitle>
+        {/* Modern Dropdown Filter Bar */}
+        <div className="mb-6">
+          <div className="flex flex-wrap items-center gap-2 pb-4 border-b border-slate-200 dark:border-slate-800">
+            {/* Role Type Filter */}
+            <FilterButton
+              label={selectedRole === 'all' ? 'Role' : roleOptions.find(r => r.value === selectedRole)?.label}
+              isActive={selectedRole !== 'all'}
+              activeCount={selectedRole !== 'all' ? 1 : 0}
+              isOpen={openPopover === 'Role' || openPopover === roleOptions.find(r => r.value === selectedRole)?.label}
+            >
+              <div className="p-4">
+                <h4 className="font-semibold text-sm text-slate-900 dark:text-white mb-3">Role Type</h4>
+                <div className="space-y-1">
+                  {roleOptions.map((role) => {
+                    const Icon = role.icon
+                    return (
+                      <button
+                        key={role.value}
+                        onClick={() => {
+                          setSelectedRole(role.value)
+                          setOpenPopover(null)
+                        }}
+                        className={`w-full flex items-center justify-between p-3 rounded-lg transition-all ${
+                          selectedRole === role.value
+                            ? 'bg-primary/10 text-primary'
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Icon className="w-5 h-5" />
+                          <span className="font-medium">{role.label}</span>
+                        </div>
+                        {selectedRole === role.value && (
+                          <Check className="w-5 h-5 text-primary" />
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </FilterButton>
+
+            {/* Location Filter */}
+            <FilterButton
+              label={selectedLocation || 'Location'}
+              isActive={!!selectedLocation}
+              activeCount={selectedLocation ? 1 : 0}
+              isOpen={openPopover === (selectedLocation || 'Location')}
+            >
+              <div className="p-4">
+                <h4 className="font-semibold text-sm text-slate-900 dark:text-white mb-3">Location</h4>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                  <Input
+                    value={selectedLocation}
+                    onChange={(e) => setSelectedLocation(e.target.value)}
+                    placeholder="City, Country"
+                    className="pl-10"
+                    autoFocus
+                  />
+                </div>
+                {selectedLocation && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={clearAllFilters}
-                    className="text-xs h-7 px-2"
+                    onClick={() => setSelectedLocation('')}
+                    className="mt-3 w-full text-slate-500"
                   >
-                    Clear
+                    Clear location
                   </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6 text-sm">
-                {/* Role Type */}
-                <div>
-                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2 block">
-                    Role Type
-                  </Label>
-                  <div className="space-y-2">
-                    {roleOptions.map((role) => {
-                      const Icon = role.icon
-                      const count = role.value === 'all' ? filteredProfessionals.length :
-                                    filteredProfessionals.filter(p => p.role === role.value).length
-                      return (
-                        <button
-                          key={role.value}
-                          onClick={() => setSelectedRole(role.value)}
-                          className={`w-full flex items-center justify-between p-2 rounded-lg transition-colors ${
-                            selectedRole === role.value
-                              ? 'bg-primary/10 text-primary border border-primary/20'
-                              : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
-                          }`}
-                        >
-                          <div className="flex items-center space-x-2">
-                            <Icon className="w-4 h-4" />
-                            <span className="text-sm">{role.label}</span>
-                          </div>
-                          <span className="text-xs text-slate-500 dark:text-slate-400">
-                            ({professionals.length})
-                          </span>
-                        </button>
-                      )
-                    })}
+                )}
+              </div>
+            </FilterButton>
+
+            {/* Price Range Filter */}
+            <FilterButton
+              label={priceRange[0] > 0 || priceRange[1] < 500 ? `£${priceRange[0]} - £${priceRange[1]}` : 'Price'}
+              isActive={priceRange[0] > 0 || priceRange[1] < 500}
+              activeCount={priceRange[0] > 0 || priceRange[1] < 500 ? 1 : 0}
+              isOpen={openPopover === 'Price' || openPopover === `£${priceRange[0]} - £${priceRange[1]}`}
+            >
+              <div className="p-4">
+                <h4 className="font-semibold text-sm text-slate-900 dark:text-white mb-3">Price Range (£/hour)</h4>
+                <div className="px-2 py-4">
+                  <Slider
+                    value={priceRange}
+                    onValueChange={setPriceRange}
+                    min={0}
+                    max={500}
+                    step={10}
+                    className="mb-6"
+                  />
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1">
+                      <Label className="text-xs text-slate-500 mb-1 block">Min</Label>
+                      <Input
+                        type="number"
+                        value={priceRange[0]}
+                        onChange={(e) => setPriceRange([parseInt(e.target.value) || 0, priceRange[1]])}
+                        className="h-9"
+                      />
+                    </div>
+                    <span className="text-slate-400 mt-5">—</span>
+                    <div className="flex-1">
+                      <Label className="text-xs text-slate-500 mb-1 block">Max</Label>
+                      <Input
+                        type="number"
+                        value={priceRange[1]}
+                        onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 500])}
+                        className="h-9"
+                      />
+                    </div>
                   </div>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setPriceRange([0, 500])}
+                  className="w-full text-slate-500"
+                >
+                  Reset price range
+                </Button>
+              </div>
+            </FilterButton>
 
-                {/* Location */}
-                <div>
-                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2 block">
-                    Location
-                  </Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-2 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                    <Input
-                      value={selectedLocation}
-                      onChange={(e) => setSelectedLocation(e.target.value)}
-                      placeholder="City, Country"
-                      className="pl-8 h-9 text-sm"
-                    />
-                  </div>
+            {/* Skills Filter */}
+            <FilterButton
+              label="Skills"
+              isActive={selectedSkills.length > 0}
+              activeCount={selectedSkills.length}
+              isOpen={openPopover === 'Skills'}
+            >
+              <div className="p-4">
+                <h4 className="font-semibold text-sm text-slate-900 dark:text-white mb-3">Skills & Expertise</h4>
+                <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto">
+                  {skillOptions.map(skill => (
+                    <button
+                      key={skill}
+                      onClick={() =>
+                        selectedSkills.includes(skill)
+                          ? removeSkillFilter(skill)
+                          : addSkillFilter(skill)
+                      }
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                        selectedSkills.includes(skill)
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      {skill}
+                    </button>
+                  ))}
                 </div>
-
-                {/* Sort By */}
-                <div>
-                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2 block">
-                    Sort By
-                  </Label>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                {selectedSkills.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedSkills([])}
+                    className="mt-3 w-full text-slate-500"
                   >
-                    {sortOptions.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    Clear all skills
+                  </Button>
+                )}
+              </div>
+            </FilterButton>
 
-                {/* Price Range */}
-                <div>
-                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2 block">
-                    Price Range (£/hour)
-                  </Label>
-                  <div className="flex items-center space-x-2">
-                    <Input
-                      type="number"
-                      value={priceRange[0]}
-                      onChange={(e) => setPriceRange([parseInt(e.target.value) || 0, priceRange[1]])}
-                      placeholder="Min"
-                      className="w-full h-9 text-sm"
-                    />
-                    <span className="text-slate-400">-</span>
-                    <Input
-                      type="number"
-                      value={priceRange[1]}
-                      onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 500])}
-                      placeholder="Max"
-                      className="w-full h-9 text-sm"
-                    />
-                  </div>
+            {/* Badge Filter */}
+            <FilterButton
+              label="Badges"
+              isActive={selectedBadgeFilters.length > 0}
+              activeCount={selectedBadgeFilters.length}
+              isOpen={openPopover === 'Badges'}
+            >
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold text-sm text-slate-900 dark:text-white">Trust Badges</h4>
+                  <Link to="/badges" className="text-xs text-primary hover:underline">
+                    View Rules
+                  </Link>
                 </div>
-
-                {/* Skills */}
-                <div>
-                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2 block">
-                    Skills
-                  </Label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {skillOptions.slice(0, 8).map(skill => (
+                <div className="space-y-2">
+                  {badgeFilterOptions.map(badge => {
+                    const Icon = badge.icon
+                    const isSelected = selectedBadgeFilters.includes(badge.value)
+                    return (
                       <button
-                        key={skill}
-                        onClick={() =>
-                          selectedSkills.includes(skill)
-                            ? removeSkillFilter(skill)
-                            : addSkillFilter(skill)
-                        }
-                        className={`text-xs px-2 py-1 rounded-md transition-colors ${
-                          selectedSkills.includes(skill)
-                            ? 'bg-primary text-white'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                        key={badge.value}
+                        onClick={() => toggleBadgeFilter(badge.value)}
+                        className={`w-full flex items-center justify-between p-3 rounded-lg transition-all ${
+                          isSelected
+                            ? `${badge.bgColor} border-2 border-current`
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border-2 border-transparent'
                         }`}
                       >
-                        {skill}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Badge Filters (per badge.md spec) */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Badge Filters
-                    </Label>
-                    <Link to="/badges" className="text-xs text-primary hover:underline">
-                      View Rules
-                    </Link>
-                  </div>
-                  <div className="space-y-2">
-                    {badgeFilterOptions.map(badge => {
-                      const Icon = badge.icon
-                      const isSelected = selectedBadgeFilters.includes(badge.value)
-                      return (
-                        <button
-                          key={badge.value}
-                          onClick={() => toggleBadgeFilter(badge.value)}
-                          className={`w-full flex items-center justify-between p-2 rounded-lg transition-colors ${
-                            isSelected
-                              ? `${badge.bgColor} dark:bg-opacity-30 border border-current`
-                              : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
-                          }`}
-                        >
-                          <div className="flex items-center space-x-2">
-                            <Icon className={`w-4 h-4 ${isSelected ? badge.color : ''}`} />
-                            <span className={`text-sm ${isSelected ? badge.color : ''}`}>{badge.label}</span>
+                        <div className="flex items-center gap-3">
+                          <div className={`p-1.5 rounded-lg ${badge.bgColor}`}>
+                            <Icon className={`w-4 h-4 ${badge.color}`} />
                           </div>
-                          {isSelected && (
-                            <Check className={`w-4 h-4 ${badge.color}`} />
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
+                          <span className={`font-medium ${isSelected ? badge.color : ''}`}>{badge.label}</span>
+                        </div>
+                        {isSelected && (
+                          <Check className={`w-5 h-5 ${badge.color}`} />
+                        )}
+                      </button>
+                    )
+                  })}
                 </div>
-              </CardContent>
-            </Card>
-          </aside>
-
-          {/* Main Content Area */}
-          <div className="flex-1 min-w-0">
-            {/* Top Bar: Results count + View modes + Mobile filter toggle */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="lg:hidden flex items-center space-x-1"
-                >
-                  <SlidersHorizontal className="w-4 h-4" />
-                  <span>Filters</span>
-                </Button>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  {filteredProfessionals.length} result{filteredProfessionals.length !== 1 ? 's' : ''}
-                </p>
               </div>
+            </FilterButton>
 
-              <div className="flex items-center space-x-2">
-                {/* Bulk Actions Toggle */}
-                <Button
-                  variant={bulkActionMode ? "default" : "outline"}
-                  size="sm"
-                  onClick={toggleBulkMode}
-                  className="h-9"
-                >
-                  <CheckSquare className="w-4 h-4 mr-2" />
-                  Select
-                </Button>
-
-                {/* View Mode Toggles */}
-                <div className="h-6 w-px bg-slate-200 dark:bg-slate-700" />
-                <Button
-                  variant={viewMode === 'grid' ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode('grid')}
-                  className="w-9 h-9 p-0"
-                >
-                  <Grid3X3 className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode('list')}
-                  className="w-9 h-9 p-0"
-                >
-                  <List className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'map' ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode('map')}
-                  className="w-9 h-9 p-0"
-                >
-                  <Map className="w-4 h-4" />
-                </Button>
+            {/* Sort Dropdown */}
+            <FilterButton
+              label={sortOptions.find(s => s.value === sortBy)?.label || 'Sort'}
+              isActive={sortBy !== 'relevance'}
+              activeCount={0}
+              isOpen={openPopover === sortOptions.find(s => s.value === sortBy)?.label || openPopover === 'Sort'}
+            >
+              <div className="p-4">
+                <h4 className="font-semibold text-sm text-slate-900 dark:text-white mb-3">Sort By</h4>
+                <div className="space-y-1">
+                  {sortOptions.map(option => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setSortBy(option.value)
+                        setOpenPopover(null)
+                      }}
+                      className={`w-full flex items-center justify-between p-3 rounded-lg transition-all ${
+                        sortBy === option.value
+                          ? 'bg-primary/10 text-primary'
+                          : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      <span className="font-medium">{option.label}</span>
+                      {sortBy === option.value && (
+                        <Check className="w-5 h-5 text-primary" />
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
+            </FilterButton>
+
+            {/* Clear All Button (shows when filters active) */}
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearAllFilters}
+                className="h-10 px-4 text-slate-500 hover:text-slate-900 dark:hover:text-white"
+              >
+                <X className="w-4 h-4 mr-1" />
+                Clear all
+              </Button>
+            )}
+
+            {/* Spacer */}
+            <div className="flex-1" />
+
+            {/* View Mode Toggles */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+              <Button
+                variant={viewMode === 'grid' ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className="w-9 h-8 p-0"
+              >
+                <Grid3X3 className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className="w-9 h-8 p-0"
+              >
+                <List className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'map' ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode('map')}
+                className="w-9 h-8 p-0"
+              >
+                <Map className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Results Bar & Active Filters */}
+        <div className="mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <p className="text-sm font-medium text-slate-900 dark:text-white">
+                {filteredProfessionals.length} result{filteredProfessionals.length !== 1 ? 's' : ''}
+              </p>
+
+              {/* Bulk Actions Toggle */}
+              <Button
+                variant={bulkActionMode ? "default" : "outline"}
+                size="sm"
+                onClick={toggleBulkMode}
+                className="h-8"
+              >
+                <CheckSquare className="w-4 h-4 mr-1.5" />
+                Select
+              </Button>
             </div>
 
-            {/* Active Filters Pills */}
-            {(selectedSkills.length > 0 || selectedLocation || selectedRole !== 'all' || selectedBadgeFilters.length > 0) && (
-              <div className="flex flex-wrap items-center gap-2 mb-4">
-                <span className="text-xs text-slate-600 dark:text-slate-400">Active:</span>
+            {/* Active Filter Pills */}
+            {hasActiveFilters && (
+              <div className="flex flex-wrap items-center gap-2">
                 {selectedRole !== 'all' && (
-                  <Badge variant="secondary" className="flex items-center space-x-1 h-6">
+                  <Badge variant="secondary" className="flex items-center gap-1.5 h-7 pl-3 pr-2 rounded-full">
                     <span>{roleOptions.find(r => r.value === selectedRole)?.label}</span>
-                    <button onClick={() => setSelectedRole('all')}>
-                      <X className="w-3 h-3" />
+                    <button
+                      onClick={() => setSelectedRole('all')}
+                      className="hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full p-0.5"
+                    >
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </Badge>
                 )}
                 {selectedLocation && (
-                  <Badge variant="secondary" className="flex items-center space-x-1 h-6">
+                  <Badge variant="secondary" className="flex items-center gap-1.5 h-7 pl-3 pr-2 rounded-full">
+                    <MapPin className="w-3 h-3" />
                     <span>{selectedLocation}</span>
-                    <button onClick={() => setSelectedLocation('')}>
-                      <X className="w-3 h-3" />
+                    <button
+                      onClick={() => setSelectedLocation('')}
+                      className="hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full p-0.5"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </Badge>
+                )}
+                {(priceRange[0] > 0 || priceRange[1] < 500) && (
+                  <Badge variant="secondary" className="flex items-center gap-1.5 h-7 pl-3 pr-2 rounded-full">
+                    <DollarSign className="w-3 h-3" />
+                    <span>£{priceRange[0]} - £{priceRange[1]}</span>
+                    <button
+                      onClick={() => setPriceRange([0, 500])}
+                      className="hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full p-0.5"
+                    >
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </Badge>
                 )}
                 {selectedSkills.map(skill => (
-                  <Badge key={skill} variant="secondary" className="flex items-center space-x-1 h-6">
+                  <Badge key={skill} variant="secondary" className="flex items-center gap-1.5 h-7 pl-3 pr-2 rounded-full">
                     <span>{skill}</span>
-                    <button onClick={() => removeSkillFilter(skill)}>
-                      <X className="w-3 h-3" />
+                    <button
+                      onClick={() => removeSkillFilter(skill)}
+                      className="hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full p-0.5"
+                    >
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </Badge>
                 ))}
@@ -750,17 +898,28 @@ const DiscoveryPage = () => {
                   if (!badge) return null
                   const Icon = badge.icon
                   return (
-                    <Badge key={badgeKey} className={`flex items-center space-x-1 h-6 ${badge.bgColor} ${badge.color}`}>
-                      <Icon className="w-3 h-3" />
+                    <Badge
+                      key={badgeKey}
+                      className={`flex items-center gap-1.5 h-7 pl-2 pr-2 rounded-full ${badge.bgColor} ${badge.color} border-0`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
                       <span>{badge.label}</span>
-                      <button onClick={() => toggleBadgeFilter(badgeKey)}>
-                        <X className="w-3 h-3" />
+                      <button
+                        onClick={() => toggleBadgeFilter(badgeKey)}
+                        className="hover:opacity-70 rounded-full p-0.5"
+                      >
+                        <X className="w-3.5 h-3.5" />
                       </button>
                     </Badge>
                   )
                 })}
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Main Content Area */}
+        <div className="flex-1 min-w-0">
 
             {/* Bulk Action Toolbar */}
             {bulkActionMode && (
@@ -876,7 +1035,7 @@ const DiscoveryPage = () => {
             {/* Professionals Grid/List */}
             {!isLoading && !error && filteredProfessionals.length > 0 && viewMode !== 'map' && (
               <div className={viewMode === 'grid'
-                ? "grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+                ? "grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
                 : "space-y-4"
               }>
                 {filteredProfessionals.map((professional) => {
@@ -1114,7 +1273,6 @@ const DiscoveryPage = () => {
               </div>
             )}
           </div>
-        </div>
       </div>
     </div>
   )

@@ -37,6 +37,52 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS phone TEXT;
 CREATE INDEX IF NOT EXISTS idx_profiles_username ON profiles(username) WHERE username IS NOT NULL;
 
 -- =============================================================================
+-- 1B. SERVICES TABLE (FIVERR-STYLE GIG LISTINGS)
+-- This table must be created before portfolio_items and service_packages
+-- which reference it via foreign keys
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS services (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+
+  -- Service details
+  title VARCHAR(200) NOT NULL,
+  description TEXT,
+  category TEXT NOT NULL,
+  subcategory TEXT,
+
+  -- Pricing (base tier - detailed pricing in service_packages)
+  starting_price DECIMAL(10,2),
+
+  -- Status
+  is_active BOOLEAN DEFAULT TRUE,
+  is_featured BOOLEAN DEFAULT FALSE,
+
+  -- Metadata
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Index for service lookups
+CREATE INDEX IF NOT EXISTS idx_services_owner_id ON services(owner_id);
+CREATE INDEX IF NOT EXISTS idx_services_category ON services(category);
+CREATE INDEX IF NOT EXISTS idx_services_active ON services(is_active) WHERE is_active = TRUE;
+
+-- RLS for services
+ALTER TABLE services ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Services are viewable by everyone" ON services;
+CREATE POLICY "Services are viewable by everyone"
+  ON services FOR SELECT
+  USING (true);
+
+DROP POLICY IF EXISTS "Users can manage their own services" ON services;
+CREATE POLICY "Users can manage their own services"
+  ON services FOR ALL
+  USING (auth.uid() = owner_id);
+
+-- =============================================================================
 -- 2. PORTFOLIO ITEMS TABLE
 -- Inspired by Fiverr Portfolio and Dribbble shots
 -- Sources:
@@ -437,10 +483,12 @@ ON CONFLICT (name) DO NOTHING;
 -- Portfolio Items RLS
 ALTER TABLE portfolio_items ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Portfolio items are viewable by everyone" ON portfolio_items;
 CREATE POLICY "Portfolio items are viewable by everyone"
   ON portfolio_items FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Users can manage their own portfolio items" ON portfolio_items;
 CREATE POLICY "Users can manage their own portfolio items"
   ON portfolio_items FOR ALL
   USING (auth.uid() = user_id);
@@ -448,10 +496,12 @@ CREATE POLICY "Users can manage their own portfolio items"
 -- Service Packages RLS
 ALTER TABLE service_packages ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Service packages are viewable by everyone" ON service_packages;
 CREATE POLICY "Service packages are viewable by everyone"
   ON service_packages FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Users can manage packages for their own services" ON service_packages;
 CREATE POLICY "Users can manage packages for their own services"
   ON service_packages FOR ALL
   USING (
@@ -465,10 +515,12 @@ CREATE POLICY "Users can manage packages for their own services"
 -- User Badges RLS
 ALTER TABLE user_badges ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Badges are viewable by everyone" ON user_badges;
 CREATE POLICY "Badges are viewable by everyone"
   ON user_badges FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Only system can manage badges" ON user_badges;
 CREATE POLICY "Only system can manage badges"
   ON user_badges FOR ALL
   USING (false); -- Badges are managed by system/admin only
@@ -476,6 +528,7 @@ CREATE POLICY "Only system can manage badges"
 -- Skills RLS
 ALTER TABLE skills ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Skills are viewable by everyone" ON skills;
 CREATE POLICY "Skills are viewable by everyone"
   ON skills FOR SELECT
   USING (true);
@@ -483,10 +536,12 @@ CREATE POLICY "Skills are viewable by everyone"
 -- User Skills RLS
 ALTER TABLE user_skills ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "User skills are viewable by everyone" ON user_skills;
 CREATE POLICY "User skills are viewable by everyone"
   ON user_skills FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Users can manage their own skills" ON user_skills;
 CREATE POLICY "Users can manage their own skills"
   ON user_skills FOR ALL
   USING (auth.uid() = user_id);
@@ -494,14 +549,17 @@ CREATE POLICY "Users can manage their own skills"
 -- Skill Endorsements RLS
 ALTER TABLE skill_endorsements ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Endorsements are viewable by everyone" ON skill_endorsements;
 CREATE POLICY "Endorsements are viewable by everyone"
   ON skill_endorsements FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Authenticated users can endorse" ON skill_endorsements;
 CREATE POLICY "Authenticated users can endorse"
   ON skill_endorsements FOR INSERT
   WITH CHECK (auth.uid() = endorsed_by);
 
+DROP POLICY IF EXISTS "Users can delete their own endorsements" ON skill_endorsements;
 CREATE POLICY "Users can delete their own endorsements"
   ON skill_endorsements FOR DELETE
   USING (auth.uid() = endorsed_by);
@@ -509,6 +567,7 @@ CREATE POLICY "Users can delete their own endorsements"
 -- Profile Stats RLS
 ALTER TABLE profile_stats ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Profile stats are viewable by everyone" ON profile_stats;
 CREATE POLICY "Profile stats are viewable by everyone"
   ON profile_stats FOR SELECT
   USING (true);
@@ -516,10 +575,12 @@ CREATE POLICY "Profile stats are viewable by everyone"
 -- Profile Views RLS
 ALTER TABLE profile_views ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Profile owners can view their stats" ON profile_views;
 CREATE POLICY "Profile owners can view their stats"
   ON profile_views FOR SELECT
   USING (auth.uid() = profile_id);
 
+DROP POLICY IF EXISTS "Anyone can log a view" ON profile_views;
 CREATE POLICY "Anyone can log a view"
   ON profile_views FOR INSERT
   WITH CHECK (true);
@@ -527,10 +588,12 @@ CREATE POLICY "Anyone can log a view"
 -- Education RLS
 ALTER TABLE user_education ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Education is viewable by everyone" ON user_education;
 CREATE POLICY "Education is viewable by everyone"
   ON user_education FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Users can manage their own education" ON user_education;
 CREATE POLICY "Users can manage their own education"
   ON user_education FOR ALL
   USING (auth.uid() = user_id);
@@ -538,10 +601,12 @@ CREATE POLICY "Users can manage their own education"
 -- Certifications RLS
 ALTER TABLE user_certifications ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Certifications are viewable by everyone" ON user_certifications;
 CREATE POLICY "Certifications are viewable by everyone"
   ON user_certifications FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Users can manage their own certifications" ON user_certifications;
 CREATE POLICY "Users can manage their own certifications"
   ON user_certifications FOR ALL
   USING (auth.uid() = user_id);

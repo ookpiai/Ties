@@ -57,8 +57,8 @@ CREATE TABLE IF NOT EXISTS agent_verification_history (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_agent_verification_history_agent_id ON agent_verification_history(agent_id);
-CREATE INDEX idx_agent_verification_history_status ON agent_verification_history(status);
+CREATE INDEX IF NOT EXISTS idx_agent_verification_history_agent_id ON agent_verification_history(agent_id);
+CREATE INDEX IF NOT EXISTS idx_agent_verification_history_status ON agent_verification_history(status);
 
 -- =====================================================
 -- UPDATE FREELANCER_AGENT_LINKS
@@ -77,10 +77,12 @@ ALTER TABLE freelancer_agent_links
 -- Agent verification history RLS
 ALTER TABLE agent_verification_history ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own verification history" ON agent_verification_history;
 CREATE POLICY "Users can view own verification history"
   ON agent_verification_history FOR SELECT
   USING (auth.uid() = agent_id);
 
+DROP POLICY IF EXISTS "Admins can view all verification history" ON agent_verification_history;
 CREATE POLICY "Admins can view all verification history"
   ON agent_verification_history FOR SELECT
   USING (
@@ -90,6 +92,7 @@ CREATE POLICY "Admins can view all verification history"
     )
   );
 
+DROP POLICY IF EXISTS "Admins can insert verification history" ON agent_verification_history;
 CREATE POLICY "Admins can insert verification history"
   ON agent_verification_history FOR INSERT
   WITH CHECK (

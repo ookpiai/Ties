@@ -22,8 +22,8 @@ CREATE TABLE IF NOT EXISTS stripe_accounts (
   UNIQUE(user_id)
 );
 
-CREATE INDEX idx_stripe_accounts_user_id ON stripe_accounts(user_id);
-CREATE INDEX idx_stripe_accounts_stripe_account_id ON stripe_accounts(stripe_account_id);
+CREATE INDEX IF NOT EXISTS idx_stripe_accounts_user_id ON stripe_accounts(user_id);
+CREATE INDEX IF NOT EXISTS idx_stripe_accounts_stripe_account_id ON stripe_accounts(stripe_account_id);
 
 -- =====================================================
 -- PAYMENT METHODS
@@ -44,8 +44,8 @@ CREATE TABLE IF NOT EXISTS payment_methods (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_payment_methods_user_id ON payment_methods(user_id);
-CREATE INDEX idx_payment_methods_stripe_customer_id ON payment_methods(stripe_customer_id);
+CREATE INDEX IF NOT EXISTS idx_payment_methods_user_id ON payment_methods(user_id);
+CREATE INDEX IF NOT EXISTS idx_payment_methods_stripe_customer_id ON payment_methods(stripe_customer_id);
 
 -- =====================================================
 -- INVOICES
@@ -85,11 +85,11 @@ CREATE TABLE IF NOT EXISTS invoices (
   UNIQUE(booking_id)
 );
 
-CREATE INDEX idx_invoices_booking_id ON invoices(booking_id);
-CREATE INDEX idx_invoices_client_id ON invoices(client_id);
-CREATE INDEX idx_invoices_freelancer_id ON invoices(freelancer_id);
-CREATE INDEX idx_invoices_status ON invoices(status);
-CREATE INDEX idx_invoices_invoice_number ON invoices(invoice_number);
+CREATE INDEX IF NOT EXISTS idx_invoices_booking_id ON invoices(booking_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_client_id ON invoices(client_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_freelancer_id ON invoices(freelancer_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+CREATE INDEX IF NOT EXISTS idx_invoices_invoice_number ON invoices(invoice_number);
 
 -- =====================================================
 -- PAYMENTS
@@ -129,12 +129,12 @@ CREATE TABLE IF NOT EXISTS payments (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_payments_invoice_id ON payments(invoice_id);
-CREATE INDEX idx_payments_booking_id ON payments(booking_id);
-CREATE INDEX idx_payments_payer_id ON payments(payer_id);
-CREATE INDEX idx_payments_recipient_id ON payments(recipient_id);
-CREATE INDEX idx_payments_status ON payments(status);
-CREATE INDEX idx_payments_stripe_payment_intent_id ON payments(stripe_payment_intent_id);
+CREATE INDEX IF NOT EXISTS idx_payments_invoice_id ON payments(invoice_id);
+CREATE INDEX IF NOT EXISTS idx_payments_booking_id ON payments(booking_id);
+CREATE INDEX IF NOT EXISTS idx_payments_payer_id ON payments(payer_id);
+CREATE INDEX IF NOT EXISTS idx_payments_recipient_id ON payments(recipient_id);
+CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
+CREATE INDEX IF NOT EXISTS idx_payments_stripe_payment_intent_id ON payments(stripe_payment_intent_id);
 
 -- =====================================================
 -- PAYOUTS
@@ -167,10 +167,10 @@ CREATE TABLE IF NOT EXISTS payouts (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_payouts_user_id ON payouts(user_id);
-CREATE INDEX idx_payouts_status ON payouts(status);
-CREATE INDEX idx_payouts_stripe_payout_id ON payouts(stripe_payout_id);
-CREATE INDEX idx_payouts_scheduled_date ON payouts(scheduled_date);
+CREATE INDEX IF NOT EXISTS idx_payouts_user_id ON payouts(user_id);
+CREATE INDEX IF NOT EXISTS idx_payouts_status ON payouts(status);
+CREATE INDEX IF NOT EXISTS idx_payouts_stripe_payout_id ON payouts(stripe_payout_id);
+CREATE INDEX IF NOT EXISTS idx_payouts_scheduled_date ON payouts(scheduled_date);
 
 -- =====================================================
 -- REFUNDS
@@ -203,10 +203,10 @@ CREATE TABLE IF NOT EXISTS refunds (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_refunds_payment_id ON refunds(payment_id);
-CREATE INDEX idx_refunds_booking_id ON refunds(booking_id);
-CREATE INDEX idx_refunds_status ON refunds(status);
-CREATE INDEX idx_refunds_requested_by ON refunds(requested_by);
+CREATE INDEX IF NOT EXISTS idx_refunds_payment_id ON refunds(payment_id);
+CREATE INDEX IF NOT EXISTS idx_refunds_booking_id ON refunds(booking_id);
+CREATE INDEX IF NOT EXISTS idx_refunds_status ON refunds(status);
+CREATE INDEX IF NOT EXISTS idx_refunds_requested_by ON refunds(requested_by);
 
 -- =====================================================
 -- PAYMENT SETTINGS
@@ -234,7 +234,7 @@ CREATE TABLE IF NOT EXISTS payment_settings (
   UNIQUE(user_id)
 );
 
-CREATE INDEX idx_payment_settings_user_id ON payment_settings(user_id);
+CREATE INDEX IF NOT EXISTS idx_payment_settings_user_id ON payment_settings(user_id);
 
 -- =====================================================
 -- UPDATE BOOKINGS TABLE
@@ -257,15 +257,18 @@ CREATE INDEX IF NOT EXISTS idx_bookings_invoice_id ON bookings(invoice_id);
 -- Stripe Accounts
 ALTER TABLE stripe_accounts ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own stripe account" ON stripe_accounts;
 CREATE POLICY "Users can view own stripe account"
   ON stripe_accounts FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update own stripe account" ON stripe_accounts;
 CREATE POLICY "Users can update own stripe account"
   ON stripe_accounts FOR UPDATE
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "System can insert stripe accounts" ON stripe_accounts;
 CREATE POLICY "System can insert stripe accounts"
   ON stripe_accounts FOR INSERT
   WITH CHECK (auth.uid() = user_id);
@@ -273,10 +276,12 @@ CREATE POLICY "System can insert stripe accounts"
 -- Payment Methods
 ALTER TABLE payment_methods ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own payment methods" ON payment_methods;
 CREATE POLICY "Users can view own payment methods"
   ON payment_methods FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can manage own payment methods" ON payment_methods;
 CREATE POLICY "Users can manage own payment methods"
   ON payment_methods FOR ALL
   USING (auth.uid() = user_id)
@@ -285,6 +290,7 @@ CREATE POLICY "Users can manage own payment methods"
 -- Invoices
 ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view invoices they're part of" ON invoices;
 CREATE POLICY "Users can view invoices they're part of"
   ON invoices FOR SELECT
   USING (auth.uid() = client_id OR auth.uid() = freelancer_id);
@@ -292,6 +298,7 @@ CREATE POLICY "Users can view invoices they're part of"
 -- Payments
 ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view payments they're part of" ON payments;
 CREATE POLICY "Users can view payments they're part of"
   ON payments FOR SELECT
   USING (auth.uid() = payer_id OR auth.uid() = recipient_id);
@@ -299,6 +306,7 @@ CREATE POLICY "Users can view payments they're part of"
 -- Payouts
 ALTER TABLE payouts ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own payouts" ON payouts;
 CREATE POLICY "Users can view own payouts"
   ON payouts FOR SELECT
   USING (auth.uid() = user_id);
@@ -306,6 +314,7 @@ CREATE POLICY "Users can view own payouts"
 -- Refunds
 ALTER TABLE refunds ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view refunds for their bookings" ON refunds;
 CREATE POLICY "Users can view refunds for their bookings"
   ON refunds FOR SELECT
   USING (
@@ -319,6 +328,7 @@ CREATE POLICY "Users can view refunds for their bookings"
 -- Payment Settings
 ALTER TABLE payment_settings ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can manage own payment settings" ON payment_settings;
 CREATE POLICY "Users can manage own payment settings"
   ON payment_settings FOR ALL
   USING (auth.uid() = user_id)

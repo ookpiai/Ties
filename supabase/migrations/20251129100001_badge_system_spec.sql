@@ -821,10 +821,12 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Badge Progress RLS
 ALTER TABLE badge_progress ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view their own badge progress" ON badge_progress;
 CREATE POLICY "Users can view their own badge progress"
   ON badge_progress FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "System manages badge progress" ON badge_progress;
 CREATE POLICY "System manages badge progress"
   ON badge_progress FOR ALL
   USING (false);
@@ -832,10 +834,12 @@ CREATE POLICY "System manages badge progress"
 -- Badge Notifications RLS
 ALTER TABLE badge_notifications ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view their own notifications" ON badge_notifications;
 CREATE POLICY "Users can view their own notifications"
   ON badge_notifications FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own notifications" ON badge_notifications;
 CREATE POLICY "Users can update their own notifications"
   ON badge_notifications FOR UPDATE
   USING (auth.uid() = user_id);
@@ -843,6 +847,7 @@ CREATE POLICY "Users can update their own notifications"
 -- Badge Rewards RLS
 ALTER TABLE badge_rewards ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view their own rewards" ON badge_rewards;
 CREATE POLICY "Users can view their own rewards"
   ON badge_rewards FOR SELECT
   USING (auth.uid() = user_id);
