@@ -536,6 +536,85 @@ export async function getMyAcceptedJobs() {
 }
 
 /**
+ * Reject an applicant (organiser only)
+ */
+export async function rejectApplicant(applicationId: string, reason?: string) {
+  try {
+    const userId = await getCurrentUserId()
+
+    // 1. Get application details
+    const { data: application, error: appError } = await supabase
+      .from('job_applications')
+      .select(`
+        *,
+        job:job_postings!job_id(organiser_id, title),
+        role:job_roles!job_role_id(role_title)
+      `)
+      .eq('id', applicationId)
+      .single()
+
+    if (appError) throw appError
+    if (!application) throw new Error('Application not found')
+
+    // 2. Verify user is the organiser
+    if (application.job.organiser_id !== userId) {
+      throw new Error('Unauthorized: Only the job organiser can reject applicants')
+    }
+
+    // 3. Check if application is pending
+    if (application.status !== 'pending') {
+      throw new Error('Can only reject pending applications')
+    }
+
+    // 4. Update application status to 'rejected'
+    const { data, error: updateError } = await supabase
+      .from('job_applications')
+      .update({
+        status: 'rejected',
+        // Store reason in a metadata field if needed in future
+      })
+      .eq('id', applicationId)
+      .select()
+      .single()
+
+    if (updateError) throw updateError
+
+    // 5. Send rejection email notification (optional)
+    try {
+      const { data: applicantProfile } = await supabase
+        .from('profiles')
+        .select('email, display_name')
+        .eq('id', application.applicant_id)
+        .single()
+
+      if (applicantProfile?.email) {
+        await sendApplicationRejectedEmail({
+          applicantEmail: applicantProfile.email,
+          applicantName: applicantProfile.display_name,
+          jobTitle: application.job.title,
+          roleName: application.role.role_title
+        })
+        console.log('✅ Rejection email sent to applicant')
+      }
+    } catch (emailError) {
+      console.error('⚠️ Failed to send rejection email:', emailError)
+      // Don't throw - rejection is still successful
+    }
+
+    return {
+      success: true,
+      data
+    }
+  } catch (error: any) {
+    console.error('Error rejecting applicant:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to reject applicant'
+    }
+  }
+}
+
+/**
  * Withdraw an application
  */
 export async function withdrawApplication(applicationId: string) {
@@ -1647,6 +1726,7 @@ export default {
   getMyAcceptedJobs,
   withdrawApplication,
   selectApplicant,
+  rejectApplicant,
   checkAllRolesFilled,
   // Phase 5B: Workspace Features
   createTask,
