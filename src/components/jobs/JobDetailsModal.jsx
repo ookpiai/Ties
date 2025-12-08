@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { X, MapPin, Calendar, DollarSign, Users, Building2, Package, Clock, User as UserIcon, ShieldCheck } from 'lucide-react'
+import { X, MapPin, Calendar, DollarSign, Users, Building2, Package, Clock, User as UserIcon, ShieldCheck, MessageCircle } from 'lucide-react'
 import { getJobPostingById } from '../../api/jobs'
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
@@ -290,19 +290,53 @@ const JobDetailsModal = ({ jobId, isOpen, onClose }) => {
               {job.organiser && (
                 <div className="border-t pt-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-3">Posted By</h3>
-                  <div className="flex items-center gap-4">
-                    <img
-                      src={job.organiser.avatar_url || '/default-avatar.png'}
-                      alt={job.organiser.display_name}
-                      className="h-12 w-12 rounded-full"
-                    />
-                    <div>
-                      <p className="font-medium text-gray-900">{job.organiser.display_name}</p>
-                      <p className="text-sm text-gray-500 capitalize">{job.organiser.role}</p>
-                      {job.organiser.city && (
-                        <p className="text-sm text-gray-500">{job.organiser.city}</p>
-                      )}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <img
+                        src={job.organiser.avatar_url || '/default-avatar.png'}
+                        alt={job.organiser.display_name}
+                        className="h-12 w-12 rounded-full"
+                      />
+                      <div>
+                        <p className="font-medium text-gray-900">{job.organiser.display_name}</p>
+                        <p className="text-sm text-gray-500 capitalize">{job.organiser.role}</p>
+                        {job.organiser.city && (
+                          <p className="text-sm text-gray-500">{job.organiser.city}</p>
+                        )}
+                      </div>
                     </div>
+                    {/* Message About Job Button */}
+                    {user && job.organiser.id !== user.id && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          onClose()
+                          // Navigate to messages with job context
+                          navigate('/messages', {
+                            state: {
+                              openConversationWithUserId: job.organiser.id,
+                              jobContext: {
+                                id: job.id,
+                                title: job.title,
+                                location: job.location,
+                                event_type: job.event_type,
+                                start_date: job.start_date,
+                                organiser: {
+                                  id: job.organiser.id,
+                                  display_name: job.organiser.display_name,
+                                  avatar_url: job.organiser.avatar_url
+                                }
+                              }
+                            }
+                          })
+                        }}
+                        className="flex items-center gap-2"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        Message About Job
+                      </Button>
+                    )}
                   </div>
                   {job.organiser.bio && (
                     <p className="text-sm text-gray-600 mt-3">{job.organiser.bio}</p>

@@ -50,6 +50,7 @@ import DiscoveryPage from './components/discovery/DiscoveryPage'
 import MessagesPage from './components/messages/MessagesPage'
 import NotificationsPage from './components/notifications/NotificationsPage'
 import CreatePage from './components/create/CreatePage'
+import PortfolioStudioPage from './components/create/PortfolioStudioPage'
 import BookingsPage from './components/bookings/BookingsPage'
 import SettingsPage from './components/settings/SettingsPage'
 import ReportPage from './components/report/ReportPage'
@@ -435,6 +436,13 @@ function AppRoutes() {
             <ProtectedRoute>
               <AppLayout>
                 <CreatePage />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/create/portfolio" element={
+            <ProtectedRoute>
+              <AppLayout>
+                <PortfolioStudioPage />
               </AppLayout>
             </ProtectedRoute>
           } />

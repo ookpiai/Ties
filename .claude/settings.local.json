@@ -50,7 +50,9 @@
       "Bash(git rm:*)",
       "Bash(done)",
       "Bash(node:*)",
-      "Bash(git -C /mnt/c/Users/oo/Desktop/ties-together/TIES-Together-V2 log --oneline)"
+      "Bash(git -C /mnt/c/Users/oo/Desktop/ties-together/TIES-Together-V2 log --oneline)",
+      "Bash(psql \"postgresql://postgres.faqiwcrnltuqvhkmzrxp:ZqH3tVuhb5wgZD8B@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres\" -c \"ALTER TABLE messages ADD COLUMN IF NOT EXISTS job_id UUID REFERENCES job_postings(id) ON DELETE SET NULL; ALTER TABLE messages ADD COLUMN IF NOT EXISTS context_type TEXT;\")",
+      "Bash(timeout 60 npx supabase:*)"
     ],
     "deny": [],
     "ask": []

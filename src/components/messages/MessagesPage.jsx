@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,6 +9,7 @@ import { useAuth } from '../../App'
 import {
   getMyConversations,
   getConversation,
+  getConversationJobContext,
   sendMessage,
   markConversationAsRead,
   subscribeToConversation,
@@ -24,12 +25,17 @@ import {
   ArrowLeft,
   Check,
   CheckCheck,
-  X
+  X,
+  Briefcase,
+  MapPin,
+  Calendar,
+  ExternalLink
 } from 'lucide-react'
 
 const MessagesPage = () => {
   const { user } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
   const [conversations, setConversations] = useState([])
   const [selectedConversation, setSelectedConversation] = useState(null)
   const [messages, setMessages] = useState([])
@@ -40,6 +46,8 @@ const MessagesPage = () => {
   const [userSearch, setUserSearch] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [pendingOpenUserId, setPendingOpenUserId] = useState(null)
+  const [pendingJobContext, setPendingJobContext] = useState(null) // Job context when starting from job page
+  const [conversationJobContext, setConversationJobContext] = useState(null) // Current conversation's job context
   const messagesEndRef = useRef(null)
   const subscriptionRef = useRef(null)
   const allMessagesSubscriptionRef = useRef(null)
@@ -49,11 +57,16 @@ const MessagesPage = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  // Capture the openConversationWithUserId from navigation state immediately
+  // Capture the openConversationWithUserId and jobContext from navigation state immediately
   useEffect(() => {
     const openUserId = location.state?.openConversationWithUserId
+    const jobContext = location.state?.jobContext
+
     if (openUserId) {
       setPendingOpenUserId(openUserId)
+      if (jobContext) {
+        setPendingJobContext(jobContext)
+      }
       // Clear the navigation state so it doesn't persist on refresh
       window.history.replaceState({}, document.title)
     }
@@ -81,6 +94,9 @@ const MessagesPage = () => {
     if (selectedConversation) {
       loadConversationMessages(selectedConversation.otherUser.id)
       markConversationAsRead(selectedConversation.otherUser.id)
+
+      // Load job context for this conversation
+      loadJobContext(selectedConversation.otherUser.id)
 
       // Subscribe to new messages in this conversation
       subscriptionRef.current = subscribeToConversation(
@@ -115,7 +131,12 @@ const MessagesPage = () => {
 
       if (existing) {
         setSelectedConversation(existing)
-        setPendingOpenUserId(null) // Clear the pending ID
+        // If we have pending job context, set it
+        if (pendingJobContext) {
+          setConversationJobContext(pendingJobContext)
+        }
+        setPendingOpenUserId(null)
+        setPendingJobContext(null)
       } else {
         // No existing conversation - load user profile and create new conversation
         try {
@@ -134,16 +155,21 @@ const MessagesPage = () => {
               unreadCount: 0
             })
             setMessages([])
+            // If we have pending job context, set it
+            if (pendingJobContext) {
+              setConversationJobContext(pendingJobContext)
+            }
           }
         } catch (error) {
           console.error('Failed to load user profile:', error)
         }
-        setPendingOpenUserId(null) // Clear the pending ID
+        setPendingOpenUserId(null)
+        setPendingJobContext(null)
       }
     }
 
     openConversation()
-  }, [pendingOpenUserId, loading, conversations])
+  }, [pendingOpenUserId, loading, conversations, pendingJobContext])
 
   const loadConversations = async () => {
     setLoading(true)
@@ -161,11 +187,41 @@ const MessagesPage = () => {
     }
   }
 
+  const loadJobContext = async (otherUserId) => {
+    // If we already have pending job context (from navigation), use that
+    if (pendingJobContext) {
+      setConversationJobContext(pendingJobContext)
+      return
+    }
+
+    // Otherwise, check if this conversation has job context in messages
+    const result = await getConversationJobContext(otherUserId)
+    if (result.success && result.data) {
+      setConversationJobContext(result.data)
+    } else {
+      setConversationJobContext(null)
+    }
+  }
+
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedConversation) return
 
     setSending(true)
-    const result = await sendMessage(selectedConversation.otherUser.id, messageText)
+
+    // Build message options
+    const options = {}
+
+    // If this is a new conversation with job context, attach it to the first message
+    if (conversationJobContext && messages.length === 0) {
+      options.jobId = conversationJobContext.id
+      options.contextType = 'job'
+    }
+
+    const result = await sendMessage(
+      selectedConversation.otherUser.id,
+      messageText,
+      Object.keys(options).length > 0 ? options : undefined
+    )
 
     if (result.success) {
       setMessages([...messages, result.data])
@@ -191,6 +247,9 @@ const MessagesPage = () => {
       })
       setMessages([])
     }
+
+    // Clear job context for manual new conversations
+    setConversationJobContext(null)
 
     setShowNewMessage(false)
     setUserSearch('')
@@ -221,14 +280,22 @@ const MessagesPage = () => {
     return date.toLocaleDateString('en-AU', { month: 'short', day: 'numeric' })
   }
 
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-AU', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    })
+  }
+
   const getRoleColor = (role) => {
     const colors = {
-      freelancer: 'bg-purple-100 text-purple-800',
-      venue: 'bg-green-100 text-green-800',
-      vendor: 'bg-orange-100 text-orange-800',
-      organiser: 'bg-blue-100 text-blue-800'
+      freelancer: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+      venue: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+      vendor: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+      organiser: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
     }
-    return colors[role] || 'bg-gray-100 text-gray-800'
+    return colors[role] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
   }
 
   if (!user) {
@@ -240,13 +307,13 @@ const MessagesPage = () => {
   }
 
   return (
-    <div className="h-screen flex bg-gray-50">
+    <div className="h-screen flex bg-gray-50 dark:bg-[#0B0B0B]">
       {/* Conversations List */}
-      <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-96 bg-white border-r`}>
+      <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-96 bg-white dark:bg-gray-900 border-r dark:border-gray-800`}>
         {/* Header */}
-        <div className="p-4 border-b">
+        <div className="p-4 border-b dark:border-gray-800">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold">Messages</h1>
+            <h1 className="text-2xl font-bold dark:text-white">Messages</h1>
             <Button
               onClick={() => setShowNewMessage(true)}
               size="sm"
@@ -267,8 +334,8 @@ const MessagesPage = () => {
           ) : conversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full p-6 text-center">
               <MessageCircle size={48} className="text-gray-400 mb-4" />
-              <p className="text-gray-600 font-medium">No messages yet</p>
-              <p className="text-sm text-gray-500 mt-2">Start a conversation to connect with others</p>
+              <p className="text-gray-600 dark:text-gray-400 font-medium">No messages yet</p>
+              <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">Start a conversation to connect with others</p>
               <Button
                 onClick={() => setShowNewMessage(true)}
                 className="mt-4"
@@ -283,8 +350,8 @@ const MessagesPage = () => {
               <div
                 key={conv.otherUser.id}
                 onClick={() => setSelectedConversation(conv)}
-                className={`p-4 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
-                  selectedConversation?.otherUser.id === conv.otherUser.id ? 'bg-gray-100' : ''
+                className={`p-4 border-b dark:border-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
+                  selectedConversation?.otherUser.id === conv.otherUser.id ? 'bg-gray-100 dark:bg-gray-800' : ''
                 }`}
               >
                 <div className="flex items-start gap-3">
@@ -297,16 +364,26 @@ const MessagesPage = () => {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <p className="font-semibold truncate">{conv.otherUser.display_name}</p>
+                      <p className="font-semibold truncate dark:text-white">{conv.otherUser.display_name}</p>
                       {conv.lastMessage && (
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
                           {formatTime(conv.lastMessage.created_at)}
                         </span>
                       )}
                     </div>
 
+                    {/* Show job context indicator in conversation list */}
+                    {conv.jobContext && (
+                      <div className="flex items-center gap-1 mb-1">
+                        <Briefcase size={12} className="text-blue-500" />
+                        <span className="text-xs text-blue-600 dark:text-blue-400 truncate">
+                          {conv.jobContext.title}
+                        </span>
+                      </div>
+                    )}
+
                     <div className="flex items-center justify-between">
-                      <p className={`text-sm truncate ${conv.unreadCount > 0 ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
+                      <p className={`text-sm truncate ${conv.unreadCount > 0 ? 'font-semibold text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}>
                         {conv.lastMessage ? conv.lastMessage.body : 'No messages yet'}
                       </p>
                       {conv.unreadCount > 0 && (
@@ -327,12 +404,15 @@ const MessagesPage = () => {
       {selectedConversation ? (
         <div className="flex-1 flex flex-col">
           {/* Conversation Header */}
-          <div className="p-4 border-b bg-white flex items-center gap-3">
+          <div className="p-4 border-b dark:border-gray-800 bg-white dark:bg-gray-900 flex items-center gap-3">
             <Button
               variant="ghost"
               size="sm"
               className="md:hidden"
-              onClick={() => setSelectedConversation(null)}
+              onClick={() => {
+                setSelectedConversation(null)
+                setConversationJobContext(null)
+              }}
             >
               <ArrowLeft size={20} />
             </Button>
@@ -345,18 +425,69 @@ const MessagesPage = () => {
             </Avatar>
 
             <div>
-              <p className="font-semibold">{selectedConversation.otherUser.display_name}</p>
+              <p className="font-semibold dark:text-white">{selectedConversation.otherUser.display_name}</p>
               <Badge variant="outline" className={getRoleColor(selectedConversation.otherUser.role)}>
                 {selectedConversation.otherUser.role}
               </Badge>
             </div>
           </div>
 
+          {/* Job Context Banner - Facebook Marketplace Style */}
+          {conversationJobContext && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 p-3">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                  <Briefcase className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-blue-600 dark:text-blue-400 font-medium uppercase tracking-wide mb-0.5">
+                    Messaging about job
+                  </p>
+                  <p className="font-semibold text-gray-900 dark:text-white truncate">
+                    {conversationJobContext.title}
+                  </p>
+                  <div className="flex items-center gap-3 mt-1 text-xs text-gray-600 dark:text-gray-400">
+                    {conversationJobContext.location && (
+                      <span className="flex items-center gap-1">
+                        <MapPin size={12} />
+                        {conversationJobContext.location}
+                      </span>
+                    )}
+                    {conversationJobContext.start_date && (
+                      <span className="flex items-center gap-1">
+                        <Calendar size={12} />
+                        {formatDate(conversationJobContext.start_date)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                  onClick={() => navigate('/jobs')}
+                >
+                  <ExternalLink size={16} />
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+          <div className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-[#0B0B0B]">
             {messages.length === 0 ? (
-              <div className="flex justify-center items-center h-full">
-                <p className="text-gray-500">No messages yet. Start the conversation!</p>
+              <div className="flex flex-col justify-center items-center h-full">
+                {conversationJobContext ? (
+                  <>
+                    <Briefcase size={48} className="text-blue-400 mb-4" />
+                    <p className="text-gray-600 dark:text-gray-400 font-medium">Start the conversation about this job</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-500 mt-2 text-center max-w-sm">
+                      Introduce yourself, ask questions about the role, or express your interest!
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-gray-500 dark:text-gray-400">No messages yet. Start the conversation!</p>
+                )}
               </div>
             ) : (
               <div className="space-y-4">
@@ -372,12 +503,12 @@ const MessagesPage = () => {
                           className={`px-4 py-2 rounded-lg ${
                             isMe
                               ? 'bg-primary text-white'
-                              : 'bg-white border'
+                              : 'bg-white dark:bg-gray-800 border dark:border-gray-700'
                           }`}
                         >
-                          <p className="text-sm break-words">{msg.body}</p>
+                          <p className={`text-sm break-words ${!isMe && 'dark:text-white'}`}>{msg.body}</p>
                           <div className={`flex items-center gap-1 mt-1 text-xs ${
-                            isMe ? 'text-white/70 justify-end' : 'text-gray-500'
+                            isMe ? 'text-white/70 justify-end' : 'text-gray-500 dark:text-gray-400'
                           }`}>
                             <span>{formatTime(msg.created_at)}</span>
                             {isMe && (
@@ -395,14 +526,14 @@ const MessagesPage = () => {
           </div>
 
           {/* Message Input */}
-          <div className="p-4 border-t bg-white">
+          <div className="p-4 border-t dark:border-gray-800 bg-white dark:bg-gray-900">
             <div className="flex gap-2">
               <Input
                 value={messageText}
                 onChange={(e) => setMessageText(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                placeholder="Type a message..."
-                className="flex-1"
+                placeholder={conversationJobContext ? `Ask about "${conversationJobContext.title}"...` : "Type a message..."}
+                className="flex-1 dark:bg-gray-800 dark:border-gray-700"
                 disabled={sending}
               />
               <Button
@@ -415,11 +546,11 @@ const MessagesPage = () => {
           </div>
         </div>
       ) : (
-        <div className="hidden md:flex flex-1 items-center justify-center bg-gray-50">
+        <div className="hidden md:flex flex-1 items-center justify-center bg-gray-50 dark:bg-[#0B0B0B]">
           <div className="text-center">
             <MessageCircle size={64} className="mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-600 font-medium">Select a conversation</p>
-            <p className="text-sm text-gray-500 mt-2">Choose from your conversations or start a new one</p>
+            <p className="text-gray-600 dark:text-gray-400 font-medium">Select a conversation</p>
+            <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">Choose from your conversations or start a new one</p>
           </div>
         </div>
       )}
@@ -427,9 +558,9 @@ const MessagesPage = () => {
       {/* New Message Modal */}
       {showNewMessage && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md">
-            <div className="p-4 border-b flex items-center justify-between">
-              <h2 className="text-lg font-semibold">New Message</h2>
+          <Card className="w-full max-w-md dark:bg-gray-900 dark:border-gray-800">
+            <div className="p-4 border-b dark:border-gray-800 flex items-center justify-between">
+              <h2 className="text-lg font-semibold dark:text-white">New Message</h2>
               <Button
                 variant="ghost"
                 size="sm"
@@ -451,14 +582,14 @@ const MessagesPage = () => {
                     value={userSearch}
                     onChange={(e) => handleUserSearch(e.target.value)}
                     placeholder="Search users..."
-                    className="pl-10"
+                    className="pl-10 dark:bg-gray-800 dark:border-gray-700"
                   />
                 </div>
               </div>
 
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {searchResults.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">
+                  <p className="text-center text-gray-500 dark:text-gray-400 py-8">
                     {userSearch ? 'No users found' : 'Search for users to start a conversation'}
                   </p>
                 ) : (
@@ -466,7 +597,7 @@ const MessagesPage = () => {
                     <div
                       key={searchUser.id}
                       onClick={() => handleStartNewConversation(searchUser)}
-                      className="flex items-center gap-3 p-3 hover:bg-gray-100 rounded-lg cursor-pointer transition-colors"
+                      className="flex items-center gap-3 p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer transition-colors"
                     >
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={searchUser.avatar_url} />
@@ -475,7 +606,7 @@ const MessagesPage = () => {
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium">{searchUser.display_name}</p>
+                        <p className="font-medium dark:text-white">{searchUser.display_name}</p>
                         <Badge variant="outline" className={getRoleColor(searchUser.role)}>
                           {searchUser.role}
                         </Badge>

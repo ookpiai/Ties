@@ -4,6 +4,19 @@ import { supabase, Message } from '../lib/supabase'
 // TYPES
 // ============================================
 
+export interface JobContext {
+  id: string
+  title: string
+  location: string | null
+  event_type: string | null
+  start_date: string
+  organiser: {
+    id: string
+    display_name: string
+    avatar_url: string | null
+  }
+}
+
 export interface ConversationPreview {
   otherUser: {
     id: string
@@ -18,6 +31,8 @@ export interface ConversationPreview {
     read: boolean
   } | null
   unreadCount: number
+  // Job context for conversations started from a job posting
+  jobContext?: JobContext | null
 }
 
 export interface MessageWithProfiles extends Message {
@@ -29,6 +44,10 @@ export interface MessageWithProfiles extends Message {
     display_name: string
     avatar_url: string | null
   }
+  // Job context fields
+  job_id?: string | null
+  context_type?: string | null
+  job?: JobContext | null
 }
 
 // ============================================
@@ -53,13 +72,21 @@ export async function getMyConversations() {
   try {
     const userId = await getCurrentUserId()
 
-    // Get all messages involving this user
+    // Get all messages involving this user, including job context
     const { data: messages, error } = await supabase
       .from('messages')
       .select(`
         *,
         from:profiles!messages_from_id_fkey(id, display_name, avatar_url, role),
-        to:profiles!messages_to_id_fkey(id, display_name, avatar_url, role)
+        to:profiles!messages_to_id_fkey(id, display_name, avatar_url, role),
+        job:job_postings!messages_job_id_fkey(
+          id,
+          title,
+          location,
+          event_type,
+          start_date,
+          organiser:profiles!job_postings_organiser_id_fkey(id, display_name, avatar_url)
+        )
       `)
       .or(`from_id.eq.${userId},to_id.eq.${userId}`)
       .order('created_at', { ascending: false })
@@ -83,7 +110,9 @@ export async function getMyConversations() {
             from_id: msg.from_id,
             read: msg.read
           },
-          unreadCount: 0
+          unreadCount: 0,
+          // Get job context from first message in conversation (if any)
+          jobContext: msg.job || null
         })
       }
 
@@ -119,7 +148,15 @@ export async function getConversation(otherUserId: string) {
       .select(`
         *,
         from:profiles!messages_from_id_fkey(display_name, avatar_url),
-        to:profiles!messages_to_id_fkey(display_name, avatar_url)
+        to:profiles!messages_to_id_fkey(display_name, avatar_url),
+        job:job_postings!messages_job_id_fkey(
+          id,
+          title,
+          location,
+          event_type,
+          start_date,
+          organiser:profiles!job_postings_organiser_id_fkey(id, display_name, avatar_url)
+        )
       `)
       .or(`and(from_id.eq.${userId},to_id.eq.${otherUserId}),and(from_id.eq.${otherUserId},to_id.eq.${userId})`)
       .order('created_at', { ascending: true })
@@ -135,6 +172,49 @@ export async function getConversation(otherUserId: string) {
     return {
       success: false,
       error: error.message || 'Failed to fetch conversation'
+    }
+  }
+}
+
+/**
+ * Get the job context for a conversation (if any)
+ * Returns the job info from the first message with a job_id
+ */
+export async function getConversationJobContext(otherUserId: string) {
+  try {
+    const userId = await getCurrentUserId()
+
+    const { data, error } = await supabase
+      .from('messages')
+      .select(`
+        job_id,
+        context_type,
+        job:job_postings!messages_job_id_fkey(
+          id,
+          title,
+          location,
+          event_type,
+          start_date,
+          organiser:profiles!job_postings_organiser_id_fkey(id, display_name, avatar_url)
+        )
+      `)
+      .or(`and(from_id.eq.${userId},to_id.eq.${otherUserId}),and(from_id.eq.${otherUserId},to_id.eq.${userId})`)
+      .not('job_id', 'is', null)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .single()
+
+    if (error && error.code !== 'PGRST116') throw error // PGRST116 = no rows returned
+
+    return {
+      success: true,
+      data: data?.job || null
+    }
+  } catch (error: any) {
+    console.error('Error fetching conversation job context:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch job context'
     }
   }
 }
@@ -163,7 +243,15 @@ export function subscribeToConversation(
           .select(`
             *,
             from:profiles!messages_from_id_fkey(display_name, avatar_url),
-            to:profiles!messages_to_id_fkey(display_name, avatar_url)
+            to:profiles!messages_to_id_fkey(display_name, avatar_url),
+            job:job_postings!messages_job_id_fkey(
+              id,
+              title,
+              location,
+              event_type,
+              start_date,
+              organiser:profiles!job_postings_organiser_id_fkey(id, display_name, avatar_url)
+            )
           `)
           .eq('id', payload.new.id)
           .single()
@@ -206,22 +294,46 @@ export function subscribeToAllMessages(callback: () => void) {
 
 /**
  * Send a message to another user
+ * Optionally with job context (when messaging about a specific job)
  */
-export async function sendMessage(toUserId: string, body: string) {
+export async function sendMessage(
+  toUserId: string,
+  body: string,
+  options?: {
+    jobId?: string
+    contextType?: 'job' | 'booking' | 'portfolio'
+  }
+) {
   try {
     const userId = await getCurrentUserId()
 
+    const messageData: any = {
+      from_id: userId,
+      to_id: toUserId,
+      body
+    }
+
+    // Add job context if provided
+    if (options?.jobId) {
+      messageData.job_id = options.jobId
+      messageData.context_type = options.contextType || 'job'
+    }
+
     const { data, error } = await supabase
       .from('messages')
-      .insert({
-        from_id: userId,
-        to_id: toUserId,
-        body
-      })
+      .insert(messageData)
       .select(`
         *,
         from:profiles!messages_from_id_fkey(display_name, avatar_url),
-        to:profiles!messages_to_id_fkey(display_name, avatar_url)
+        to:profiles!messages_to_id_fkey(display_name, avatar_url),
+        job:job_postings!messages_job_id_fkey(
+          id,
+          title,
+          location,
+          event_type,
+          start_date,
+          organiser:profiles!job_postings_organiser_id_fkey(id, display_name, avatar_url)
+        )
       `)
       .single()
 
@@ -238,6 +350,21 @@ export async function sendMessage(toUserId: string, body: string) {
       error: error.message || 'Failed to send message'
     }
   }
+}
+
+/**
+ * Send a message about a specific job posting
+ * This is a convenience wrapper for sendMessage with job context
+ */
+export async function sendMessageAboutJob(
+  toUserId: string,
+  body: string,
+  jobId: string
+) {
+  return sendMessage(toUserId, body, {
+    jobId,
+    contextType: 'job'
+  })
 }
 
 /**
@@ -343,9 +470,11 @@ export async function searchUsers(query: string) {
 export default {
   getMyConversations,
   getConversation,
+  getConversationJobContext,
   subscribeToConversation,
   subscribeToAllMessages,
   sendMessage,
+  sendMessageAboutJob,
   markMessageAsRead,
   markConversationAsRead,
   deleteMessage,
