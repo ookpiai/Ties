@@ -29,6 +29,7 @@ const JobApplicantsPage = () => {
   const [job, setJob] = useState(null)
   const [applications, setApplications] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [selectedRole, setSelectedRole] = useState('all')
   const [selectingApplication, setSelectingApplication] = useState(null)
   const [rejectingApplication, setRejectingApplication] = useState(null)
@@ -41,17 +42,27 @@ const JobApplicantsPage = () => {
 
   const loadJobAndApplications = async () => {
     setLoading(true)
+    setError(null)
 
     // Load job details
     const jobResult = await getJobPostingById(jobId)
+    console.log('Job result:', jobResult)
     if (jobResult.success) {
       setJob(jobResult.data)
+    } else {
+      setError(jobResult.error || 'Failed to load job details')
+      setLoading(false)
+      return
     }
 
     // Load applications
     const appsResult = await getApplicationsForJob(jobId)
+    console.log('Applications result:', appsResult)
     if (appsResult.success) {
       setApplications(appsResult.data)
+    } else {
+      console.error('Failed to load applications:', appsResult.error)
+      // Don't set error - job loaded successfully, just no applications or permission issue
     }
 
     setLoading(false)
@@ -148,17 +159,19 @@ const JobApplicantsPage = () => {
     )
   }
 
-  if (!job) {
+  if (error || !job) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-[#0B0B0B]">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center py-12">
             <Briefcase className="h-16 w-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Job not found</h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-4">This job posting may have been removed or you don't have access to it.</p>
-            <Button onClick={() => navigate('/jobs')}>
+            <p className="text-gray-500 dark:text-gray-400 mb-4">
+              {error || "This job posting may have been removed or you don't have access to it."}
+            </p>
+            <Button onClick={() => navigate('/studio')}>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Jobs
+              Back to Studio
             </Button>
           </div>
         </div>
