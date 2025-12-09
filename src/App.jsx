@@ -69,6 +69,13 @@ import MyJobsPage from './components/jobs/MyJobsPage'
 import VenuePortfolio from './components/venue/VenuePortfolio'
 import { BadgeRulesPage } from './components/profile/badges'
 import TestAccountsPage from './components/dev/TestAccountsPage'
+// Help Center Pages
+import HelpCenterPage from './components/help/HelpCenterPage'
+import GettingStartedPage from './components/help/GettingStartedPage'
+import SubscriptionsGuidePage from './components/help/SubscriptionsGuidePage'
+import PostingJobsGuidePage from './components/help/PostingJobsGuidePage'
+import MessagingGuidePage from './components/help/MessagingGuidePage'
+import ProfileSetupGuidePage from './components/help/ProfileSetupGuidePage'
 import { LiveRegionManager, initFocusVisible, createSkipLink } from './utils/accessibility'
 import useKeyboardShortcuts from './hooks/useKeyboardShortcuts'
 import KeyboardShortcutsModal from './components/ui/KeyboardShortcutsModal'
@@ -547,6 +554,38 @@ function AppRoutes() {
                 <BadgeRulesPage />
               </AppLayout>
             </ProtectedRoute>
+          } />
+
+          {/* Help Center Routes */}
+          <Route path="/help" element={
+            <AppLayout>
+              <HelpCenterPage />
+            </AppLayout>
+          } />
+          <Route path="/help/getting-started" element={
+            <AppLayout>
+              <GettingStartedPage />
+            </AppLayout>
+          } />
+          <Route path="/help/subscriptions" element={
+            <AppLayout>
+              <SubscriptionsGuidePage />
+            </AppLayout>
+          } />
+          <Route path="/help/posting-jobs" element={
+            <AppLayout>
+              <PostingJobsGuidePage />
+            </AppLayout>
+          } />
+          <Route path="/help/messaging" element={
+            <AppLayout>
+              <MessagingGuidePage />
+            </AppLayout>
+          } />
+          <Route path="/help/profile-setup" element={
+            <AppLayout>
+              <ProfileSetupGuidePage />
+            </AppLayout>
           } />
 
           {/* Catch all route */}
