@@ -7,7 +7,7 @@
  * - Color-coded booking statuses
  * - Click to view/edit booking details
  * - Quick navigation between dates
- * - Multi-talent view for agents
+ * - Multi-talent view for teams
  */
 
 import { useState, useEffect, useMemo } from 'react'
@@ -79,7 +79,7 @@ const STATUS_LABELS = {
 
 const ScheduleGridView = ({
   userId = null,
-  talents = null, // For agent view: array of { id, name, avatar }
+  talents = null, // For team view: array of { id, name, avatar }
   onEventClick,
   onDateClick,
   showAddButton = true

@@ -107,12 +107,12 @@ const TEST_USERS = [
   { email: 'creativestudiosyd@gmail.com', name: 'Creative Studio Sydney', username: 'creativestudio', role: 'Venue', specialty: 'studio', city: 0 },
   { email: 'osteria.dining@gmail.com', name: 'Osteria Private Dining', username: 'osteriadining', role: 'Venue', specialty: 'restaurant', city: 1 },
 
-  // AGENTS (5 users)
-  { email: 'rachel.hughes.talent@gmail.com', name: 'Rachel Hughes', username: 'rachelhughes', role: 'Artist', specialty: 'agent', city: 0, isAgent: true },
-  { email: 'daniel.wong.agency@outlook.com', name: 'Daniel Wong', username: 'danielwong', role: 'Artist', specialty: 'agent', city: 1, isAgent: true },
-  { email: 'stephanie.clarke.mgmt@gmail.com', name: 'Stephanie Clarke', username: 'stephanieclarke', role: 'Artist', specialty: 'agent', city: 2, isAgent: true },
-  { email: 'robert.james.talent@gmail.com', name: 'Robert James', username: 'robertjames', role: 'Artist', specialty: 'agent', city: 0, isAgent: true },
-  { email: 'michelle.lee.artists@outlook.com', name: 'Michelle Lee', username: 'michellelee', role: 'Artist', specialty: 'agent', city: 3, isAgent: true },
+  // MORE FREELANCERS (5 users - former agents converted to freelancers/venues/vendors)
+  { email: 'rachel.hughes.talent@gmail.com', name: 'Rachel Hughes', username: 'rachelhughes', role: 'Freelancer', specialty: 'event_planner', city: 0 },
+  { email: 'daniel.wong.agency@outlook.com', name: 'Daniel Wong', username: 'danielwong', role: 'Freelancer', specialty: 'dj', city: 1 },
+  { email: 'stephanie.clarke.mgmt@gmail.com', name: 'Stephanie Clarke', username: 'stephanieclarke', role: 'Vendor', specialty: 'catering', city: 2 },
+  { email: 'robert.james.talent@gmail.com', name: 'Robert James', username: 'robertjames', role: 'Venue', specialty: 'studio', city: 0 },
+  { email: 'michelle.lee.artists@outlook.com', name: 'Michelle Lee', username: 'michellelee', role: 'Freelancer', specialty: 'photographer', city: 3 },
 
   // ORGANISERS/CLIENTS (5 users)
   { email: 'sarah.white.wedding@gmail.com', name: 'Sarah White', username: 'sarahwhite', role: 'Organiser', specialty: null, city: 0 },
@@ -134,17 +134,16 @@ const getSpecialtyIcon = (specialty, role) => {
     videographer: Video,
     musician: Music,
     mc: Mic,
-    agent: Users,
+    event_planner: Briefcase,
   }
   return icons[specialty] || User
 }
 
 // Get badge color for role
-const getRoleBadgeClass = (role, isAgent) => {
-  if (isAgent) return 'bg-indigo-100 text-indigo-800 border-indigo-300'
-
+const getRoleBadgeClass = (role) => {
   const classes = {
     Artist: 'bg-purple-100 text-purple-800 border-purple-300',
+    Freelancer: 'bg-purple-100 text-purple-800 border-purple-300',
     Vendor: 'bg-green-100 text-green-800 border-green-300',
     Venue: 'bg-blue-100 text-blue-800 border-blue-300',
     Organiser: 'bg-orange-100 text-orange-800 border-orange-300',
@@ -162,10 +161,9 @@ const formatSpecialty = (specialty) => {
 const groupUsersByCategory = (users) => {
   const groups = {
     devTeam: users.filter(u => u.isDev),
-    freelancers: users.filter(u => u.role === 'Artist' && !u.isAgent && !u.isDev),
+    freelancers: users.filter(u => (u.role === 'Artist' || u.role === 'Freelancer') && !u.isDev),
     vendors: users.filter(u => u.role === 'Vendor'),
     venues: users.filter(u => u.role === 'Venue'),
-    agents: users.filter(u => u.isAgent),
     organisers: users.filter(u => u.role === 'Organiser' && !u.isDev),
   }
   return groups
@@ -241,16 +239,16 @@ export default function TestAccountsPage() {
         <CardContent className="p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className={`p-2 rounded-lg ${user.isDev ? 'bg-red-100' : user.isAgent ? 'bg-indigo-100' : user.role === 'Venue' ? 'bg-blue-100' : user.role === 'Vendor' ? 'bg-green-100' : user.role === 'Organiser' ? 'bg-orange-100' : 'bg-purple-100'}`}>
-                <Icon className={`h-5 w-5 ${user.isDev ? 'text-red-600' : user.isAgent ? 'text-indigo-600' : user.role === 'Venue' ? 'text-blue-600' : user.role === 'Vendor' ? 'text-green-600' : user.role === 'Organiser' ? 'text-orange-600' : 'text-purple-600'}`} />
+              <div className={`p-2 rounded-lg ${user.isDev ? 'bg-red-100' : user.role === 'Venue' ? 'bg-blue-100' : user.role === 'Vendor' ? 'bg-green-100' : user.role === 'Organiser' ? 'bg-orange-100' : 'bg-purple-100'}`}>
+                <Icon className={`h-5 w-5 ${user.isDev ? 'text-red-600' : user.role === 'Venue' ? 'text-blue-600' : user.role === 'Vendor' ? 'text-green-600' : user.role === 'Organiser' ? 'text-orange-600' : 'text-purple-600'}`} />
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-medium truncate">{user.name}</h3>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  <Badge variant="outline" className={user.isDev ? 'bg-red-100 text-red-800 border-red-300' : getRoleBadgeClass(user.role, user.isAgent)}>
-                    {user.isDev ? 'Dev Team' : user.isAgent ? 'Agent' : user.role}
+                  <Badge variant="outline" className={user.isDev ? 'bg-red-100 text-red-800 border-red-300' : getRoleBadgeClass(user.role)}>
+                    {user.isDev ? 'Dev Team' : user.role}
                   </Badge>
-                  {user.specialty && !user.isAgent && (
+                  {user.specialty && (
                     <span className="text-xs text-muted-foreground">
                       {formatSpecialty(user.specialty)}
                     </span>
@@ -367,13 +365,12 @@ export default function TestAccountsPage() {
 
       {/* Tabs for filtering */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-        <TabsList className="grid grid-cols-7 w-full max-w-3xl">
+        <TabsList className="grid grid-cols-6 w-full max-w-3xl">
           <TabsTrigger value="dev" className="text-red-600">Dev Team</TabsTrigger>
           <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="freelancers">Freelancers</TabsTrigger>
           <TabsTrigger value="vendors">Vendors</TabsTrigger>
           <TabsTrigger value="venues">Venues</TabsTrigger>
-          <TabsTrigger value="agents">Agents</TabsTrigger>
           <TabsTrigger value="organisers">Organisers</TabsTrigger>
         </TabsList>
 
@@ -383,15 +380,14 @@ export default function TestAccountsPage() {
 
         <TabsContent value="all" className="mt-6">
           {renderUserSection('Dev Team', groupedUsers.devTeam, User)}
-          {renderUserSection('Freelancers/Artists', groupedUsers.freelancers, User)}
+          {renderUserSection('Freelancers', groupedUsers.freelancers, User)}
           {renderUserSection('Vendors', groupedUsers.vendors, Store)}
           {renderUserSection('Venues', groupedUsers.venues, Building2)}
-          {renderUserSection('Agents', groupedUsers.agents, Users)}
-          {renderUserSection('Organisers/Clients', groupedUsers.organisers, Briefcase)}
+          {renderUserSection('Organisers', groupedUsers.organisers, Briefcase)}
         </TabsContent>
 
         <TabsContent value="freelancers" className="mt-6">
-          {renderUserSection('Freelancers/Artists', groupedUsers.freelancers, User)}
+          {renderUserSection('Freelancers', groupedUsers.freelancers, User)}
         </TabsContent>
 
         <TabsContent value="vendors" className="mt-6">
@@ -402,12 +398,8 @@ export default function TestAccountsPage() {
           {renderUserSection('Venues', groupedUsers.venues, Building2)}
         </TabsContent>
 
-        <TabsContent value="agents" className="mt-6">
-          {renderUserSection('Agents', groupedUsers.agents, Users)}
-        </TabsContent>
-
         <TabsContent value="organisers" className="mt-6">
-          {renderUserSection('Organisers/Clients', groupedUsers.organisers, Briefcase)}
+          {renderUserSection('Organisers', groupedUsers.organisers, Briefcase)}
         </TabsContent>
       </Tabs>
 
@@ -425,10 +417,9 @@ export default function TestAccountsPage() {
         <CardContent className="p-4">
           <h3 className="font-medium mb-2">Quick Tips</h3>
           <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• <strong>Freelancers</strong> - Can browse jobs, apply, receive bookings</li>
+            <li>• <strong>Freelancers</strong> - Can browse jobs, apply, receive bookings, build portfolio</li>
             <li>• <strong>Vendors</strong> - Equipment rentals, catering, event services</li>
             <li>• <strong>Venues</strong> - List spaces for events, manage bookings</li>
-            <li>• <strong>Agents</strong> - Manage talent, apply on behalf, view dashboard</li>
             <li>• <strong>Organisers</strong> - Create jobs, book talent, manage events</li>
           </ul>
         </CardContent>

@@ -162,20 +162,19 @@ const DiscoveryPage = () => {
           filteredProfiles = profiles.filter(p => p.role === 'Vendor')
         } else if (selectedRole === 'venue') {
           filteredProfiles = profiles.filter(p => p.role === 'Venue')
-        } else if (selectedRole === 'agent') {
-          // Filter for verified agents only
-          filteredProfiles = profiles.filter(p => p.is_agent && p.is_agent_verified)
+        } else if (selectedRole === 'organiser') {
+          filteredProfiles = profiles.filter(p => p.role === 'Organiser')
         }
 
         // Transform Supabase profiles to match component's expected format
         const transformedProfiles = filteredProfiles.map(profile => ({
           id: profile.id,
           name: profile.display_name || 'Anonymous',
-          role: profile.is_agent && profile.is_agent_verified ? 'agent' : mapSupabaseRoleToComponentRole(profile.role),
+          role: mapSupabaseRoleToComponentRole(profile.role),
           originalRole: profile.role, // Keep original role for specialty label lookup
           specialty: profile.specialty,
           specialty_display_name: profile.specialty_display_name || getSpecialtyLabel(profile.role, profile.specialty),
-          title: profile.is_agent && profile.is_agent_verified ? 'Verified Agent' : (profile.role || 'Creative Professional'),
+          title: profile.role || 'Creative Professional',
           location: profile.city || 'Location not specified',
           avatar: profile.avatar_url,
           rating: 0, // TODO: Add ratings in future phase
@@ -187,10 +186,7 @@ const DiscoveryPage = () => {
           availability: 'available',
           featured: false,
           profileViews: 0,
-          completedProjects: 0,
-          // Agent-specific fields
-          isAgent: profile.is_agent && profile.is_agent_verified,
-          agentIndustryTags: profile.agent_industry_tags || []
+          completedProjects: 0
         }))
 
         setProfessionals(transformedProfiles)
@@ -218,7 +214,7 @@ const DiscoveryPage = () => {
     { value: 'freelancer', label: 'Freelancers', icon: Briefcase },
     { value: 'vendor', label: 'Vendors', icon: Package },
     { value: 'venue', label: 'Venues', icon: Building },
-    { value: 'agent', label: 'Agents', icon: ShieldCheck }
+    { value: 'organiser', label: 'Organisers', icon: Calendar }
   ]
 
   const skillOptions = [

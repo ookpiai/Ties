@@ -24,12 +24,8 @@ import {
   MessageSquare,
   Mail,
   DollarSign,
-  Wallet,
-  UserPlus,
-  ShieldCheck
+  Wallet
 } from 'lucide-react'
-import PendingAgentRequestsPanel from '../agent/PendingAgentRequestsPanel'
-import { getPendingRepresentationRequests, getFreelancerAgents, updateRoutingPreference, removeRepresentation } from '../../api/agents'
 import StripeConnectOnboarding from '../payments/StripeConnectOnboarding'
 import EarningsDashboard from '../payments/EarningsDashboard'
 import { HelpTooltip, FeatureTip } from '@/components/ui/HelpTooltip'
@@ -43,16 +39,13 @@ const SettingsPage = () => {
   const [currentPlan, setCurrentPlan] = useState('free') // 'free', 'pro', 'studio'
   const [googleCalendarSync, setGoogleCalendarSync] = useState(false)
   const [autoAcceptBookings, setAutoAcceptBookings] = useState(false)
-  const [pendingAgentRequests, setPendingAgentRequests] = useState(0)
 
   // Check if user is a freelancer/vendor/venue (can receive payments)
   const canReceivePayments = user?.role && ['Freelancer', 'Vendor', 'Venue', 'Artist', 'Crew'].includes(user.role)
-  const canHaveAgents = user?.role && ['Freelancer', 'Artist', 'Crew'].includes(user.role)
 
   const categories = [
     { id: 'account', label: 'Account & Profile', icon: User },
     { id: 'payments', label: 'Payments & Earnings', icon: Wallet, show: canReceivePayments },
-    { id: 'agents', label: 'Agent Management', icon: UserPlus, show: canHaveAgents, badge: pendingAgentRequests },
     { id: 'billing', label: 'Billing & Subscription', icon: CreditCard },
     { id: 'platform', label: 'Platform Preferences', icon: Monitor },
     { id: 'booking', label: 'Booking Preferences', icon: Clock },
@@ -189,59 +182,6 @@ const SettingsPage = () => {
             <div className="mt-8">
               <h2 className="text-xl font-semibold text-app mb-4">Your Earnings</h2>
               <EarningsDashboard />
-            </div>
-          </div>
-        )
-
-      case 'agents':
-        return (
-          <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-app flex items-center gap-2">
-              <ShieldCheck className="w-6 h-6 text-indigo-600" />
-              Agent Management
-            </h1>
-            <p className="text-muted">
-              Manage agent representation requests and control how your bookings are routed.
-            </p>
-
-            {/* Pending Agent Requests */}
-            <PendingAgentRequestsPanel
-              onRequestsChange={(count) => setPendingAgentRequests(count)}
-            />
-
-            {/* Agent Settings */}
-            <div className="bg-surface border border-app text-app p-6 rounded-lg shadow-sm">
-              <h3 className="text-lg font-medium text-app mb-4">Agent Preferences</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-sm font-medium text-app">Accept Agent Requests</span>
-                    <p className="text-xs text-muted">Allow verified agents to send you representation requests</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      defaultChecked={user?.accepts_agent_requests !== false}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* Info Box */}
-            <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
-              <h4 className="font-medium text-indigo-800 dark:text-indigo-300 mb-2">What is Agent Representation?</h4>
-              <p className="text-sm text-indigo-700 dark:text-indigo-400 mb-3">
-                Agents help manage your bookings, negotiate rates, and find you more work. In exchange, they take a commission (typically 10-20%) on bookings they manage.
-              </p>
-              <ul className="text-sm text-indigo-700 dark:text-indigo-400 space-y-1 list-disc list-inside">
-                <li>Agents can accept bookings on your behalf</li>
-                <li>Agents can negotiate rates with clients</li>
-                <li>Commission is automatically calculated on invoices</li>
-                <li>You can terminate the relationship at any time</li>
-              </ul>
             </div>
           </div>
         )

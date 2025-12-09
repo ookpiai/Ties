@@ -18,7 +18,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import AvailabilityCalendar from '../calendar/AvailabilityCalendar'
 import BookNowButton from '../bookings/BookNowButton'
 import CheckAvailabilityButton from '../bookings/CheckAvailabilityButton'
-import RequestToRepresentButton from '../agent/RequestToRepresentButton'
 import ServicesPage from './ServicesPage'
 import {
   User,
@@ -63,7 +62,6 @@ import { getUserSkills } from '../../api/skills'
 import { getUserBadges } from '../../api/badges'
 import { getServicePackages } from '../../api/servicePackages'
 import { getProfileStats, getPublicStats, recordProfileView } from '../../api/profileStats'
-import { getAgentTalentRoster, getFreelancerAgents } from '../../api/agents'
 
 const PublicProfileView = () => {
   const { userId } = useParams()
@@ -81,9 +79,6 @@ const PublicProfileView = () => {
   const [packages, setPackages] = useState([])
   const [stats, setStats] = useState(null)
 
-  // Agent mode data
-  const [talentRoster, setTalentRoster] = useState([])
-  const [agentLinks, setAgentLinks] = useState([])
 
   // Load profile data
   useEffect(() => {
@@ -116,16 +111,6 @@ const PublicProfileView = () => {
         setBadges(badgesData)
         setPackages(packagesData)
         setStats(statsData)
-
-        // Load agent data if profile is an agent or has agents
-        if (profileData.is_agent && profileData.is_agent_verified) {
-          const roster = await getAgentTalentRoster(userId).catch(() => [])
-          setTalentRoster(roster.filter(l => l.status === 'approved'))
-        }
-
-        // Load freelancer's agents if applicable
-        const agents = await getFreelancerAgents(userId).catch(() => [])
-        setAgentLinks(agents.filter(l => l.status === 'approved'))
       } catch (err) {
         console.error('Failed to load profile:', err)
         setError('Profile not found or failed to load.')
@@ -270,15 +255,6 @@ const PublicProfileView = () => {
                   <div className="flex items-center mt-2 text-slate-600 dark:text-slate-300">
                     <RoleIcon className="w-5 h-5 mr-2" />
                     <span className="capitalize">{profile.role || 'User'}</span>
-                    {profile.is_agent && profile.is_agent_verified && (
-                      <>
-                        <span className="mx-2">•</span>
-                        <Badge className="bg-indigo-100 text-indigo-800 border-indigo-300">
-                          <ShieldCheck className="w-3 h-3 mr-1" />
-                          Verified Agent
-                        </Badge>
-                      </>
-                    )}
                     {profile.city && (
                       <>
                         <span className="mx-2">•</span>
@@ -307,12 +283,6 @@ const PublicProfileView = () => {
                       hourlyRate={profile.hourly_rate}
                       dailyRate={profile.daily_rate}
                       isOwnProfile={isOwnProfile}
-                    />
-                    <RequestToRepresentButton
-                      freelancerId={profile.id}
-                      freelancerName={profile.display_name || profile.full_name}
-                      acceptsAgentRequests={profile.accepts_agent_requests !== false}
-                      variant="outline"
                     />
                   </div>
                 )}
@@ -419,108 +389,6 @@ const PublicProfileView = () => {
                   </Card>
                 )}
 
-                {/* Agent: Representing These Freelancers */}
-                {profile.is_agent && profile.is_agent_verified && talentRoster.length > 0 && (
-                  <Card className="bg-surface border border-app rounded-2xl">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <UserCheck className="w-5 h-5 text-indigo-600" />
-                        Representing These Freelancers
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {talentRoster.map((link) => {
-                          const freelancer = link.freelancer_profile
-                          return (
-                            <div
-                              key={link.id}
-                              className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
-                              onClick={() => navigate(`/profile/${freelancer?.id}`)}
-                            >
-                              <Avatar className="h-10 w-10">
-                                <AvatarImage src={freelancer?.avatar_url} />
-                                <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                                  {freelancer?.display_name?.split(' ').map(n => n[0]).join('') || 'U'}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm truncate">
-                                  {freelancer?.display_name || 'Unknown'}
-                                </p>
-                                <p className="text-xs text-muted-foreground capitalize">
-                                  {freelancer?.role || 'Freelancer'}
-                                </p>
-                              </div>
-                              <Badge variant="outline" className="text-xs">Active</Badge>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Freelancer's Agents (Contact Routing) */}
-                {agentLinks.length > 0 && (
-                  <Card className="bg-surface border border-app rounded-2xl border-indigo-200">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-indigo-700">
-                        <ShieldCheck className="w-5 h-5" />
-                        Represented by
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        This freelancer is represented by a verified agent.
-                      </p>
-                      {agentLinks.map((link) => {
-                        const agent = link.agent_profile
-                        return (
-                          <div
-                            key={link.id}
-                            className="flex items-center justify-between p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg"
-                          >
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-10 w-10">
-                                <AvatarImage src={agent?.avatar_url} />
-                                <AvatarFallback className="bg-indigo-100 text-indigo-700 text-sm">
-                                  {agent?.display_name?.split(' ').map(n => n[0]).join('') || 'A'}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <p className="font-medium text-sm">{agent?.display_name || 'Agent'}</p>
-                                <p className="text-xs text-muted-foreground">Verified Agent</p>
-                              </div>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  navigate('/messages', { state: { openConversationWithUserId: agent?.id } })
-                                }}
-                              >
-                                Contact Agent
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  navigate(`/profile/${agent?.id}`)
-                                }}
-                              >
-                                View Profile
-                              </Button>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </CardContent>
-                  </Card>
-                )}
               </div>
 
               {/* Right Column - Sidebar */}

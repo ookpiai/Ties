@@ -60,9 +60,6 @@ const BookingDetailsModal = ({ bookingId, currentUserId, isOpen, onClose, onUpda
     return configs[status] || configs.pending
   }
 
-  // Check if booking was handled by an agent (defensive - fields may not exist)
-  const isAgentManaged = booking?.agent_id && booking?.agent_accepted
-
   // Get display name with fallback
   const getDisplayName = (profile) => profile?.display_name || profile?.full_name || 'Unknown User'
 
@@ -109,11 +106,6 @@ const BookingDetailsModal = ({ bookingId, currentUserId, isOpen, onClose, onUpda
                 <Badge className={getStatusConfig(booking.status).color}>
                   {getStatusConfig(booking.status).label}
                 </Badge>
-                {isAgentManaged && (
-                  <Badge variant="outline" className="text-xs border-purple-300 bg-purple-50 text-purple-700">
-                    Managed by Agent
-                  </Badge>
-                )}
               </div>
             </div>
 

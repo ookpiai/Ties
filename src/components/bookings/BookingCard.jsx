@@ -112,9 +112,6 @@ const BookingCard = ({ booking, currentUserId, onUpdate }) => {
     return configs[status] || configs.pending
   }
 
-  // Check if booking was handled by an agent (defensive - fields may not exist)
-  const isAgentManaged = booking?.agent_id && booking?.agent_accepted
-
   const statusConfig = getStatusConfig(booking.status)
 
   // Handle accept booking
@@ -409,11 +406,6 @@ const BookingCard = ({ booking, currentUserId, onUpdate }) => {
                   <Badge variant="outline" className="text-xs h-5 border-blue-300 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
                     <Briefcase className="h-3 w-3 mr-1" />
                     Job Gig
-                  </Badge>
-                )}
-                {isAgentManaged && (
-                  <Badge variant="outline" className="text-xs h-5 border-purple-300 dark:border-purple-600 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300">
-                    Managed by Agent
                   </Badge>
                 )}
               </div>

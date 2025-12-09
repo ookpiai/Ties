@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronRight, ChevronLeft, Check, User, Building, MapPin, Users, Briefcase, Loader2, Shield } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Check, User, Building, MapPin, Users, Briefcase, Loader2, Calendar } from 'lucide-react';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
 import { helpContent } from '../../constants/helpContent';
 
@@ -45,45 +45,38 @@ const GuidedOnboarding = ({ onComplete }) => {
   const userTypes = [
     {
       id: 'individual',
-      title: 'Individual/Professional',
-      description: 'Freelancer, artist, or creative professional',
+      title: 'Freelancer / Creative Professional',
+      description: 'Photographer, DJ, musician, designer, or other creative',
       icon: User,
       color: 'bg-blue-500'
     },
     {
       id: 'vendor',
       title: 'Vendor or Supplier',
-      description: 'Equipment rental, services, or supplies',
+      description: 'Equipment rental, catering, or event services',
       icon: Building,
       color: 'bg-green-500'
     },
     {
       id: 'venue',
       title: 'Venue or Space Owner',
-      description: 'Studios, event spaces, or locations',
+      description: 'Studios, event spaces, or locations for hire',
       icon: MapPin,
       color: 'bg-purple-500'
     },
     {
-      id: 'client',
-      title: 'Client / Commissioner / Brand',
-      description: 'Looking to hire creative professionals',
-      icon: Briefcase,
+      id: 'organiser',
+      title: 'Event Organiser',
+      description: 'Plan and coordinate events, hire creative talent',
+      icon: Calendar,
       color: 'bg-orange-500'
     },
     {
       id: 'collective',
       title: 'Collective or Team',
-      description: 'Creative agency, band, or group',
+      description: 'Creative agency, band, production company, or group',
       icon: Users,
       color: 'bg-pink-500'
-    },
-    {
-      id: 'agent',
-      title: 'Agent / Talent Manager',
-      description: 'Represent and manage creative freelancers',
-      icon: Shield,
-      color: 'bg-indigo-500'
     }
   ];
 
@@ -105,21 +98,17 @@ const GuidedOnboarding = ({ onComplete }) => {
       'Outdoor Location', 'Co-working Space', 'Rehearsal Space',
       'Conference Room', 'Theater', 'Warehouse', 'Rooftop', 'Private Residence'
     ],
-    client: [
-      'Startup', 'Small Business', 'Corporation', 'Non-profit', 'Government',
-      'Educational Institution', 'Healthcare', 'Retail', 'Hospitality',
-      'Technology', 'Fashion', 'Food & Beverage', 'Real Estate', 'Finance'
+    organiser: [
+      'Wedding Planner', 'Corporate Event Planner', 'Festival Organiser',
+      'Party Planner', 'Conference Organiser', 'Concert Promoter',
+      'Brand Activation', 'Product Launch', 'Private Events', 'Charity Events',
+      'Sports Events', 'Trade Shows', 'Awards Ceremonies', 'Other'
     ],
     collective: [
       'Creative Agency', 'Production Company', 'Band/Music Group',
       'Design Studio', 'Marketing Agency', 'Event Planning Company',
       'Photography Collective', 'Art Collective', 'Theater Group',
       'Dance Company', 'Film Crew', 'Podcast Network'
-    ],
-    agent: [
-      'Music', 'DJ', 'Photography', 'Videography', 'Entertainment',
-      'Events', 'Corporate', 'Weddings', 'Modeling', 'Acting',
-      'Voice Over', 'Dance', 'Comedy', 'Magic', 'Other'
     ]
   };
 
@@ -141,18 +130,13 @@ const GuidedOnboarding = ({ onComplete }) => {
       setCurrentStep(currentStep + 1);
     } else {
       // Map onboarding data to profile fields that exist in the database
-      // Aligned with RegisterPage.jsx role mappings
       const roleMapping = {
-        'individual': 'Artist',      // Individual freelancers
-        'vendor': 'Crew',            // Vendors/Crew members
+        'individual': 'Freelancer',  // Individual freelancers/creatives
+        'vendor': 'Vendor',          // Vendors/Suppliers
         'venue': 'Venue',            // Venues
-        'client': 'Organiser',       // Event organisers/clients
-        'collective': 'Artist',      // Collectives
-        'agent': 'Artist'            // Agents (use Artist, set is_agent flag separately)
+        'organiser': 'Organiser',    // Event organisers
+        'collective': 'Freelancer'   // Collectives (group of freelancers)
       };
-
-      // Check if user selected Agent type
-      const isAgent = formData.userType === 'agent';
 
       // Get the first selected role as specialty if available
       const selectedSpecialty = formData.roles.length > 0 ? formData.roles[0] : null;
@@ -163,12 +147,7 @@ const GuidedOnboarding = ({ onComplete }) => {
         specialty: selectedSpecialty ? selectedSpecialty.toLowerCase().replace(/\s+/g, '_') : null,
         specialty_display_name: selectedSpecialty,
         bio: formData.roles.length > 1 ? `Specializing in: ${formData.roles.join(', ')}` : null,
-        onboarding_completed: true,
-        // Agent-specific fields
-        is_agent: isAgent,
-        agent_industry_tags: isAgent ? formData.roles : null,
-        // Agent verification status starts as not_submitted - they need to verify separately
-        agent_verification_status: isAgent ? 'not_submitted' : null
+        onboarding_completed: true
       };
 
       setIsSubmitting(true);
@@ -329,7 +308,7 @@ const GuidedOnboarding = ({ onComplete }) => {
   );
 
   const renderFinalStep = () => {
-    const isAgentUser = userType === 'agent';
+    const isOrganiser = userType === 'organiser';
 
     return (
       <div className="text-center space-y-6">
@@ -340,35 +319,32 @@ const GuidedOnboarding = ({ onComplete }) => {
         <div>
           <h3 className="section-header mb-2">Welcome to TIES Together!</h3>
           <p className="body-text text-muted-foreground">
-            {isAgentUser
-              ? 'Your agent profile is set up! Complete verification to unlock all agent features.'
-              : 'Your profile is set up and you\'re ready to start connecting with the creative community.'
-            }
+            Your profile is set up and you're ready to start connecting with the creative community.
           </p>
         </div>
 
         <div className="bg-card p-6 rounded-lg border text-left">
           <h4 className="card-title mb-4">What's next?</h4>
           <div className="space-y-3">
-            {isAgentUser ? (
+            {isOrganiser ? (
               <>
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
-                    <span className="text-indigo-600 font-medium text-sm">1</span>
+                  <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                    <span className="text-orange-600 font-medium text-sm">1</span>
                   </div>
-                  <span className="body-text">Complete agent verification (website + evidence)</span>
+                  <span className="body-text">Browse the Discovery page to find talent</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
-                    <span className="text-indigo-600 font-medium text-sm">2</span>
+                  <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                    <span className="text-orange-600 font-medium text-sm">2</span>
                   </div>
-                  <span className="body-text">Connect with freelancers to represent</span>
+                  <span className="body-text">Post a job to find the perfect team</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
-                    <span className="text-indigo-600 font-medium text-sm">3</span>
+                  <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                    <span className="text-orange-600 font-medium text-sm">3</span>
                   </div>
-                  <span className="body-text">Use Agent Dashboard to manage your talent roster</span>
+                  <span className="body-text">Use Studio to manage your events</span>
                 </div>
               </>
             ) : (
@@ -389,21 +365,12 @@ const GuidedOnboarding = ({ onComplete }) => {
                   <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
                     <span className="text-primary font-medium text-sm">3</span>
                   </div>
-                  <span className="body-text">Start collaborating on exciting projects</span>
+                  <span className="body-text">Browse jobs or start collaborating on projects</span>
                 </div>
               </>
             )}
           </div>
         </div>
-
-        {isAgentUser && (
-          <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-lg text-left">
-            <p className="text-sm text-indigo-800">
-              <strong>Note:</strong> Agent verification is required to represent freelancers and access full agent features.
-              Visit your Agent Dashboard after setup to complete verification.
-            </p>
-          </div>
-        )}
       </div>
     );
   };
