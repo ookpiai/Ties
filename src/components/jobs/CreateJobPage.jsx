@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createJobPosting } from '../../api/jobs'
+import { canCreateJob, canStartTrial } from '../../api/subscriptions'
 import { useAuth } from '../../App'
 import { Button } from '../ui/button'
 import {
@@ -15,11 +16,13 @@ import {
   ClipboardList,
   FileText,
   Lock,
-  Globe
+  Globe,
+  Loader2
 } from 'lucide-react'
 import JobBasicDetailsForm from './JobBasicDetailsForm'
 import JobRolesManager from './JobRolesManager'
 import JobWorkspaceDetailsForm from './JobWorkspaceDetailsForm'
+import UpgradePromptModal from '../subscription/UpgradePromptModal'
 
 const CreateJobPage = () => {
   const navigate = useNavigate()
@@ -27,6 +30,12 @@ const CreateJobPage = () => {
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState(null)
+
+  // Subscription limit state
+  const [isCheckingLimit, setIsCheckingLimit] = useState(true)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [limitInfo, setLimitInfo] = useState(null)
+  const [canTrial, setCanTrial] = useState(false)
 
   // Job basic details (visible in Jobs Feed card)
   const [jobData, setJobData] = useState({
@@ -53,6 +62,43 @@ const CreateJobPage = () => {
 
   // Roles array
   const [roles, setRoles] = useState([])
+
+  // Check job creation limit on mount
+  useEffect(() => {
+    const checkLimit = async () => {
+      try {
+        const [jobLimit, trialEligible] = await Promise.all([
+          canCreateJob(),
+          canStartTrial()
+        ])
+
+        setLimitInfo(jobLimit)
+        setCanTrial(trialEligible)
+
+        if (!jobLimit.allowed) {
+          setShowUpgradeModal(true)
+        }
+      } catch (err) {
+        console.error('Error checking job limit:', err)
+        // Allow creation on error - fail open
+        setLimitInfo({ allowed: true, currentCount: 0, limit: 1 })
+      } finally {
+        setIsCheckingLimit(false)
+      }
+    }
+
+    checkLimit()
+  }, [])
+
+  const handleTrialStarted = () => {
+    // Refresh limit after trial starts
+    setShowUpgradeModal(false)
+    setIsCheckingLimit(true)
+    canCreateJob().then(result => {
+      setLimitInfo(result)
+      setIsCheckingLimit(false)
+    })
+  }
 
   const steps = [
     { number: 1, title: 'Job Card', description: 'Public listing info' },
@@ -177,8 +223,37 @@ const CreateJobPage = () => {
     }
   }
 
+  // Show loading while checking limit
+  if (isCheckingLimit) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0B0B0B] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Checking subscription...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0B0B0B] py-8">
+      {/* Upgrade Modal */}
+      <UpgradePromptModal
+        isOpen={showUpgradeModal}
+        onClose={() => {
+          setShowUpgradeModal(false)
+          if (!limitInfo?.allowed) {
+            navigate('/create')
+          }
+        }}
+        limitType="jobs"
+        currentCount={limitInfo?.currentCount || 0}
+        currentLimit={limitInfo?.limit || 1}
+        currentTier="free"
+        canStartTrial={canTrial}
+        onTrialStarted={handleTrialStarted}
+      />
+
       <div className="max-w-5xl mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
