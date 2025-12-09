@@ -1,18 +1,19 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../App'
 import { Button } from '@/components/ui/button'
-import { 
-  Home, 
-  Search, 
-  MessageCircle, 
-  Calendar, 
-  FolderOpen, 
-  User, 
+import {
+  Home,
+  Search,
+  MessageCircle,
+  Calendar,
+  FolderOpen,
+  User,
   LogOut,
   Menu,
   X,
   Settings,
-  Shield
+  Shield,
+  HelpCircle
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
@@ -56,6 +57,7 @@ const Navbar = () => {
     { path: '/bookings', label: 'Bookings', icon: Calendar },
     { path: '/studio', label: 'Studio', icon: FolderOpen },
     { path: '/settings', label: 'Settings', icon: Settings },
+    { path: '/help', label: 'Help', icon: HelpCircle },
   ]
 
   const isActive = (path) => location.pathname === path
@@ -209,6 +211,14 @@ const Navbar = () => {
                 >
                   <User className="w-5 h-5" />
                   <span>Profile</span>
+                </Link>
+                <Link
+                  to="/help"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center space-x-3 px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                >
+                  <HelpCircle className="w-5 h-5" />
+                  <span>Help Center</span>
                 </Link>
                 <button
                   onClick={handleLogout}
