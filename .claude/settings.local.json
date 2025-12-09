@@ -54,7 +54,10 @@
       "Bash(psql \"postgresql://postgres.faqiwcrnltuqvhkmzrxp:ZqH3tVuhb5wgZD8B@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres\" -c \"ALTER TABLE messages ADD COLUMN IF NOT EXISTS job_id UUID REFERENCES job_postings(id) ON DELETE SET NULL; ALTER TABLE messages ADD COLUMN IF NOT EXISTS context_type TEXT;\")",
       "Bash(timeout 60 npx supabase:*)",
       "Bash(psql \"postgresql://postgres.faqiwcrnltuqvhkmzrxp:ZqH3tVuhb5wgZD8B@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres\" -c \"\n-- Migration 1: Add Job Context to Messages\nALTER TABLE messages ADD COLUMN IF NOT EXISTS job_id UUID REFERENCES job_postings(id) ON DELETE SET NULL;\nALTER TABLE messages ADD COLUMN IF NOT EXISTS context_type TEXT;\n\")",
-      "Bash(apt list:*)"
+      "Bash(apt list:*)",
+      "Bash(grep:*)",
+      "Bash(psql \"postgresql://postgres.faqiwcrnltuqvhkmzrxp:ZqH3tVuhb5wgZD8B@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres\" -c \"SELECT * FROM supabase_migrations.schema_migrations ORDER BY version DESC LIMIT 10;\")",
+      "Bash(git fetch:*)"
     ],
     "deny": [],
     "ask": []

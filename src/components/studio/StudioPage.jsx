@@ -1,3 +1,10 @@
+/**
+ * TIES STUDIO - Unified Project Management Hub
+ *
+ * All jobs are projects. Whether you created them (organizer) or
+ * were accepted to them (team member), they all appear here.
+ */
+
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../App'
@@ -7,39 +14,40 @@ import {
   Users,
   Calendar,
   DollarSign,
-  FileText,
-  MessageSquare,
-  Settings,
   FolderOpen,
   CheckCircle,
-  Upload,
-  BarChart3,
-  Target,
-  Zap,
   Search,
-  Edit,
   MapPin,
   Briefcase,
   Eye,
   ArrowRight,
   Loader2,
-  Info
+  Crown,
+  UserCheck,
+  Clock,
+  Filter,
+  LayoutGrid,
+  List,
+  Edit,
+  MessageCircle
 } from 'lucide-react'
 import { Button } from '../ui/button'
+import { Badge } from '../ui/badge'
 
 const StudioPage = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState('my-projects')
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('All Status')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [roleFilter, setRoleFilter] = useState('all') // 'all', 'organizer', 'team'
+  const [viewMode, setViewMode] = useState('grid') // 'grid' or 'list'
 
   // Real data states
   const [acceptedJobs, setAcceptedJobs] = useState([])
   const [myPostedJobs, setMyPostedJobs] = useState([])
   const [loading, setLoading] = useState(true)
 
-  // Load accepted jobs and posted jobs
+  // Load all projects
   useEffect(() => {
     loadData()
   }, [user?.id])
@@ -48,14 +56,15 @@ const StudioPage = () => {
     if (!user?.id) return
     setLoading(true)
     try {
-      // Load jobs I've been accepted to (as a freelancer/vendor/venue)
-      const acceptedResult = await getMyAcceptedJobs()
+      const [acceptedResult, postedResult] = await Promise.all([
+        getMyAcceptedJobs(),
+        getJobPostings()
+      ])
+
       if (acceptedResult.success) {
         setAcceptedJobs(acceptedResult.data || [])
       }
 
-      // Load jobs I've posted (as an organiser)
-      const postedResult = await getJobPostings()
       if (postedResult.success) {
         const myJobs = postedResult.data?.filter(job => job.organiser_id === user.id) || []
         setMyPostedJobs(myJobs)
@@ -83,454 +92,407 @@ const StudioPage = () => {
     }).format(amount || 0)
   }
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'open': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-      case 'in_progress': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
-      case 'filled': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
-      case 'completed': return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
-      case 'cancelled': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
+  const getStatusConfig = (status) => {
+    const configs = {
+      open: {
+        label: 'Open',
+        color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+        icon: Clock
+      },
+      in_progress: {
+        label: 'In Progress',
+        color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+        icon: ArrowRight
+      },
+      filled: {
+        label: 'Filled',
+        color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+        icon: UserCheck
+      },
+      completed: {
+        label: 'Completed',
+        color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+        icon: CheckCircle
+      },
+      cancelled: {
+        label: 'Cancelled',
+        color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+        icon: null
+      }
     }
+    return configs[status] || configs.open
   }
 
-  // Filter accepted jobs based on search and status
-  const filteredAcceptedJobs = acceptedJobs.filter(job => {
-    const matchesSearch = !searchTerm ||
-      job.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.location?.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === 'All Status' || job.status === statusFilter.toLowerCase().replace(' ', '_')
-    return matchesSearch && matchesStatus
-  })
-
-  // Filter posted jobs based on search and status
-  const filteredPostedJobs = myPostedJobs.filter(job => {
-    const matchesSearch = !searchTerm ||
-      job.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.location?.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === 'All Status' || job.status === statusFilter.toLowerCase().replace(' ', '_')
-    return matchesSearch && matchesStatus
-  })
-  
-  const studioFeatures = [
-    {
-      icon: FolderOpen,
-      title: 'Unlimited Studio Workspaces',
-      description: 'Manage multiple event-based projects simultaneously'
-    },
-    {
-      icon: Users,
-      title: 'Collaborator Access & Role Permissions',
-      description: 'Invite crew, clients, or co-organisers with tiered access control'
-    },
-    {
-      icon: CheckCircle,
-      title: 'Task Management Suite',
-      description: 'Create tasks with deadlines, assign roles, build timelines'
-    },
-    {
-      icon: FileText,
-      title: 'Template Library',
-      description: 'Reusable templates for budgets, run sheets, crew packs'
-    },
-    {
-      icon: Target,
-      title: 'Vendor & Role Tagging',
-      description: 'Automate task delegation based on service types'
-    },
-    {
-      icon: MessageSquare,
-      title: 'In-Studio Messaging & Notifications',
-      description: 'Threaded communication tied to tasks, files, and updates'
-    },
-    {
-      icon: Upload,
-      title: 'File Management System',
-      description: 'Upload files with version history and real-time comments'
-    },
-    {
-      icon: BarChart3,
-      title: 'Budget Tracking & Reporting',
-      description: 'Estimate vs actual budget view with exportable summaries'
-    },
-    {
-      icon: Users,
-      title: 'Client Dashboard View',
-      description: 'Grant limited access to stakeholders for approval and visibility'
-    },
-    {
-      icon: Zap,
-      title: 'Event Preset Kits',
-      description: 'Pre-built role/task templates for different event types'
-    }
+  // Combine and tag all projects
+  const allProjects = [
+    ...myPostedJobs.map(job => ({ ...job, userRole: 'organizer' })),
+    ...acceptedJobs.map(job => ({ ...job, userRole: 'team' }))
   ]
 
+  // Remove duplicates (if user is both organizer and team member somehow)
+  const uniqueProjects = allProjects.filter((project, index, self) =>
+    index === self.findIndex(p => p.id === project.id)
+  )
+
+  // Apply filters
+  const filteredProjects = uniqueProjects.filter(project => {
+    const matchesSearch = !searchTerm ||
+      project.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.location?.toLowerCase().includes(searchTerm.toLowerCase())
+
+    const matchesStatus = statusFilter === 'all' || project.status === statusFilter
+
+    const matchesRole = roleFilter === 'all' || project.userRole === roleFilter
+
+    return matchesSearch && matchesStatus && matchesRole
+  })
+
+  // Sort by date (most recent first)
+  const sortedProjects = [...filteredProjects].sort((a, b) => {
+    return new Date(b.created_at || 0) - new Date(a.created_at || 0)
+  })
+
+  // Stats
+  const stats = {
+    total: uniqueProjects.length,
+    asOrganizer: myPostedJobs.length,
+    asTeamMember: acceptedJobs.length,
+    active: uniqueProjects.filter(p => ['open', 'in_progress', 'filled'].includes(p.status)).length,
+    completed: uniqueProjects.filter(p => p.status === 'completed').length
+  }
+
+  const ProjectCard = ({ project }) => {
+    const statusConfig = getStatusConfig(project.status)
+    const isOrganizer = project.userRole === 'organizer'
+
+    return (
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-600 transition-all">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              {isOrganizer ? (
+                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800 text-xs">
+                  <Crown className="h-3 w-3 mr-1" />
+                  Organizer
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800 text-xs">
+                  <UserCheck className="h-3 w-3 mr-1" />
+                  Team Member
+                </Badge>
+              )}
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+              {project.title}
+            </h3>
+          </div>
+          <Badge className={`${statusConfig.color} text-xs ml-2 flex-shrink-0`}>
+            {statusConfig.label}
+          </Badge>
+        </div>
+
+        {/* Details */}
+        <div className="space-y-2 mb-4 text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex items-center gap-2">
+            <MapPin size={14} className="flex-shrink-0" />
+            <span className="truncate">{project.location || 'Location TBD'}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Calendar size={14} className="flex-shrink-0" />
+            <span>{formatDate(project.start_date)}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <DollarSign size={14} className="flex-shrink-0" />
+            <span>
+              {isOrganizer
+                ? `Budget: ${formatCurrency(project.total_budget)}`
+                : `Your Rate: ${formatCurrency(project.my_role?.budget || project.total_budget)}`
+              }
+            </span>
+          </div>
+          {!isOrganizer && project.organiser && (
+            <div className="flex items-center gap-2">
+              <Users size={14} className="flex-shrink-0" />
+              <span className="truncate">By {project.organiser.display_name}</span>
+            </div>
+          )}
+          {isOrganizer && project.roles && (
+            <div className="flex items-center gap-2">
+              <Users size={14} className="flex-shrink-0" />
+              <span>{project.roles.length} role(s) • {project.roles.reduce((acc, r) => acc + (r.filled_count || 0), 0)} filled</span>
+            </div>
+          )}
+        </div>
+
+        {/* Role Badge (for team members) */}
+        {!isOrganizer && project.my_role && (
+          <div className="mb-4">
+            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800">
+              {project.my_role.role_title}
+            </Badge>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex items-center gap-2">
+          {isOrganizer ? (
+            <>
+              <Button
+                onClick={() => navigate(`/jobs/${project.id}/applicants`)}
+                variant="outline"
+                size="sm"
+                className="flex-1"
+              >
+                <Users size={14} className="mr-1" />
+                Applicants
+              </Button>
+              <Button
+                onClick={() => navigate(`/jobs/${project.id}/workspace`)}
+                size="sm"
+                className="flex-1"
+              >
+                Open Workspace
+                <ArrowRight size={14} className="ml-1" />
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                onClick={() => navigate(`/jobs/${project.id}/workspace`)}
+                size="sm"
+                className="flex-1"
+              >
+                Open Workspace
+                <ArrowRight size={14} className="ml-1" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/messages')}
+              >
+                <MessageCircle size={14} />
+              </Button>
+            </>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/jobs/${project.id}`)}
+          >
+            <Eye size={14} />
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  const ProjectListItem = ({ project }) => {
+    const statusConfig = getStatusConfig(project.status)
+    const isOrganizer = project.userRole === 'organizer'
+
+    return (
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition-all">
+        <div className="flex items-center gap-4">
+          {/* Role indicator */}
+          <div className={`w-1 h-12 rounded-full flex-shrink-0 ${isOrganizer ? 'bg-amber-500' : 'bg-blue-500'}`} />
+
+          {/* Main content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-semibold text-gray-900 dark:text-white truncate">{project.title}</h3>
+              <Badge className={`${statusConfig.color} text-xs`}>
+                {statusConfig.label}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+              <span className="flex items-center gap-1">
+                <MapPin size={12} />
+                {project.location || 'TBD'}
+              </span>
+              <span className="flex items-center gap-1">
+                <Calendar size={12} />
+                {formatDate(project.start_date)}
+              </span>
+              <span className="flex items-center gap-1">
+                <DollarSign size={12} />
+                {formatCurrency(project.total_budget)}
+              </span>
+            </div>
+          </div>
+
+          {/* Role badge */}
+          <Badge variant="outline" className={`flex-shrink-0 ${isOrganizer ? 'border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-400' : 'border-blue-300 text-blue-700 dark:border-blue-700 dark:text-blue-400'}`}>
+            {isOrganizer ? 'Organizer' : project.my_role?.role_title || 'Team'}
+          </Badge>
+
+          {/* Actions */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Button
+              onClick={() => navigate(`/jobs/${project.id}/workspace`)}
+              size="sm"
+            >
+              Open
+              <ArrowRight size={14} className="ml-1" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0B0B0B] transition-colors duration-200">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0B0B0B]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-3 bg-[#E03131]/10 rounded-lg">
-              <FolderOpen className="w-8 h-8 text-[#E03131]" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">TIES Studio</h1>
-              <p className="text-gray-600 dark:text-gray-400">
-                Your project management hub for jobs you're working on and jobs you've posted
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation Tabs */}
-        <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 overflow-x-auto">
-          {[
-            { id: 'my-projects', label: 'Jobs I\'m Working On', icon: Briefcase, count: acceptedJobs.length },
-            { id: 'my-postings', label: 'Jobs I\'ve Posted', icon: FolderOpen, count: myPostedJobs.length },
-            { id: 'features', label: 'Studio Features', icon: Zap },
-            { id: 'settings', label: 'Settings', icon: Settings }
-          ].map((tab) => {
-            const IconComponent = tab.icon
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                }`}
-              >
-                <IconComponent size={16} />
-                {tab.label}
-                {tab.count !== undefined && (
-                  <span className={`ml-1 px-2 py-0.5 rounded-full text-xs ${
-                    activeTab === tab.id
-                      ? 'bg-[#E03131] text-white'
-                      : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
-                  }`}>
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Content based on active tab */}
-        {activeTab === 'my-projects' && (
-          <div>
-            {/* Info Banner */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
-              <div className="flex items-start gap-3">
-                <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-blue-800 dark:text-blue-300">
-                  <p className="font-medium mb-1">Jobs You've Been Accepted To</p>
-                  <p className="text-blue-700 dark:text-blue-400">
-                    These are jobs where you applied and were selected. Use Studio to manage tasks, files, and communicate with the team.
-                  </p>
-                </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-[#E03131]/10 rounded-xl">
+                <FolderOpen className="w-8 h-8 text-[#E03131]" />
               </div>
-            </div>
-
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Jobs I'm Working On</h2>
-              <Button onClick={() => navigate('/jobs')} variant="outline">
-                <Search size={16} className="mr-2" />
-                Find More Jobs
-              </Button>
-            </div>
-
-            {/* Search and Filter */}
-            <div className="flex items-center gap-4 mb-6">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={16} />
-                <input
-                  type="text"
-                  placeholder="Search jobs by title or location..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E03131]/20"
-                />
-              </div>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E03131]/20"
-              >
-                <option>All Status</option>
-                <option>Open</option>
-                <option>In Progress</option>
-                <option>Filled</option>
-                <option>Completed</option>
-              </select>
-            </div>
-
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-[#E03131]" />
-              </div>
-            ) : filteredAcceptedJobs.length === 0 ? (
-              <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Active Jobs Yet</h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  You haven't been accepted to any jobs yet. Browse the Jobs Feed to find opportunities!
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Studio</h1>
+                <p className="text-gray-600 dark:text-gray-400">
+                  All your projects in one place
                 </p>
-                <Button onClick={() => navigate('/jobs')}>
-                  Browse Jobs Feed
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredAcceptedJobs.map((job) => (
-                  <div key={job.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 hover:shadow-lg transition-shadow">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{job.title}</h3>
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(job.status)}`}>
-                            {job.status?.replace('_', ' ')}
-                          </span>
-                          {job.my_role && (
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
-                              {job.my_role.role_title}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2 mb-4 text-sm text-gray-600 dark:text-gray-400">
-                      <div className="flex items-center gap-2">
-                        <MapPin size={14} />
-                        <span>{job.location || 'Location TBD'}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Calendar size={14} />
-                        <span>{formatDate(job.start_date)} - {formatDate(job.end_date)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <DollarSign size={14} />
-                        <span>{formatCurrency(job.my_role?.budget || job.total_budget)}</span>
-                      </div>
-                      {job.organiser && (
-                        <div className="flex items-center gap-2">
-                          <Users size={14} />
-                          <span>Organized by {job.organiser.display_name}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Button
-                        onClick={() => navigate(`/jobs/${job.id}/workspace`)}
-                        className="flex-1"
-                      >
-                        Open Workspace
-                        <ArrowRight size={16} className="ml-2" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => navigate(`/jobs/${job.id}`)}
-                      >
-                        <Eye size={16} />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'my-postings' && (
-          <div>
-            {/* Info Banner */}
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-6">
-              <div className="flex items-start gap-3">
-                <Info className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-amber-800 dark:text-amber-300">
-                  <p className="font-medium mb-1">Jobs You've Posted</p>
-                  <p className="text-amber-700 dark:text-amber-400">
-                    Manage job postings you've created. Review applicants, select team members, and manage the project once roles are filled.
-                  </p>
-                </div>
               </div>
             </div>
+            <Button onClick={() => navigate('/jobs/create')}>
+              <Plus size={16} className="mr-2" />
+              New Project
+            </Button>
+          </div>
+        </div>
 
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Jobs I've Posted</h2>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">Total Projects</div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.asOrganizer}</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">As Organizer</div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.asTeamMember}</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">As Team Member</div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.active}</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">Active</div>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Search */}
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+              <input
+                type="text"
+                placeholder="Search projects..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E03131]/20 focus:border-[#E03131]"
+              />
+            </div>
+
+            {/* Role Filter */}
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="px-4 py-2.5 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E03131]/20"
+            >
+              <option value="all">All Roles</option>
+              <option value="organizer">As Organizer</option>
+              <option value="team">As Team Member</option>
+            </select>
+
+            {/* Status Filter */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-2.5 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E03131]/20"
+            >
+              <option value="all">All Status</option>
+              <option value="open">Open</option>
+              <option value="in_progress">In Progress</option>
+              <option value="filled">Filled</option>
+              <option value="completed">Completed</option>
+            </select>
+
+            {/* View Toggle */}
+            <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2.5 ${viewMode === 'grid' ? 'bg-[#E03131] text-white' : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+              >
+                <LayoutGrid size={18} />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-2.5 ${viewMode === 'list' ? 'bg-[#E03131] text-white' : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+              >
+                <List size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-[#E03131]" />
+          </div>
+        ) : sortedProjects.length === 0 ? (
+          <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+            <FolderOpen className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+              {searchTerm || statusFilter !== 'all' || roleFilter !== 'all'
+                ? 'No matching projects found'
+                : 'No projects yet'}
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+              {searchTerm || statusFilter !== 'all' || roleFilter !== 'all'
+                ? 'Try adjusting your filters to find what you\'re looking for.'
+                : 'Create a new project to hire talent, or browse the Jobs Feed to find work opportunities.'}
+            </p>
+            <div className="flex items-center justify-center gap-3">
               <Button onClick={() => navigate('/jobs/create')}>
                 <Plus size={16} className="mr-2" />
-                Post New Job
+                Create Project
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/jobs')}>
+                <Briefcase size={16} className="mr-2" />
+                Browse Jobs
               </Button>
             </div>
-
-            {/* Search and Filter */}
-            <div className="flex items-center gap-4 mb-6">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={16} />
-                <input
-                  type="text"
-                  placeholder="Search your jobs..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E03131]/20"
-                />
-              </div>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E03131]/20"
-              >
-                <option>All Status</option>
-                <option>Open</option>
-                <option>In Progress</option>
-                <option>Filled</option>
-                <option>Cancelled</option>
-              </select>
+          </div>
+        ) : (
+          <>
+            {/* Results count */}
+            <div className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              Showing {sortedProjects.length} project{sortedProjects.length !== 1 ? 's' : ''}
             </div>
 
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-[#E03131]" />
-              </div>
-            ) : filteredPostedJobs.length === 0 ? (
-              <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                <FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Jobs Posted Yet</h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  You haven't posted any jobs yet. Create a job to find freelancers, venues, or vendors for your events.
-                </p>
-                <Button onClick={() => navigate('/jobs/create')}>
-                  <Plus size={16} className="mr-2" />
-                  Post Your First Job
-                </Button>
+            {/* Projects Grid/List */}
+            {viewMode === 'grid' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {sortedProjects.map((project) => (
+                  <ProjectCard key={project.id} project={project} />
+                ))}
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredPostedJobs.map((job) => (
-                  <div key={job.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 hover:shadow-lg transition-shadow">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{job.title}</h3>
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(job.status)}`}>
-                            {job.status?.replace('_', ' ')}
-                          </span>
-                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 capitalize">
-                            {job.event_type?.replace('_', ' ')}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2 mb-4 text-sm text-gray-600 dark:text-gray-400">
-                      <div className="flex items-center gap-2">
-                        <MapPin size={14} />
-                        <span>{job.location || 'Location TBD'}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Calendar size={14} />
-                        <span>{formatDate(job.start_date)} - {formatDate(job.end_date)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <DollarSign size={14} />
-                        <span>Budget: {formatCurrency(job.total_budget)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Users size={14} />
-                        <span>{job.roles?.length || 0} role(s)</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Button
-                        onClick={() => navigate(`/jobs/${job.id}/applicants`)}
-                        variant="outline"
-                        className="flex-1"
-                      >
-                        <Users size={16} className="mr-2" />
-                        View Applicants
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => navigate(`/jobs/${job.id}`)}
-                      >
-                        <Eye size={16} />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => navigate(`/jobs/${job.id}/edit`)}
-                      >
-                        <Edit size={16} />
-                      </Button>
-                    </div>
-                  </div>
+              <div className="space-y-3">
+                {sortedProjects.map((project) => (
+                  <ProjectListItem key={project.id} project={project} />
                 ))}
               </div>
             )}
-          </div>
-        )}
-
-        {activeTab === 'features' && (
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Studio Features</h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {studioFeatures.map((feature, index) => {
-                const IconComponent = feature.icon
-                return (
-                  <div key={index} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="p-3 rounded-lg bg-[#E03131]/10 text-[#E03131]">
-                        <IconComponent size={24} />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">{feature.title}</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{feature.description}</p>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'settings' && (
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Studio Settings</h2>
-
-            <div className="space-y-6">
-              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Notification Preferences</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium text-gray-900 dark:text-white">Email Notifications</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Receive updates about workspace activity
-                      </div>
-                    </div>
-                    <input type="checkbox" className="h-4 w-4" defaultChecked />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium text-gray-900 dark:text-white">Auto-assign Tasks</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Automatically assign tasks based on collaborator roles
-                      </div>
-                    </div>
-                    <input type="checkbox" className="h-4 w-4" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          </>
         )}
       </div>
     </div>
@@ -538,4 +500,3 @@ const StudioPage = () => {
 }
 
 export default StudioPage
-

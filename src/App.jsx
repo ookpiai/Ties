@@ -55,7 +55,7 @@ import BookingsPage from './components/bookings/BookingsPage'
 import SettingsPage from './components/settings/SettingsPage'
 import ReportPage from './components/report/ReportPage'
 import AdminDashboard from './components/admin/AdminDashboard'
-import FunctionalStudioPage from './components/studio/FunctionalStudioPage'
+import StudioPage from './components/studio/StudioPage'
 import EnhancedOnboarding from './components/onboarding/EnhancedOnboarding'
 import ProfilePage from './components/profile/ProfilePage'
 import PublicProfileView from './components/profile/PublicProfileView'
@@ -509,7 +509,7 @@ function AppRoutes() {
           <Route path="/studio" element={
             <ProtectedRoute>
               <AppLayout>
-                <FunctionalStudioPage />
+                <StudioPage />
               </AppLayout>
             </ProtectedRoute>
           } />
