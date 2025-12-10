@@ -65,6 +65,7 @@ import JobFeedPage from './components/jobs/JobFeedPage'
 import CreateJobPage from './components/jobs/CreateJobPage'
 import MyApplicationsPage from './components/jobs/MyApplicationsPage'
 import JobApplicantsPage from './components/jobs/JobApplicantsPage'
+import JobDetailPage from './components/jobs/JobDetailPage'
 import MyJobsPage from './components/jobs/MyJobsPage'
 import VenuePortfolio from './components/venue/VenuePortfolio'
 import { BadgeRulesPage } from './components/profile/badges'
@@ -485,6 +486,13 @@ function AppRoutes() {
               </AppLayout>
             </ProtectedRoute>
           } />
+          <Route path="/jobs/my-jobs" element={
+            <ProtectedRoute>
+              <AppLayout>
+                <MyJobsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
           <Route path="/jobs/:jobId/applicants" element={
             <ProtectedRoute>
               <AppLayout>
@@ -492,10 +500,10 @@ function AppRoutes() {
               </AppLayout>
             </ProtectedRoute>
           } />
-          <Route path="/jobs/my-jobs" element={
+          <Route path="/jobs/:jobId" element={
             <ProtectedRoute>
               <AppLayout>
-                <MyJobsPage />
+                <JobDetailPage />
               </AppLayout>
             </ProtectedRoute>
           } />

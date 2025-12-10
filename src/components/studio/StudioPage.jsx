@@ -245,25 +245,25 @@ const StudioPage = () => {
                 className="flex-1"
               >
                 <Users size={14} className="mr-1" />
-                Applicants
+                View Applicants
               </Button>
               <Button
-                onClick={() => navigate(`/jobs/${project.id}/workspace`)}
+                onClick={() => navigate(`/jobs/${project.id}`)}
                 size="sm"
                 className="flex-1"
               >
-                Open Workspace
+                View Job
                 <ArrowRight size={14} className="ml-1" />
               </Button>
             </>
           ) : (
             <>
               <Button
-                onClick={() => navigate(`/jobs/${project.id}/workspace`)}
+                onClick={() => navigate(`/jobs/${project.id}`)}
                 size="sm"
                 className="flex-1"
               >
-                Open Workspace
+                View Job
                 <ArrowRight size={14} className="ml-1" />
               </Button>
               <Button
@@ -275,13 +275,6 @@ const StudioPage = () => {
               </Button>
             </>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate(`/jobs/${project.id}`)}
-          >
-            <Eye size={14} />
-          </Button>
         </div>
       </div>
     )

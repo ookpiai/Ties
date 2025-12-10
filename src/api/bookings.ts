@@ -206,13 +206,13 @@ export async function getBookings(
       .from('bookings')
       .select(`
         *,
-        client_profile:profiles!bookings_client_id_fkey(
+        client_profile:profiles!client_id(
           id,
           display_name,
           avatar_url,
           role
         ),
-        freelancer_profile:profiles!bookings_freelancer_id_fkey(
+        freelancer_profile:profiles!freelancer_id(
           id,
           display_name,
           avatar_url,
@@ -262,14 +262,14 @@ export async function getBookingById(
       .from('bookings')
       .select(`
         *,
-        client_profile:profiles!bookings_client_id_fkey(
+        client_profile:profiles!client_id(
           id,
           display_name,
           avatar_url,
           role,
           bio
         ),
-        freelancer_profile:profiles!bookings_freelancer_id_fkey(
+        freelancer_profile:profiles!freelancer_id(
           id,
           display_name,
           avatar_url,
@@ -701,12 +701,12 @@ export async function getUpcomingBookings(userId: string): Promise<Booking[]> {
       .from('bookings')
       .select(`
         *,
-        client_profile:profiles!bookings_client_id_fkey(
+        client_profile:profiles!client_id(
           id,
           display_name,
           avatar_url
         ),
-        freelancer_profile:profiles!bookings_freelancer_id_fkey(
+        freelancer_profile:profiles!freelancer_id(
           id,
           display_name,
           avatar_url
