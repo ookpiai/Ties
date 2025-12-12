@@ -72,7 +72,7 @@ const checklistConfig = {
       title: 'Add portfolio items',
       description: 'Showcase your best work with photos or videos',
       icon: Camera,
-      href: '/profile?tab=portfolio',
+      href: '/create/portfolio',
       checkFn: (user, profile) => profile?.portfolio_items?.length > 0
     },
     {
@@ -172,7 +172,7 @@ const checklistConfig = {
       title: 'Add event photos',
       description: 'Show events hosted at your venue',
       icon: Camera,
-      href: '/profile?tab=portfolio',
+      href: '/create/portfolio',
       checkFn: (user, profile) => profile?.portfolio_items?.length > 0
     },
     {
