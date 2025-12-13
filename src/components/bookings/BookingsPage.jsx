@@ -27,7 +27,7 @@ import { createCalendarBlock } from '../../api/calendarUnified'
 
 const BookingsPage = () => {
   const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState('all')
+  const [activeTab, setActiveTab] = useState('schedule')
   const [bookings, setBookings] = useState([])
   const [stats, setStats] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -49,9 +49,8 @@ const BookingsPage = () => {
     setIsLoading(true)
     setError(null)
     try {
-      // Determine role filter based on active tab
-      const roleFilter = activeTab === 'as-client' ? 'client' : activeTab === 'as-freelancer' ? 'freelancer' : 'both'
-      const data = await getBookings(user.id, roleFilter)
+      // Always get all bookings (both client and freelancer)
+      const data = await getBookings(user.id, 'both')
       setBookings(data)
     } catch (err) {
       setError(err.message)
@@ -169,14 +168,14 @@ const BookingsPage = () => {
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
           Bookings
           <HelpTooltip
-            content="View and manage all your bookings. 'Hired Others' shows services you've booked from others. 'Got Hired' shows gigs where you've been hired. Click on bookings to expand job details when applicable."
+            content="View your schedule and manage all your bookings. The calendar shows your jobs, bookings, and availability at a glance. Click on events to see details."
             title="Your Bookings"
             variant="info"
             size="sm"
           />
         </h1>
         <p className="text-muted-foreground">
-          Track who you've hired and who's hired you
+          Manage your schedule and bookings
         </p>
       </div>
 
@@ -203,7 +202,7 @@ const BookingsPage = () => {
                 size="sm"
                 className="border-orange-300 text-orange-700 hover:bg-orange-100 dark:border-orange-600 dark:text-orange-300"
                 onClick={() => {
-                  setActiveTab('as-freelancer')
+                  setActiveTab('all')
                   setStatusFilter('pending')
                 }}
               >
@@ -318,7 +317,11 @@ const BookingsPage = () => {
       <Card>
         <CardContent className="p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-5 mb-6">
+            <TabsList className="grid w-full grid-cols-3 mb-6">
+              <TabsTrigger value="schedule">
+                <CalendarDays className="w-4 h-4 mr-1" />
+                Schedule
+              </TabsTrigger>
               <TabsTrigger value="all">
                 All Bookings
                 {bookings.length > 0 && (
@@ -327,43 +330,19 @@ const BookingsPage = () => {
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="as-client" className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-1">
-                <span className="hidden sm:inline">Hired Others</span>
-                <span className="sm:hidden text-xs">Hired</span>
-                {stats && stats.as_client.total > 0 && (
-                  <Badge variant="secondary" className="ml-1 sm:ml-2">
-                    {stats.as_client.total}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="as-freelancer" className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-1">
-                <span className="hidden sm:inline">Got Hired</span>
-                <span className="sm:hidden text-xs">Gigs</span>
-                {stats && stats.as_freelancer.total > 0 && (
-                  <Badge variant="secondary" className="ml-1 sm:ml-2">
-                    {stats.as_freelancer.total}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="schedule">
-                <CalendarDays className="w-4 h-4 mr-1" />
-                <span className="hidden sm:inline">Schedule</span>
-                <span className="sm:hidden">Cal</span>
-              </TabsTrigger>
               <TabsTrigger value="requests">
                 <CalendarCheck className="w-4 h-4 mr-1" />
-                <span className="hidden sm:inline">Requests</span>
-                <span className="sm:hidden">Req</span>
+                Requests
                 {pendingRequestsCount > 0 && (
-                  <Badge variant="destructive" className="ml-1 sm:ml-2">
+                  <Badge variant="destructive" className="ml-2">
                     {pendingRequestsCount}
                   </Badge>
                 )}
               </TabsTrigger>
             </TabsList>
 
-            {/* Modern Filter Bar - Only show on booking tabs */}
-            {['all', 'as-client', 'as-freelancer'].includes(activeTab) && (
+            {/* Modern Filter Bar - Only show on bookings tab */}
+            {activeTab === 'all' && (
               <FilterBar
                 searchValue={searchQuery}
                 onSearchChange={setSearchQuery}
@@ -397,42 +376,26 @@ const BookingsPage = () => {
             {/* Bookings Content */}
             {!isLoading && !error && (
               <>
-                <TabsContent value="all" className="mt-0">
-                  <BookingsList
-                    bookings={filteredBookings}
-                    currentUserId={user?.id}
-                    onUpdate={handleBookingUpdate}
-                  />
-                </TabsContent>
-
-                <TabsContent value="as-client" className="mt-0">
-                  <BookingsList
-                    bookings={filteredBookings}
-                    currentUserId={user?.id}
-                    onUpdate={handleBookingUpdate}
-                  />
-                </TabsContent>
-
-                <TabsContent value="as-freelancer" className="mt-0">
-                  <BookingsList
-                    bookings={filteredBookings}
-                    currentUserId={user?.id}
-                    onUpdate={handleBookingUpdate}
-                  />
-                </TabsContent>
-
                 <TabsContent value="schedule" className="mt-0">
                   <CalendarView
                     showJobIntegration={true}
                     onBlockDates={() => setShowBlockModal(true)}
                     onEventClick={(event) => {
                       if (event.type === 'booking') {
-                        // Find the booking in our list and scroll to it or show it
+                        // Navigate to bookings tab and search for this booking
                         setActiveTab('all')
                         setStatusFilter('all')
                         setSearchQuery(event.title.substring(0, 20))
                       }
                     }}
+                  />
+                </TabsContent>
+
+                <TabsContent value="all" className="mt-0">
+                  <BookingsList
+                    bookings={filteredBookings}
+                    currentUserId={user?.id}
+                    onUpdate={handleBookingUpdate}
                   />
                 </TabsContent>
 
