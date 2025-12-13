@@ -58,7 +58,11 @@
       "Bash(grep:*)",
       "Bash(psql \"postgresql://postgres.faqiwcrnltuqvhkmzrxp:ZqH3tVuhb5wgZD8B@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres\" -c \"SELECT * FROM supabase_migrations.schema_migrations ORDER BY version DESC LIMIT 10;\")",
       "Bash(git fetch:*)",
-      "WebFetch(domain:www.saasframe.io)"
+      "WebFetch(domain:www.saasframe.io)",
+      "Bash(npx supabase db push:*)",
+      "WebFetch(domain:help.behance.net)",
+      "WebFetch(domain:www.behance.net)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []
