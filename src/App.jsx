@@ -67,6 +67,7 @@ import MyApplicationsPage from './components/jobs/MyApplicationsPage'
 import JobApplicantsPage from './components/jobs/JobApplicantsPage'
 import JobDetailPage from './components/jobs/JobDetailPage'
 import MyJobsPage from './components/jobs/MyJobsPage'
+import CalendarPage from './components/calendar/CalendarPage'
 import VenuePortfolio from './components/venue/VenuePortfolio'
 import { BadgeRulesPage } from './components/profile/badges'
 import TestAccountsPage from './components/dev/TestAccountsPage'
@@ -457,6 +458,13 @@ function AppRoutes() {
             <ProtectedRoute>
               <AppLayout>
                 <BookingsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/calendar" element={
+            <ProtectedRoute>
+              <AppLayout>
+                <CalendarPage />
               </AppLayout>
             </ProtectedRoute>
           } />

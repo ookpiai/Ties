@@ -6,6 +6,7 @@ import {
   Search,
   MessageCircle,
   Calendar,
+  CalendarCheck,
   FolderOpen,
   User,
   LogOut,
@@ -52,9 +53,10 @@ const Navbar = () => {
 
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: Home },
+    { path: '/calendar', label: 'Calendar', icon: Calendar },
     { path: '/discover', label: 'Discover', icon: Search },
     { path: '/messages', label: 'Messages', icon: MessageCircle },
-    { path: '/bookings', label: 'Bookings', icon: Calendar },
+    { path: '/bookings', label: 'Bookings', icon: CalendarCheck },
     { path: '/studio', label: 'Studio', icon: FolderOpen },
     { path: '/settings', label: 'Settings', icon: Settings },
     { path: '/help', label: 'Help', icon: HelpCircle },

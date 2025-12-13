@@ -209,6 +209,71 @@ export async function getJobPostings(filters?: {
 }
 
 /**
+ * Get jobs created by the current user (as organizer)
+ * Used for calendar and studio views
+ */
+export async function getMyJobs() {
+  try {
+    const userId = await getCurrentUserId()
+
+    const { data, error } = await supabase
+      .from('job_postings')
+      .select(`
+        *,
+        roles:job_roles(*),
+        applications:job_applications(count)
+      `)
+      .eq('organiser_id', userId)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    return data || []
+  } catch (error: any) {
+    console.error('Error fetching my jobs:', error)
+    return []
+  }
+}
+
+/**
+ * Get jobs the current user has applied to
+ * Returns applications with full job data for calendar display
+ */
+export async function getAppliedJobs() {
+  try {
+    const userId = await getCurrentUserId()
+
+    const { data, error } = await supabase
+      .from('job_applications')
+      .select(`
+        *,
+        job_posting:job_postings!job_id(
+          id,
+          title,
+          description,
+          location,
+          event_type,
+          start_date,
+          end_date,
+          total_budget,
+          status,
+          organiser:profiles!organiser_id(id, display_name, avatar_url)
+        ),
+        role:job_roles!job_role_id(*)
+      `)
+      .eq('applicant_id', userId)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    return data || []
+  } catch (error: any) {
+    console.error('Error fetching applied jobs:', error)
+    return []
+  }
+}
+
+/**
  * Get a single job posting by ID with all details
  */
 export async function getJobPostingById(jobId: string) {
@@ -1718,6 +1783,8 @@ export default {
   createJobPosting,
   getJobPostings,
   getJobPostingById,
+  getMyJobs,
+  getAppliedJobs,
   updateJobPosting,
   cancelJobPosting,
   applyToJobRole,

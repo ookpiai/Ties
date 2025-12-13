@@ -62,7 +62,9 @@
       "Bash(npx supabase db push:*)",
       "WebFetch(domain:help.behance.net)",
       "WebFetch(domain:www.behance.net)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(npx supabase db push --include-all)",
+      "Bash(npx supabase migration repair:*)"
     ],
     "deny": [],
     "ask": []
