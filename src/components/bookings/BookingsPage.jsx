@@ -21,7 +21,7 @@ import BookingCard from './BookingCard'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import { helpContent } from '../../constants/helpContent'
 import AvailabilityRequestsPanel from '../calendar/AvailabilityRequestsPanel'
-import ScheduleGridView from '../calendar/ScheduleGridView'
+import CalendarView from '../calendar/CalendarView'
 import DateRangeBlockModal from '../calendar/DateRangeBlockModal'
 import { createCalendarBlock } from '../../api/calendarUnified'
 
@@ -422,32 +422,18 @@ const BookingsPage = () => {
                 </TabsContent>
 
                 <TabsContent value="schedule" className="mt-0">
-                  <div className="space-y-4">
-                    {/* Quick Actions */}
-                    <div className="flex items-center justify-end gap-2 mb-4">
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowBlockModal(true)}
-                      >
-                        <Lock className="w-4 h-4 mr-2" />
-                        Block Dates
-                      </Button>
-                    </div>
-
-                    {/* Schedule Grid View */}
-                    <ScheduleGridView
-                      userId={user?.id}
-                      onEventClick={(event) => {
-                        console.log('Event clicked:', event)
-                        // TODO: Open booking details modal
-                      }}
-                      onDateClick={(date) => {
-                        console.log('Date clicked:', date)
-                        // TODO: Open date details or create booking
-                      }}
-                      showAddButton={false}
-                    />
-                  </div>
+                  <CalendarView
+                    showJobIntegration={true}
+                    onBlockDates={() => setShowBlockModal(true)}
+                    onEventClick={(event) => {
+                      if (event.type === 'booking') {
+                        // Find the booking in our list and scroll to it or show it
+                        setActiveTab('all')
+                        setStatusFilter('all')
+                        setSearchQuery(event.title.substring(0, 20))
+                      }
+                    }}
+                  />
                 </TabsContent>
 
                 <TabsContent value="requests" className="mt-0">
