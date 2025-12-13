@@ -43,7 +43,7 @@ const BookingsPage = () => {
       loadBookings()
       loadStats()
     }
-  }, [user?.id, activeTab])
+  }, [user?.id])
 
   const loadBookings = async () => {
     setIsLoading(true)
