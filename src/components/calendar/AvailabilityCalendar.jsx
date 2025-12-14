@@ -31,7 +31,7 @@ const AvailabilityCalendar = ({ userId, isOwnProfile = false }) => {
   // Load calendar blocks for current month
   useEffect(() => {
     loadMonthData()
-  }, [userId, selectedDate])
+  }, [userId, selectedDate, isOwnProfile])
 
   const loadMonthData = async () => {
     setIsLoading(true)
@@ -41,15 +41,40 @@ const AvailabilityCalendar = ({ userId, isOwnProfile = false }) => {
       const monthStart = startOfMonth(selectedDate)
       const monthEnd = endOfMonth(selectedDate)
 
-      // Load blocks, availability, and bookings in parallel
-      const [blocksData, availabilityData, bookingsData] = await Promise.all([
-        getCalendarBlocks(userId, monthStart, monthEnd),
-        checkAvailability(userId, monthStart, monthEnd),
-        getBookings(userId, 'both')
-      ])
+      // Load blocks and availability for any profile
+      // Only load bookings if viewing own profile (RLS blocks access to other users' bookings)
+      let blocksData = []
+      let availabilityData = []
+      let bookingsData = []
 
-      setBlocks(blocksData)
-      setAvailability(availabilityData)
+      // Fetch calendar blocks - public availability info
+      try {
+        blocksData = await getCalendarBlocks(userId, monthStart, monthEnd)
+      } catch (blockErr) {
+        console.warn('Failed to load calendar blocks:', blockErr)
+        // Continue without blocks - calendar still useful
+      }
+
+      // Fetch availability data
+      try {
+        availabilityData = await checkAvailability(userId, monthStart, monthEnd)
+      } catch (availErr) {
+        console.warn('Failed to load availability:', availErr)
+        // Continue without detailed availability
+      }
+
+      // Only fetch bookings if viewing own profile (RLS restriction)
+      if (isOwnProfile) {
+        try {
+          bookingsData = await getBookings(userId, 'both')
+        } catch (bookErr) {
+          console.warn('Failed to load bookings:', bookErr)
+          // Continue without bookings
+        }
+      }
+
+      setBlocks(blocksData || [])
+      setAvailability(availabilityData || [])
       // Filter bookings to show only those within current month view
       const filteredBookings = (bookingsData || []).filter(booking => {
         const startDate = new Date(booking.start_date)
