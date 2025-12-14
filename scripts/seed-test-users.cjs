@@ -86,7 +86,9 @@ const TEST_USERS = [
   { email: 'prestige.transport@gmail.com', name: 'Prestige Event Transport', username: 'prestigetransport', role: 'Vendor', specialty: 'transport', city: 0, bio: 'Wedding cars, limousines, and guest shuttle services.', hourly: 200, daily: 1500 },
   { email: 'shieldeventsecurity@gmail.com', name: 'Shield Event Security', username: 'shieldsecurity', role: 'Vendor', specialty: 'security', city: 2, bio: 'Licensed security guards for events, venues, and VIP protection.', hourly: 45, daily: 350 },
 
-  // ==================== VENUES (10 users) ====================
+  // ==================== VENUES (11 users) ====================
+  // FEATURED: Arteform Studios - Brutalist-inspired studio (Gold Coast) - Demo Ready Profile
+  { email: 'admin@arteform.com.au', name: 'ARTÈFORM Studios', username: 'arteformstudios', role: 'Venue', specialty: 'studio', city: 5, bio: 'ARTÈFORM is a brutalist-inspired studio and event space for visionaries, creatives and modern brands. We blend raw aesthetics with refined design — a blank canvas for creators, lovers and brands to build something unforgettable. Located in Miami, Gold Coast, our space offers professional studio lighting, premium audio equipment, and a curated atmosphere perfect for photography shoots, brand launches, content creation, private events, and intimate weddings.', hourly: 150, daily: 900, headline: 'Brutalist-Inspired Studio & Event Space', tagline: 'Shoot. Launch. Curate.', website: 'https://arteform.com.au/', socialLinks: { instagram: 'arteform_', tiktok: 'arteformstudios' }, isFeatured: true },
   { email: 'grandballroom.syd@gmail.com', name: 'Grand Ballroom Sydney', username: 'grandballroomsyd', role: 'Venue', specialty: 'ballroom', city: 0, bio: 'Elegant ballroom venue seating up to 500 guests. Full catering available.', hourly: 500, daily: 8000 },
   { email: 'skyline.rooftop@outlook.com', name: 'Skyline Rooftop Venue', username: 'skylinerooftop', role: 'Venue', specialty: 'rooftop', city: 0, bio: 'Stunning rooftop venue with city views. Capacity 200.', hourly: 400, daily: 6000 },
   { email: 'gardenpavilion.melb@gmail.com', name: 'Garden Pavilion Melbourne', username: 'gardenpavilion', role: 'Venue', specialty: 'garden', city: 1, bio: 'Beautiful garden venue for weddings and events. Indoor/outdoor options.', hourly: 350, daily: 5500 },
@@ -201,6 +203,23 @@ async function updateProfile(userId, userData) {
     onboarding_completed: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
+  }
+
+  // Extended profile fields (for featured/demo profiles)
+  if (userData.headline) {
+    profileData.headline = userData.headline
+  }
+  if (userData.tagline) {
+    profileData.tagline = userData.tagline
+  }
+  if (userData.website) {
+    profileData.website = userData.website
+  }
+  if (userData.socialLinks) {
+    profileData.social_links = userData.socialLinks
+  }
+  if (userData.isFeatured) {
+    profileData.is_verified = true
   }
 
   // Agent-specific fields

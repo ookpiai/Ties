@@ -95,7 +95,9 @@ const TEST_USERS = [
   { email: 'prestige.transport@gmail.com', name: 'Prestige Event Transport', username: 'prestigetransport', role: 'Vendor', specialty: 'transport', city: 0 },
   { email: 'shieldeventsecurity@gmail.com', name: 'Shield Event Security', username: 'shieldsecurity', role: 'Vendor', specialty: 'security', city: 2 },
 
-  // VENUES (10 users)
+  // VENUES (11 users)
+  // FEATURED: Arteform Studios - Brutalist-inspired studio and event space (Gold Coast)
+  { email: 'admin@arteform.com.au', name: 'ARTÈFORM Studios', username: 'arteformstudios', role: 'Venue', specialty: 'studio', city: 5, isFeatured: true },
   { email: 'grandballroom.syd@gmail.com', name: 'Grand Ballroom Sydney', username: 'grandballroomsyd', role: 'Venue', specialty: 'ballroom', city: 0 },
   { email: 'skyline.rooftop@outlook.com', name: 'Skyline Rooftop Venue', username: 'skylinerooftop', role: 'Venue', specialty: 'rooftop', city: 0 },
   { email: 'gardenpavilion.melb@gmail.com', name: 'Garden Pavilion Melbourne', username: 'gardenpavilion', role: 'Venue', specialty: 'garden', city: 1 },
@@ -234,8 +236,15 @@ export default function TestAccountsPage() {
     const Icon = getSpecialtyIcon(user.specialty, user.role)
     const isLoggingIn = loggingIn === user.email
 
+    // Determine card styling based on user type
+    const getCardClass = () => {
+      if (user.isDev) return 'border-red-300 bg-red-50/50'
+      if (user.isFeatured) return 'border-yellow-400 bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 ring-1 ring-yellow-200'
+      return ''
+    }
+
     return (
-      <Card key={user.email} className={`hover:shadow-md transition-shadow ${user.isDev ? 'border-red-300 bg-red-50/50' : ''}`}>
+      <Card key={user.email} className={`hover:shadow-md transition-shadow ${getCardClass()}`}>
         <CardContent className="p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -248,6 +257,11 @@ export default function TestAccountsPage() {
                   <Badge variant="outline" className={user.isDev ? 'bg-red-100 text-red-800 border-red-300' : getRoleBadgeClass(user.role)}>
                     {user.isDev ? 'Dev Team' : user.role}
                   </Badge>
+                  {user.isFeatured && (
+                    <Badge className="bg-gradient-to-r from-yellow-500 to-amber-500 text-white border-0">
+                      Demo Ready
+                    </Badge>
+                  )}
                   {user.specialty && (
                     <span className="text-xs text-muted-foreground">
                       {formatSpecialty(user.specialty)}

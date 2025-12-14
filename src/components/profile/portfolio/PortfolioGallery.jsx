@@ -3,12 +3,18 @@
  *
  * Modern styling with glassmorphism, gradients, and micro-interactions
  * Inspired by Fiverr Portfolio, Dribbble shots, and modern SaaS design
+ *
+ * Features:
+ * - Tabbed media type filtering (All, Images, Videos, Audio, Links, Before/After)
+ * - Premium grid layout with masonry-like design
+ * - Lightbox modal for detailed view
  */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Image,
   Video,
@@ -26,6 +32,7 @@ import {
   Loader2,
   ArrowLeftRight,
   Sparkles,
+  LayoutGrid,
 } from 'lucide-react'
 import {
   getPortfolioItems,
@@ -92,6 +99,35 @@ const PortfolioGallery = ({
   const [items, setItems] = useState(propItems || [])
   const [isLoading, setIsLoading] = useState(!propItems)
   const [selectedItem, setSelectedItem] = useState(null)
+  const [activeMediaType, setActiveMediaType] = useState('all')
+
+  // Get counts for each media type
+  const mediaTypeCounts = useMemo(() => {
+    const counts = { all: items.length, image: 0, video: 0, audio: 0, link: 0, before_after: 0 }
+    items.forEach(item => {
+      if (counts[item.type] !== undefined) {
+        counts[item.type]++
+      }
+    })
+    return counts
+  }, [items])
+
+  // Filter items by active media type
+  const filteredItems = useMemo(() => {
+    if (activeMediaType === 'all') return items
+    return items.filter(item => item.type === activeMediaType)
+  }, [items, activeMediaType])
+
+  // Available media types (only show tabs for types that have items)
+  const availableMediaTypes = useMemo(() => {
+    const types = ['all']
+    if (mediaTypeCounts.image > 0) types.push('image')
+    if (mediaTypeCounts.video > 0) types.push('video')
+    if (mediaTypeCounts.audio > 0) types.push('audio')
+    if (mediaTypeCounts.link > 0) types.push('link')
+    if (mediaTypeCounts.before_after > 0) types.push('before_after')
+    return types
+  }, [mediaTypeCounts])
 
   // Load portfolio items if not provided
   useEffect(() => {
@@ -254,194 +290,239 @@ const PortfolioGallery = ({
     ? 'grid-cols-2 gap-3'
     : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5'
 
-  return (
-    <div className="space-y-6">
-      {/* Portfolio Grid - Masonry-like layout with premium styling */}
-      <div className={`grid ${gridClass}`}>
-        {items.slice(0, maxDisplay).map((item, index) => {
-          const config = MEDIA_TYPE_CONFIG[item.type] || MEDIA_TYPE_CONFIG.image
+  // Get tab label with icon
+  const getTabLabel = (type) => {
+    const config = {
+      all: { icon: LayoutGrid, label: 'All' },
+      image: { icon: Image, label: 'Images' },
+      video: { icon: Video, label: 'Videos' },
+      audio: { icon: Music, label: 'Audio' },
+      link: { icon: Link2, label: 'Links' },
+      before_after: { icon: ArrowLeftRight, label: 'Before/After' },
+    }
+    return config[type] || { icon: LayoutGrid, label: type }
+  }
 
-          return (
+  // Render the portfolio grid
+  const renderPortfolioGrid = (itemsToRender) => (
+    <div className={`grid ${gridClass}`}>
+      {itemsToRender.slice(0, maxDisplay).map((item, index) => {
+        const config = MEDIA_TYPE_CONFIG[item.type] || MEDIA_TYPE_CONFIG.image
+
+        return (
+          <div
+            key={item.id}
+            className="group relative"
+            style={{ animationDelay: `${index * 50}ms` }}
+          >
+            {/* Card with glassmorphism effect */}
             <div
-              key={item.id}
-              className="group relative"
-              style={{ animationDelay: `${index * 50}ms` }}
+              className={`
+                relative overflow-hidden rounded-2xl
+                bg-white dark:bg-slate-900/80
+                backdrop-blur-xl
+                border border-slate-200/80 dark:border-slate-700/50
+                shadow-sm hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-black/20
+                transition-all duration-500 ease-out
+                cursor-pointer
+                hover:-translate-y-1
+                ${item.is_featured ? 'ring-2 ring-yellow-500/50' : ''}
+              `}
+              onClick={() => setSelectedItem(item)}
             >
-              {/* Card with glassmorphism effect */}
-              <div
-                className={`
-                  relative overflow-hidden rounded-2xl
-                  bg-white dark:bg-slate-900/80
-                  backdrop-blur-xl
-                  border border-slate-200/80 dark:border-slate-700/50
-                  shadow-sm hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-black/20
-                  transition-all duration-500 ease-out
-                  cursor-pointer
-                  hover:-translate-y-1
-                  ${item.is_featured ? 'ring-2 ring-yellow-500/50' : ''}
-                `}
-                onClick={() => setSelectedItem(item)}
-              >
-                {/* Media Preview */}
-                <div className={`relative overflow-hidden ${compact ? 'aspect-square' : 'aspect-video'}`}>
-                  {renderMediaPreview(item)}
+              {/* Media Preview */}
+              <div className={`relative overflow-hidden ${compact ? 'aspect-square' : 'aspect-video'}`}>
+                {renderMediaPreview(item)}
 
-                  {/* Gradient overlay on hover */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                {/* Gradient overlay on hover */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                  {/* View button on hover */}
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-                    <Button
-                      size="sm"
-                      className="bg-white/90 backdrop-blur-sm text-slate-900 hover:bg-white shadow-lg"
-                    >
-                      <Eye className="w-4 h-4 mr-1.5" />
-                      View
-                    </Button>
-                  </div>
+                {/* View button on hover */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+                  <Button
+                    size="sm"
+                    className="bg-white/90 backdrop-blur-sm text-slate-900 hover:bg-white shadow-lg"
+                  >
+                    <Eye className="w-4 h-4 mr-1.5" />
+                    View
+                  </Button>
+                </div>
 
-                  {/* Featured Badge with glow */}
-                  {item.is_featured && (
-                    <div className="absolute top-3 left-3">
-                      <Badge className="bg-gradient-to-r from-yellow-500 to-amber-500 text-white border-0 shadow-lg shadow-yellow-500/30">
-                        <Star className="w-3 h-3 mr-1 fill-white" />
-                        Featured
-                      </Badge>
-                    </div>
-                  )}
-
-                  {/* Type Badge with gradient */}
-                  <div className="absolute top-3 right-3">
-                    <Badge
-                      className={`
-                        bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm
-                        border ${config.borderColor}
-                        ${config.textColor}
-                        shadow-sm
-                      `}
-                    >
-                      {React.createElement(config.icon, { className: 'w-3 h-3 mr-1' })}
-                      {config.label}
+                {/* Featured Badge with glow */}
+                {item.is_featured && (
+                  <div className="absolute top-3 left-3">
+                    <Badge className="bg-gradient-to-r from-yellow-500 to-amber-500 text-white border-0 shadow-lg shadow-yellow-500/30">
+                      <Star className="w-3 h-3 mr-1 fill-white" />
+                      Featured
                     </Badge>
                   </div>
+                )}
 
-                  {/* Owner Actions */}
-                  {isOwner && (
-                    <div className="absolute bottom-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-                      <Button
-                        variant="secondary"
-                        size="icon"
-                        className="w-8 h-8 bg-white/90 backdrop-blur-sm hover:bg-white shadow-lg"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleToggleFeatured(item.id, item.is_featured)
-                        }}
-                      >
-                        <Star
-                          className={`w-4 h-4 ${
-                            item.is_featured ? 'fill-yellow-500 text-yellow-500' : 'text-slate-600'
-                          }`}
-                        />
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="icon"
-                        className="w-8 h-8 bg-white/90 backdrop-blur-sm hover:bg-white shadow-lg"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onEditItem?.(item)
-                        }}
-                      >
-                        <Edit2 className="w-4 h-4 text-slate-600" />
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="icon"
-                        className="w-8 h-8 bg-white/90 backdrop-blur-sm hover:bg-red-50 hover:text-red-600 shadow-lg"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDelete(item.id)
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
+                {/* Type Badge with gradient */}
+                <div className="absolute top-3 right-3">
+                  <Badge
+                    className={`
+                      bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm
+                      border ${config.borderColor}
+                      ${config.textColor}
+                      shadow-sm
+                    `}
+                  >
+                    {React.createElement(config.icon, { className: 'w-3 h-3 mr-1' })}
+                    {config.label}
+                  </Badge>
                 </div>
 
-                {/* Content with subtle gradient */}
-                {!compact && (
-                  <CardContent className="p-4 bg-gradient-to-b from-transparent to-slate-50/50 dark:to-slate-800/30">
-                    <h4 className="font-semibold text-slate-900 dark:text-white truncate">
-                      {item.title}
-                    </h4>
-                    {item.description && (
-                      <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">
-                        {item.description}
-                      </p>
-                    )}
-
-                    {/* Skills/Tags with pill design */}
-                    {item.skills_used && item.skills_used.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-3">
-                        {item.skills_used.slice(0, 3).map((skill, idx) => (
-                          <span
-                            key={idx}
-                            className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                        {item.skills_used.length > 3 && (
-                          <span className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary font-medium">
-                            +{item.skills_used.length - 3}
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    {/* View Count with icon */}
-                    {item.view_count > 0 && (
-                      <div className="flex items-center text-xs text-slate-500 dark:text-slate-500 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-                        <Eye className="w-3.5 h-3.5 mr-1.5" />
-                        {item.view_count.toLocaleString()} views
-                      </div>
-                    )}
-                  </CardContent>
+                {/* Owner Actions */}
+                {isOwner && (
+                  <div className="absolute bottom-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="w-8 h-8 bg-white/90 backdrop-blur-sm hover:bg-white shadow-lg"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleToggleFeatured(item.id, item.is_featured)
+                      }}
+                    >
+                      <Star
+                        className={`w-4 h-4 ${
+                          item.is_featured ? 'fill-yellow-500 text-yellow-500' : 'text-slate-600'
+                        }`}
+                      />
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="w-8 h-8 bg-white/90 backdrop-blur-sm hover:bg-white shadow-lg"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onEditItem?.(item)
+                      }}
+                    >
+                      <Edit2 className="w-4 h-4 text-slate-600" />
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="w-8 h-8 bg-white/90 backdrop-blur-sm hover:bg-red-50 hover:text-red-600 shadow-lg"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDelete(item.id)
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 )}
               </div>
-            </div>
-          )
-        })}
 
-        {/* Add Item Card with premium dashed border */}
-        {isOwner && items.length < maxDisplay && !compact && (
-          <div
-            className="group flex items-center justify-center aspect-video rounded-2xl cursor-pointer transition-all duration-300 hover:-translate-y-1"
-            onClick={onAddItem}
-          >
-            <div className="w-full h-full rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-gradient-to-br from-slate-50 to-slate-100/50 dark:from-slate-800/50 dark:to-slate-900/50 flex items-center justify-center group-hover:border-primary group-hover:bg-primary/5 transition-all duration-300">
-              <div className="text-center">
-                <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-slate-200 dark:bg-slate-700 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                  <Plus className="w-6 h-6 text-slate-500 group-hover:text-primary transition-colors" />
-                </div>
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-400 group-hover:text-primary transition-colors">
-                  Add Portfolio Item
-                </p>
-              </div>
+              {/* Content with subtle gradient */}
+              {!compact && (
+                <CardContent className="p-4 bg-gradient-to-b from-transparent to-slate-50/50 dark:to-slate-800/30">
+                  <h4 className="font-semibold text-slate-900 dark:text-white truncate">
+                    {item.title}
+                  </h4>
+                  {item.description && (
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">
+                      {item.description}
+                    </p>
+                  )}
+
+                  {/* Skills/Tags with pill design */}
+                  {item.skills_used && item.skills_used.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {item.skills_used.slice(0, 3).map((skill, idx) => (
+                        <span
+                          key={idx}
+                          className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                      {item.skills_used.length > 3 && (
+                        <span className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary font-medium">
+                          +{item.skills_used.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* View Count with icon */}
+                  {item.view_count > 0 && (
+                    <div className="flex items-center text-xs text-slate-500 dark:text-slate-500 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                      <Eye className="w-3.5 h-3.5 mr-1.5" />
+                      {item.view_count.toLocaleString()} views
+                    </div>
+                  )}
+                </CardContent>
+              )}
             </div>
           </div>
-        )}
-      </div>
+        )
+      })}
+
+      {/* Add Item Card with premium dashed border */}
+      {isOwner && itemsToRender.length < maxDisplay && !compact && (
+        <div
+          className="group flex items-center justify-center aspect-video rounded-2xl cursor-pointer transition-all duration-300 hover:-translate-y-1"
+          onClick={onAddItem}
+        >
+          <div className="w-full h-full rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-gradient-to-br from-slate-50 to-slate-100/50 dark:from-slate-800/50 dark:to-slate-900/50 flex items-center justify-center group-hover:border-primary group-hover:bg-primary/5 transition-all duration-300">
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-slate-200 dark:bg-slate-700 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                <Plus className="w-6 h-6 text-slate-500 group-hover:text-primary transition-colors" />
+              </div>
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400 group-hover:text-primary transition-colors">
+                Add Portfolio Item
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+
+  return (
+    <div className="space-y-6">
+      {/* Media Type Tabs - Only show if there are multiple types or not compact mode */}
+      {!compact && availableMediaTypes.length > 1 && (
+        <Tabs value={activeMediaType} onValueChange={setActiveMediaType} className="w-full">
+          <TabsList className="inline-flex h-auto p-1 bg-slate-100/80 dark:bg-slate-800/80 rounded-xl gap-1 flex-wrap">
+            {availableMediaTypes.map((type) => {
+              const { icon: Icon, label } = getTabLabel(type)
+              return (
+                <TabsTrigger
+                  key={type}
+                  value={type}
+                  className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm rounded-lg px-4 py-2 text-sm font-medium transition-all"
+                >
+                  <Icon className="w-4 h-4 mr-2" />
+                  {label}
+                  <Badge
+                    variant="secondary"
+                    className="ml-2 h-5 px-1.5 text-xs bg-slate-200/80 dark:bg-slate-600/80"
+                  >
+                    {mediaTypeCounts[type]}
+                  </Badge>
+                </TabsTrigger>
+              )
+            })}
+          </TabsList>
+        </Tabs>
+      )}
+
+      {/* Portfolio Grid */}
+      {renderPortfolioGrid(filteredItems)}
 
       {/* Show More Button with gradient */}
-      {items.length > maxDisplay && (
+      {filteredItems.length > maxDisplay && (
         <div className="text-center pt-4">
           <Button
             variant="outline"
             className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700"
           >
-            View All {items.length} Items
+            View All {filteredItems.length} Items
           </Button>
         </div>
       )}
