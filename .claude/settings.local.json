@@ -68,7 +68,9 @@
       "WebFetch(domain:arteform.com.au)",
       "Bash(node scripts/seed-arteform-api.mjs:*)",
       "Bash(SUPABASE_SERVICE_ROLE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhcWl3Y3JubHR1cXZoa216cnhwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MjE0MDgzNiwiZXhwIjoyMDc3NzE2ODM2fQ.vnS9Js0-kSV4uL2-RohYDU53-p2dymuMMLV4RtpXrpA' node scripts/seed-test-users.cjs)",
-      "Bash(SUPABASE_SERVICE_ROLE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhcWl3Y3JubHR1cXZoa216cnhwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MjE0MDgzNiwiZXhwIjoyMDc3NzE2ODM2fQ.vnS9Js0-kSV4uL2-RohYDU53-p2dymuMMLV4RtpXrpA' node scripts/confirm-arteform.cjs)"
+      "Bash(SUPABASE_SERVICE_ROLE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhcWl3Y3JubHR1cXZoa216cnhwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MjE0MDgzNiwiZXhwIjoyMDc3NzE2ODM2fQ.vnS9Js0-kSV4uL2-RohYDU53-p2dymuMMLV4RtpXrpA' node scripts/confirm-arteform.cjs)",
+      "Bash(echo:*)",
+      "Bash(git push)"
     ],
     "deny": [],
     "ask": []

@@ -210,8 +210,8 @@ const CreateJobPage = () => {
       const result = await createJobPosting(jobPayload, rolesPayload)
 
       if (result.success) {
-        // Success! Navigate to job details
-        navigate(`/jobs`)
+        // Success! Navigate to Studio to see the new project
+        navigate(`/studio`)
       } else {
         setError(result.error || 'Failed to create job posting')
       }

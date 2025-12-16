@@ -268,14 +268,14 @@ const Dashboard = () => {
           title: 'Welcome back, Organiser!',
           subtitle: 'Find talent, manage projects, and bring your creative vision to life.',
           primaryAction: 'Post a Job',
-          primaryHref: '/jobs/new'
+          primaryHref: '/jobs/create'
         }
       case 'Venue':
         return {
           title: 'Welcome back, Venue Partner!',
-          subtitle: 'Manage your space listings and connect with event organisers.',
-          primaryAction: 'Update Venue Info',
-          primaryHref: '/profile'
+          subtitle: 'Manage your space, post events, and connect with creative talent.',
+          primaryAction: 'Post a Job',
+          primaryHref: '/jobs/create'
         }
       default:
         return {

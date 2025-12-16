@@ -8,7 +8,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../App'
-import { getMyAcceptedJobs, getJobPostings } from '../../api/jobs'
+import { getMyAcceptedJobs, getMyJobs } from '../../api/jobs'
 import {
   Plus,
   Users,
@@ -56,19 +56,17 @@ const StudioPage = () => {
     if (!user?.id) return
     setLoading(true)
     try {
-      const [acceptedResult, postedResult] = await Promise.all([
+      const [acceptedResult, myJobsData] = await Promise.all([
         getMyAcceptedJobs(),
-        getJobPostings()
+        getMyJobs()
       ])
 
       if (acceptedResult.success) {
         setAcceptedJobs(acceptedResult.data || [])
       }
 
-      if (postedResult.success) {
-        const myJobs = postedResult.data?.filter(job => job.organiser_id === user.id) || []
-        setMyPostedJobs(myJobs)
-      }
+      // getMyJobs returns array directly (not wrapped in {success, data})
+      setMyPostedJobs(myJobsData || [])
     } catch (error) {
       console.error('Failed to load studio data:', error)
     }
