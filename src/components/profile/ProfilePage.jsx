@@ -52,11 +52,18 @@ import {
   Languages,
   Share2,
   ExternalLink,
+  Palette,
+  Film,
+  Music,
+  Image as ImageIcon,
+  ArrowLeftRight,
+  Sparkles,
+  Grid3X3,
 } from 'lucide-react'
 import { updateProfile, getProfile } from '../../api/profiles'
 import { uploadAvatar } from '../../api/storage'
 import ServicesPage from './ServicesPage'
-import { PortfolioGallery } from './portfolio'
+import { PortfolioGallery, AddPortfolioItemModal } from './portfolio'
 import { ServicePackagesDisplay, PackageEditorModal } from './packages'
 import { SkillsCard, SkillsEditorModal } from './skills'
 import { BadgeGrid, VerificationRow, AvailableBadges } from './badges'
@@ -114,6 +121,9 @@ const ProfilePage = () => {
   const [editingPackage, setEditingPackage] = useState(null)
   const [showLanguagesModal, setShowLanguagesModal] = useState(false)
   const [showSocialModal, setShowSocialModal] = useState(false)
+  const [showPortfolioModal, setShowPortfolioModal] = useState(false)
+  const [editingPortfolioItem, setEditingPortfolioItem] = useState(null)
+  const [selectedPortfolioType, setSelectedPortfolioType] = useState(null)
 
   // Language editing state
   const [newLanguage, setNewLanguage] = useState({ language: '', level: 'conversational' })
@@ -899,44 +909,220 @@ const ProfilePage = () => {
             </div>
           </TabsContent>
 
-          {/* Portfolio Tab (View Only - Edit in Create Page) */}
+          {/* Portfolio Tab - Premium Showcase */}
           <TabsContent value="portfolio">
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold">Portfolio</h2>
-                  <p className="text-sm text-slate-500">Showcase your best work</p>
+              {/* Portfolio Header with Gradient */}
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#E03131] to-[#FF6B6B] flex items-center justify-center shadow-lg shadow-red-500/20">
+                    <Palette className="w-7 h-7 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                      Portfolio
+                    </h2>
+                    <p className="text-slate-600 dark:text-slate-400">
+                      Showcase your best work to potential clients
+                    </p>
+                  </div>
                 </div>
-                <Button onClick={() => navigate('/create')}>
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit Portfolio
+                <Button onClick={() => {
+                  setSelectedPortfolioType(null)
+                  setEditingPortfolioItem(null)
+                  setShowPortfolioModal(true)
+                }} className="bg-gradient-to-r from-[#E03131] to-[#FF6B6B] hover:from-[#C92A2A] hover:to-[#E03131] text-white shadow-lg shadow-red-500/20">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add New Item
                 </Button>
               </div>
 
-              {portfolio.length === 0 ? (
-                <div className="text-center py-12 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
-                    <Briefcase className="w-8 h-8 text-gray-400" />
+              {/* Stats Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 hover:shadow-lg transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center">
+                        <Grid3X3 className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{portfolio.length}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Total Items</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border border-yellow-200 dark:border-yellow-800/50 hover:shadow-lg transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-lg shadow-yellow-500/20">
+                        <Star className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-400">{portfolio.filter(p => p.is_featured).length}</p>
+                        <p className="text-xs text-yellow-600 dark:text-yellow-500">Featured</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 border border-pink-200 dark:border-pink-800/50 hover:shadow-lg transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-lg shadow-pink-500/20">
+                        <ImageIcon className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-pink-700 dark:text-pink-400">{portfolio.filter(p => p.type === 'image').length}</p>
+                        <p className="text-xs text-pink-600 dark:text-pink-500">Photos</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border border-blue-200 dark:border-blue-800/50 hover:shadow-lg transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                        <Film className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">{portfolio.filter(p => p.type === 'video').length}</p>
+                        <p className="text-xs text-blue-600 dark:text-blue-500">Videos</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Quick Add Section */}
+              <Card className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 overflow-hidden">
+                <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-700/50">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Sparkles className="w-5 h-5 text-[#E03131]" />
+                    Quick Add
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-5">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {[
+                      { type: 'image', title: 'Photo', icon: Camera, color: 'from-pink-500 to-rose-500', lightColor: 'bg-pink-50 dark:bg-pink-900/20 border-pink-200 dark:border-pink-800', desc: 'Upload photos' },
+                      { type: 'video', title: 'Video', icon: Film, color: 'from-blue-500 to-cyan-500', lightColor: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800', desc: 'Add video content' },
+                      { type: 'audio', title: 'Audio', icon: Music, color: 'from-purple-500 to-violet-500', lightColor: 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800', desc: 'Share audio' },
+                      { type: 'link', title: 'Link', icon: ExternalLink, color: 'from-emerald-500 to-teal-500', lightColor: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800', desc: 'External links' },
+                      { type: 'before_after', title: 'Before/After', icon: ArrowLeftRight, color: 'from-orange-500 to-amber-500', lightColor: 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800', desc: 'Transformations' },
+                    ].map((item) => {
+                      const Icon = item.icon
+                      const count = portfolio.filter(p => p.type === item.type).length
+                      return (
+                        <button
+                          key={item.type}
+                          onClick={() => {
+                            setSelectedPortfolioType(item.type)
+                            setEditingPortfolioItem(null)
+                            setShowPortfolioModal(true)
+                          }}
+                          className={`${item.lightColor} border-2 rounded-xl p-4 text-left transition-all hover:shadow-lg hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-[#E03131] group`}
+                        >
+                          <div className={`w-12 h-12 bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center mb-3 shadow-lg group-hover:scale-110 transition-transform`}>
+                            <Icon className="w-6 h-6 text-white" />
+                          </div>
+                          <h3 className="font-semibold text-slate-900 dark:text-white mb-1">
+                            {item.title}
+                          </h3>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">
+                            {item.desc}
+                          </p>
+                          {count > 0 && (
+                            <Badge variant="secondary" className="mt-2 text-xs">
+                              {count} item{count !== 1 ? 's' : ''}
+                            </Badge>
+                          )}
+                        </button>
+                      )
+                    })}
                   </div>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
-                    Your portfolio is empty
-                  </h3>
-                  <p className="text-slate-600 dark:text-slate-400 mb-4 max-w-md mx-auto">
-                    Head over to the Portfolio Studio to start adding your best work!
-                  </p>
-                  <Button onClick={() => navigate('/create')}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Go to Portfolio Studio
-                  </Button>
-                </div>
+                </CardContent>
+              </Card>
+
+              {/* Portfolio Gallery */}
+              {portfolio.length === 0 ? (
+                <Card className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-900/50 border border-slate-200 dark:border-slate-700/50">
+                  <CardContent className="p-12 text-center">
+                    <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center">
+                      <Palette className="w-10 h-10 text-slate-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
+                      Start Building Your Portfolio
+                    </h3>
+                    <p className="text-slate-600 dark:text-slate-400 mb-6 max-w-md mx-auto">
+                      Your portfolio is your visual resume. Add photos, videos, and links to showcase your best work and attract clients.
+                    </p>
+                    <Button onClick={() => {
+                      setSelectedPortfolioType(null)
+                      setEditingPortfolioItem(null)
+                      setShowPortfolioModal(true)
+                    }} className="bg-gradient-to-r from-[#E03131] to-[#FF6B6B] hover:from-[#C92A2A] hover:to-[#E03131] text-white">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Your First Item
+                    </Button>
+                  </CardContent>
+                </Card>
               ) : (
-                <PortfolioGallery
-                  userId={user?.id}
-                  items={portfolio}
-                  isOwner={false}
-                  onRefresh={refreshPortfolio}
-                />
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                        Your Work
+                      </h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        Click any item to view, edit, or manage
+                      </p>
+                    </div>
+                  </div>
+                  <PortfolioGallery
+                    userId={user?.id}
+                    items={portfolio}
+                    isOwner={true}
+                    onRefresh={refreshPortfolio}
+                    onAddItem={() => {
+                      setSelectedPortfolioType(null)
+                      setEditingPortfolioItem(null)
+                      setShowPortfolioModal(true)
+                    }}
+                    onEditItem={(item) => {
+                      setSelectedPortfolioType(item.type)
+                      setEditingPortfolioItem(item)
+                      setShowPortfolioModal(true)
+                    }}
+                  />
+                </div>
               )}
+
+              {/* Tips Section */}
+              <Card className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800/50">
+                <CardContent className="p-5">
+                  <h3 className="font-semibold text-amber-900 dark:text-amber-300 mb-3 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5" />
+                    Portfolio Tips
+                  </h3>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm text-amber-800 dark:text-amber-400">
+                    <div className="flex items-start gap-2">
+                      <Star className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <span>Feature your best work to highlight it prominently</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <ImageIcon className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <span>High-quality images make a stronger first impression</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Palette className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <span>Add variety - mix photos, videos, and other content</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 
@@ -1023,6 +1209,24 @@ const ProfilePage = () => {
           setShowPackageModal(false)
           setEditingPackage(null)
           refreshPackages()
+        }}
+      />
+
+      <AddPortfolioItemModal
+        isOpen={showPortfolioModal}
+        onClose={() => {
+          setShowPortfolioModal(false)
+          setSelectedPortfolioType(null)
+          setEditingPortfolioItem(null)
+        }}
+        userId={user?.id}
+        editItem={editingPortfolioItem}
+        defaultType={selectedPortfolioType}
+        onSuccess={() => {
+          setShowPortfolioModal(false)
+          setSelectedPortfolioType(null)
+          setEditingPortfolioItem(null)
+          refreshPortfolio()
         }}
       />
     </div>

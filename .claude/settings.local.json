@@ -70,7 +70,8 @@
       "Bash(SUPABASE_SERVICE_ROLE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhcWl3Y3JubHR1cXZoa216cnhwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MjE0MDgzNiwiZXhwIjoyMDc3NzE2ODM2fQ.vnS9Js0-kSV4uL2-RohYDU53-p2dymuMMLV4RtpXrpA' node scripts/seed-test-users.cjs)",
       "Bash(SUPABASE_SERVICE_ROLE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhcWl3Y3JubHR1cXZoa216cnhwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MjE0MDgzNiwiZXhwIjoyMDc3NzE2ODM2fQ.vnS9Js0-kSV4uL2-RohYDU53-p2dymuMMLV4RtpXrpA' node scripts/confirm-arteform.cjs)",
       "Bash(echo:*)",
-      "Bash(git push)"
+      "Bash(git push)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfix: Studio job display and navigation issues\n\n- StudioPage: Use getMyJobs() instead of getJobPostings() to properly\n  fetch user''s created jobs (was filtering public feed client-side)\n- CreateJobPage: Navigate to /studio after job creation instead of /jobs\n- Dashboard: Fix Organiser primary action href from /jobs/new to /jobs/create\n- Dashboard: Update Venue role to have \"Post a Job\" as primary action\n\nThese fixes ensure jobs appear in Studio after creation and all roles\nhave proper access to job posting functionality.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []
