@@ -145,12 +145,24 @@ const DiscoveryPage = () => {
         // Convert component role to Supabase role for filtering
         const supabaseRole = mapComponentRoleToSupabaseRole(selectedRole)
 
-        // For multiple roles (like freelancer), we need to fetch all and filter
-        const profiles = await searchProfiles({
-          query: searchQuery,
+        // Build filter object with all active filters
+        const filters = {
+          query: searchQuery || undefined,
           role: selectedRole === 'all' || selectedRole === 'freelancer' ? undefined : supabaseRole?.[0],
-          location: selectedLocation
-        })
+          location: selectedLocation || undefined,
+          // Price range filter (only apply if modified from default)
+          minPrice: priceRange[0] > 0 ? priceRange[0] : undefined,
+          maxPrice: priceRange[1] < 500 ? priceRange[1] : undefined,
+          // Skills/specialty filter
+          specialties: selectedSkills.length > 0 ? selectedSkills : undefined,
+          // Badge filters
+          badges: selectedBadgeFilters.length > 0 ? selectedBadgeFilters : undefined,
+          // Sort option
+          sortBy: sortBy !== 'relevance' ? sortBy : undefined
+        }
+
+        // Fetch profiles with all filters applied
+        const profiles = await searchProfiles(filters)
 
         // Filter for specific roles locally (since some map to multiple Supabase roles)
         let filteredProfiles = profiles
@@ -167,8 +179,10 @@ const DiscoveryPage = () => {
         }
 
         // Transform Supabase profiles to match component's expected format
+        // Now includes real data from profile_stats!
         const transformedProfiles = filteredProfiles.map(profile => ({
           id: profile.id,
+          username: profile.username, // For booking route
           name: profile.display_name || 'Anonymous',
           role: mapSupabaseRoleToComponentRole(profile.role),
           originalRole: profile.role, // Keep original role for specialty label lookup
@@ -177,16 +191,23 @@ const DiscoveryPage = () => {
           title: profile.role || 'Creative Professional',
           location: profile.city || 'Location not specified',
           avatar: profile.avatar_url,
-          rating: 0, // TODO: Add ratings in future phase
-          reviewCount: 0,
-          hourlyRate: 0, // TODO: Add rates in future phase
-          skills: [], // TODO: Add skills in future phase
+          // Real data from profile_stats
+          rating: profile.average_rating || 0,
+          reviewCount: profile.total_reviews || 0,
+          hourlyRate: profile.hourly_rate || 0,
+          // Skills from specialty (can be expanded later)
+          skills: profile.specialty ? [profile.specialty_display_name || profile.specialty] : [],
           bio: profile.bio || 'No bio available',
           portfolio: [],
-          availability: 'available',
+          // Real availability status
+          availability: profile.public_booking_enabled ? 'available' : 'unavailable',
           featured: false,
           profileViews: 0,
-          completedProjects: 0
+          completedProjects: profile.total_bookings_completed || 0,
+          // Additional data for badges
+          emailVerified: profile.email_verified,
+          onTimeRate: profile.on_time_delivery_rate || 100,
+          lastActiveAt: profile.last_active_at
         }))
 
         setProfessionals(transformedProfiles)
@@ -199,7 +220,7 @@ const DiscoveryPage = () => {
     }
 
     loadProfiles()
-  }, [searchQuery, selectedRole, selectedLocation])
+  }, [searchQuery, selectedRole, selectedLocation, priceRange, selectedSkills, selectedBadgeFilters, sortBy])
 
   // Sync filteredProfessionals with professionals when data loads
   useEffect(() => {
@@ -372,8 +393,19 @@ const DiscoveryPage = () => {
     navigate('/messages', { state: { openConversationWithUserId: professionalId } })
   }
 
-  const handleBookNow = (professionalId, professionalName) => {
-    navigate(`/book/${professionalId}`)
+  const handleBookNow = (professional) => {
+    // Use username for booking route if available, otherwise navigate to profile
+    if (professional.username) {
+      navigate(`/book/${professional.username}`)
+    } else {
+      // Fallback: navigate to profile page if no username
+      navigate(`/profile/${professional.id}`)
+      toast({
+        title: 'Booking not available',
+        description: 'This professional hasn\'t set up direct booking yet. View their profile to contact them.',
+        variant: 'default'
+      })
+    }
   }
 
   const handleShareProfile = async (professionalId, professionalName) => {
@@ -1127,7 +1159,7 @@ const DiscoveryPage = () => {
                                 <DropdownMenuItem
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    handleBookNow(professional.id, professional.name)
+                                    handleBookNow(professional)
                                   }}
                                 >
                                   <Calendar className="w-4 h-4 mr-2" />

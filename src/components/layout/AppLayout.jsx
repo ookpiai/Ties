@@ -67,7 +67,7 @@ const AppLayout = ({ children }) => {
 
   const primaryNavItems = [
     { path: '/dashboard', label: 'Home', icon: Home },
-    { path: '/discover', label: 'Discover', icon: Compass },
+    { path: '/discover', label: 'Discover Talent', icon: Compass },
     { path: '/jobs', label: 'Jobs', icon: Layers },
     { path: '/messages', label: 'Messages', icon: MessageSquare },
     { path: '/notifications', label: 'Notifications', icon: Bell },

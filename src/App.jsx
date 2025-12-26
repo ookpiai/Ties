@@ -48,6 +48,7 @@ class ErrorBoundary extends Component {
 import CleanFeedDashboard from './components/CleanFeedDashboard'
 import { SocialFeed } from './components/feed'
 import DiscoveryPage from './components/discovery/DiscoveryPage'
+import CompareProfilesPage from './components/discovery/CompareProfilesPage'
 import MessagesPage from './components/messages/MessagesPage'
 import NotificationsPage from './components/notifications/NotificationsPage'
 import CreatePage from './components/create/CreatePage'
@@ -422,6 +423,13 @@ function AppRoutes() {
             <ProtectedRoute>
               <AppLayout>
                 <DiscoveryPage />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/compare" element={
+            <ProtectedRoute>
+              <AppLayout>
+                <CompareProfilesPage />
               </AppLayout>
             </ProtectedRoute>
           } />
