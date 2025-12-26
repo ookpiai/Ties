@@ -233,3 +233,260 @@ export async function getProfilesByIds(ids: string[]): Promise<ProfileWithStats[
     } as ProfileWithStats
   })
 }
+
+// Personalized recommendation types
+export type DiscoveryTab = 'for_you' | 'top_rated' | 'near_you' | 'new_talent' | 'recently_active'
+
+export interface RecommendedProfile extends ProfileWithStats {
+  recommendation_score?: number
+  recommendation_reason?: string
+}
+
+export interface UserContext {
+  userId?: string
+  role?: string
+  specialty?: string
+  city?: string
+}
+
+// Complementary skills matrix - what professionals work well together
+const COMPLEMENTARY_SKILLS: Record<string, string[]> = {
+  // Freelancers
+  'photographer': ['videographer', 'makeup_artist', 'stylist', 'model', 'editor'],
+  'videographer': ['photographer', 'editor', 'sound_engineer', 'drone_operator'],
+  'dj': ['sound_engineer', 'lighting_tech', 'mc', 'musician'],
+  'makeup_artist': ['photographer', 'stylist', 'hair_stylist', 'model'],
+  'musician': ['sound_engineer', 'videographer', 'photographer', 'dj'],
+  'event_planner': ['caterer', 'florist', 'decorator', 'photographer', 'dj'],
+  'mc': ['dj', 'sound_engineer', 'event_planner'],
+  'editor': ['videographer', 'photographer', 'colorist'],
+  // Vendors
+  'catering': ['event_planner', 'florist', 'decorator'],
+  'florist': ['event_planner', 'photographer', 'decorator'],
+  'decorator': ['event_planner', 'florist', 'photographer'],
+  // More can be added
+}
+
+// Role-based default filters - what each role typically looks for
+const ROLE_DEFAULT_FILTERS: Record<string, string[]> = {
+  'Organiser': ['Freelancer', 'Vendor', 'Venue'], // Looking to hire talent
+  'Freelancer': ['Organiser', 'Freelancer'],      // Find gigs + collaborators
+  'Vendor': ['Organiser', 'Venue'],               // Find events to work
+  'Venue': ['Organiser'],                         // Find event bookings
+}
+
+/**
+ * Get personalized profile recommendations based on user context and tab
+ */
+export async function getRecommendedProfiles(
+  tab: DiscoveryTab,
+  userContext: UserContext,
+  limit: number = 20
+): Promise<RecommendedProfile[]> {
+  const { userId, role, specialty, city } = userContext
+
+  // Build base query with profile_stats
+  let query = supabase
+    .from('profiles')
+    .select(`
+      *,
+      profile_stats (
+        average_rating,
+        total_reviews,
+        on_time_delivery_rate,
+        last_active_at,
+        total_bookings_completed
+      )
+    `)
+    .neq('id', userId || '')  // Exclude current user
+
+  // Apply tab-specific filters
+  switch (tab) {
+    case 'top_rated':
+      // Will sort by rating in post-processing
+      break
+    case 'near_you':
+      if (city) {
+        query = query.ilike('city', `%${city}%`)
+      }
+      break
+    case 'new_talent':
+      // Users who joined in last 30 days
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      query = query.gte('created_at', thirtyDaysAgo.toISOString())
+      break
+    case 'recently_active':
+      // Will filter by last_active in post-processing
+      break
+    case 'for_you':
+    default:
+      // For You tab: Apply role-based filters
+      if (role && ROLE_DEFAULT_FILTERS[role]) {
+        query = query.in('role', ROLE_DEFAULT_FILTERS[role])
+      }
+      break
+  }
+
+  query = query.limit(limit * 2) // Fetch more for scoring/filtering
+
+  const { data, error } = await query
+
+  if (error) throw error
+
+  // Transform and calculate recommendation scores
+  let results: RecommendedProfile[] = (data || []).map((profile: any) => {
+    const stats = profile.profile_stats?.[0] || profile.profile_stats || {}
+    const transformedProfile: RecommendedProfile = {
+      ...profile,
+      average_rating: stats.average_rating || 0,
+      total_reviews: stats.total_reviews || 0,
+      on_time_delivery_rate: stats.on_time_delivery_rate || 100,
+      last_active_at: stats.last_active_at || profile.created_at,
+      total_bookings_completed: stats.total_bookings_completed || 0,
+      profile_stats: undefined,
+      recommendation_score: 0,
+      recommendation_reason: ''
+    }
+
+    // Calculate personalized score for "For You" tab
+    if (tab === 'for_you') {
+      const { score, reason } = calculateRecommendationScore(transformedProfile, userContext)
+      transformedProfile.recommendation_score = score
+      transformedProfile.recommendation_reason = reason
+    }
+
+    return transformedProfile
+  })
+
+  // Apply tab-specific sorting/filtering
+  const now = new Date()
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+
+  switch (tab) {
+    case 'for_you':
+      // Sort by recommendation score
+      results.sort((a, b) => (b.recommendation_score || 0) - (a.recommendation_score || 0))
+      break
+    case 'top_rated':
+      results.sort((a, b) => {
+        // Primary: rating, Secondary: review count
+        const ratingDiff = (b.average_rating || 0) - (a.average_rating || 0)
+        if (ratingDiff !== 0) return ratingDiff
+        return (b.total_reviews || 0) - (a.total_reviews || 0)
+      })
+      results.forEach(p => {
+        if ((p.average_rating || 0) >= 4.5) {
+          p.recommendation_reason = `Top rated (${p.average_rating?.toFixed(1)}★)`
+        } else if ((p.average_rating || 0) >= 4.0) {
+          p.recommendation_reason = `Highly rated (${p.average_rating?.toFixed(1)}★)`
+        }
+      })
+      break
+    case 'near_you':
+      results.forEach(p => {
+        if (p.city && city && p.city.toLowerCase().includes(city.toLowerCase())) {
+          p.recommendation_reason = `Near you in ${p.city}`
+        }
+      })
+      break
+    case 'new_talent':
+      results.sort((a, b) =>
+        new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+      )
+      results.forEach(p => {
+        p.recommendation_reason = 'New to TIES Together'
+      })
+      break
+    case 'recently_active':
+      results = results.filter(p => {
+        const lastActive = p.last_active_at ? new Date(p.last_active_at) : null
+        return lastActive && lastActive >= sevenDaysAgo
+      })
+      results.sort((a, b) =>
+        new Date(b.last_active_at || 0).getTime() - new Date(a.last_active_at || 0).getTime()
+      )
+      results.forEach(p => {
+        p.recommendation_reason = 'Recently active'
+      })
+      break
+  }
+
+  return results.slice(0, limit)
+}
+
+/**
+ * Calculate a recommendation score based on user context
+ */
+function calculateRecommendationScore(
+  profile: ProfileWithStats,
+  userContext: UserContext
+): { score: number; reason: string } {
+  const { role: userRole, specialty: userSpecialty, city: userCity } = userContext
+  let score = 0
+  const reasons: string[] = []
+
+  // 1. Role matching (30% weight)
+  if (userRole && ROLE_DEFAULT_FILTERS[userRole]?.includes(profile.role || '')) {
+    score += 0.30
+    reasons.push('Good match for your needs')
+  } else if (profile.role === userRole) {
+    score += 0.15 // Same role (potential collaborator)
+    reasons.push('Potential collaborator')
+  }
+
+  // 2. Complementary skills (25% weight)
+  if (userSpecialty && profile.specialty) {
+    const complementary = COMPLEMENTARY_SKILLS[userSpecialty.toLowerCase()] || []
+    if (complementary.includes(profile.specialty.toLowerCase())) {
+      score += 0.25
+      reasons.push('Complementary skills')
+    } else if (profile.specialty.toLowerCase() === userSpecialty.toLowerCase()) {
+      score += 0.10 // Same specialty
+    }
+  }
+
+  // 3. Location proximity (20% weight)
+  if (userCity && profile.city) {
+    if (profile.city.toLowerCase() === userCity.toLowerCase()) {
+      score += 0.20
+      reasons.push(`Near you in ${profile.city}`)
+    } else if (profile.city.toLowerCase().includes(userCity.toLowerCase().split(',')[0])) {
+      score += 0.10 // Same region/area
+    }
+  }
+
+  // 4. Rating score (15% weight)
+  const ratingScore = ((profile.average_rating || 0) / 5) * 0.15
+  score += ratingScore
+  if ((profile.average_rating || 0) >= 4.5) {
+    reasons.push('Top rated')
+  }
+
+  // 5. Activity recency (10% weight)
+  if (profile.last_active_at) {
+    const lastActive = new Date(profile.last_active_at)
+    const now = new Date()
+    const daysSinceActive = (now.getTime() - lastActive.getTime()) / (1000 * 60 * 60 * 24)
+
+    if (daysSinceActive <= 7) {
+      score += 0.10
+      reasons.push('Recently active')
+    } else if (daysSinceActive <= 30) {
+      score += 0.05
+    }
+  }
+
+  // Pick the most relevant reason
+  const primaryReason = reasons[0] || ''
+
+  return { score, reason: primaryReason }
+}
+
+/**
+ * Get the default role filter for a user based on their role
+ */
+export function getDefaultRoleFilter(userRole?: string): string[] | null {
+  if (!userRole) return null
+  return ROLE_DEFAULT_FILTERS[userRole] || null
+}

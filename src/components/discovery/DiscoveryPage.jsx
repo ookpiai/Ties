@@ -61,9 +61,14 @@ import {
   CheckCircle,
   Crown,
   Image,
-  ArrowUpDown
+  ArrowUpDown,
+  Sparkles,
+  TrendingUp,
+  Clock,
+  UserCheck
 } from 'lucide-react'
-import { searchProfiles } from '../../api/profiles'
+import { searchProfiles, getRecommendedProfiles, getDefaultRoleFilter } from '../../api/profiles'
+import { useAuth } from '../../App'
 import { getSpecialtyLabel } from '../../constants/specialties'
 import { getFavorites, addFavorite, removeFavorite } from '../../api/favorites'
 import { useToast } from '@/hooks/use-toast'
@@ -73,6 +78,11 @@ import { helpContent } from '../../constants/helpContent'
 const DiscoveryPage = () => {
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { user } = useAuth()
+
+  // Discovery tab state
+  const [activeTab, setActiveTab] = useState('for_you')
+
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedRole, setSelectedRole] = useState('all')
   const [selectedLocation, setSelectedLocation] = useState('')
@@ -95,6 +105,23 @@ const DiscoveryPage = () => {
 
   // Popover open states for filter dropdowns
   const [openPopover, setOpenPopover] = useState(null)
+
+  // Discovery tabs configuration
+  const discoveryTabs = [
+    { id: 'for_you', label: 'For You', icon: Sparkles, description: 'Personalized recommendations' },
+    { id: 'top_rated', label: 'Top Rated', icon: Star, description: 'Highest rated professionals' },
+    { id: 'near_you', label: 'Near You', icon: MapPin, description: 'Professionals in your area' },
+    { id: 'new_talent', label: 'New', icon: UserCheck, description: 'Recently joined' },
+    { id: 'recently_active', label: 'Active', icon: Clock, description: 'Active in the last 7 days' },
+  ]
+
+  // User context for personalization
+  const userContext = {
+    userId: user?.id,
+    role: user?.role,
+    specialty: user?.specialty,
+    city: user?.city
+  }
 
   // Map Supabase roles to component roles
   const mapSupabaseRoleToComponentRole = (supabaseRole) => {
@@ -135,34 +162,49 @@ const DiscoveryPage = () => {
     loadFavorites()
   }, [])
 
-  // Load profiles from Supabase on mount and when filters change
+  // Check if user has active manual filters
+  const hasManualFilters = () => {
+    return (
+      searchQuery ||
+      selectedRole !== 'all' ||
+      selectedLocation ||
+      selectedSkills.length > 0 ||
+      selectedBadgeFilters.length > 0 ||
+      priceRange[0] > 0 ||
+      priceRange[1] < 500 ||
+      sortBy !== 'relevance'
+    )
+  }
+
+  // Load profiles from Supabase - uses recommendation API for tabs, search API for filters
   useEffect(() => {
     const loadProfiles = async () => {
       setIsLoading(true)
       setError('')
 
       try {
-        // Convert component role to Supabase role for filtering
-        const supabaseRole = mapComponentRoleToSupabaseRole(selectedRole)
+        let profiles
 
-        // Build filter object with all active filters
-        const filters = {
-          query: searchQuery || undefined,
-          role: selectedRole === 'all' || selectedRole === 'freelancer' ? undefined : supabaseRole?.[0],
-          location: selectedLocation || undefined,
-          // Price range filter (only apply if modified from default)
-          minPrice: priceRange[0] > 0 ? priceRange[0] : undefined,
-          maxPrice: priceRange[1] < 500 ? priceRange[1] : undefined,
-          // Skills/specialty filter
-          specialties: selectedSkills.length > 0 ? selectedSkills : undefined,
-          // Badge filters
-          badges: selectedBadgeFilters.length > 0 ? selectedBadgeFilters : undefined,
-          // Sort option
-          sortBy: sortBy !== 'relevance' ? sortBy : undefined
+        // Use recommendation API when on discovery tabs without manual filters
+        if (!hasManualFilters() && activeTab !== 'all') {
+          profiles = await getRecommendedProfiles(activeTab, userContext, 40)
+        } else {
+          // Use search API when filters are applied
+          const supabaseRole = mapComponentRoleToSupabaseRole(selectedRole)
+
+          const filters = {
+            query: searchQuery || undefined,
+            role: selectedRole === 'all' || selectedRole === 'freelancer' ? undefined : supabaseRole?.[0],
+            location: selectedLocation || undefined,
+            minPrice: priceRange[0] > 0 ? priceRange[0] : undefined,
+            maxPrice: priceRange[1] < 500 ? priceRange[1] : undefined,
+            specialties: selectedSkills.length > 0 ? selectedSkills : undefined,
+            badges: selectedBadgeFilters.length > 0 ? selectedBadgeFilters : undefined,
+            sortBy: sortBy !== 'relevance' ? sortBy : undefined
+          }
+
+          profiles = await searchProfiles(filters)
         }
-
-        // Fetch profiles with all filters applied
-        const profiles = await searchProfiles(filters)
 
         // Filter for specific roles locally (since some map to multiple Supabase roles)
         let filteredProfiles = profiles
@@ -179,35 +221,33 @@ const DiscoveryPage = () => {
         }
 
         // Transform Supabase profiles to match component's expected format
-        // Now includes real data from profile_stats!
         const transformedProfiles = filteredProfiles.map(profile => ({
           id: profile.id,
-          username: profile.username, // For booking route
+          username: profile.username,
           name: profile.display_name || 'Anonymous',
           role: mapSupabaseRoleToComponentRole(profile.role),
-          originalRole: profile.role, // Keep original role for specialty label lookup
+          originalRole: profile.role,
           specialty: profile.specialty,
           specialty_display_name: profile.specialty_display_name || getSpecialtyLabel(profile.role, profile.specialty),
           title: profile.role || 'Creative Professional',
           location: profile.city || 'Location not specified',
           avatar: profile.avatar_url,
-          // Real data from profile_stats
           rating: profile.average_rating || 0,
           reviewCount: profile.total_reviews || 0,
           hourlyRate: profile.hourly_rate || 0,
-          // Skills from specialty (can be expanded later)
           skills: profile.specialty ? [profile.specialty_display_name || profile.specialty] : [],
           bio: profile.bio || 'No bio available',
           portfolio: [],
-          // Real availability status
           availability: profile.public_booking_enabled ? 'available' : 'unavailable',
           featured: false,
           profileViews: 0,
           completedProjects: profile.total_bookings_completed || 0,
-          // Additional data for badges
           emailVerified: profile.email_verified,
           onTimeRate: profile.on_time_delivery_rate || 100,
-          lastActiveAt: profile.last_active_at
+          lastActiveAt: profile.last_active_at,
+          // Recommendation data from personalized API
+          recommendationScore: profile.recommendation_score || 0,
+          recommendationReason: profile.recommendation_reason || ''
         }))
 
         setProfessionals(transformedProfiles)
@@ -220,7 +260,7 @@ const DiscoveryPage = () => {
     }
 
     loadProfiles()
-  }, [searchQuery, selectedRole, selectedLocation, priceRange, selectedSkills, selectedBadgeFilters, sortBy])
+  }, [searchQuery, selectedRole, selectedLocation, priceRange, selectedSkills, selectedBadgeFilters, sortBy, activeTab, user?.id])
 
   // Sync filteredProfessionals with professionals when data loads
   useEffect(() => {
@@ -562,6 +602,95 @@ const DiscoveryPage = () => {
             />
           </div>
         </div>
+
+        {/* Discovery Tabs */}
+        <div className="mb-4">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {discoveryTabs.map((tab) => {
+              const Icon = tab.icon
+              const isActive = activeTab === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id)
+                    // Clear filters when switching tabs
+                    if (hasManualFilters()) {
+                      clearAllFilters()
+                    }
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                    isActive
+                      ? 'bg-primary text-white shadow-md'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                  title={tab.description}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Personalization Context Banner */}
+        {activeTab === 'for_you' && user?.role && !hasManualFilters() && (
+          <div className="mb-4 p-4 rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-primary/20">
+                <Sparkles className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-0.5">
+                  Recommended for you as {user.role === 'Organiser' ? 'an' : 'a'} {user.role}
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  {user.role === 'Organiser' && 'Showing freelancers, vendors, and venues perfect for your events'}
+                  {user.role === 'Freelancer' && 'Showing organisers looking for talent and potential collaborators'}
+                  {user.role === 'Vendor' && 'Showing organisers and venues looking for your services'}
+                  {user.role === 'Venue' && 'Showing event organisers looking for venues like yours'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'near_you' && user?.city && !hasManualFilters() && (
+          <div className="mb-4 p-4 rounded-xl bg-gradient-to-r from-blue-500/10 via-blue-500/5 to-transparent border border-blue-500/20">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-blue-500/20">
+                <MapPin className="w-5 h-5 text-blue-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-0.5">
+                  Professionals near {user.city}
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Showing talent in your local area for easier collaboration
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'near_you' && !user?.city && (
+          <div className="mb-4 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/50">
+                <MapPin className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-0.5">
+                  Location not set
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Add your city in your <Link to="/profile" className="text-primary hover:underline">profile settings</Link> to see talent near you
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modern Dropdown Filter Bar */}
         <div className="mb-6">
@@ -1274,23 +1403,37 @@ const DiscoveryPage = () => {
                       </div>
 
                       {/* Availability Status */}
-                      <div className="mt-3 flex items-center justify-center">
+                      <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
                         <div className={`flex items-center space-x-1 text-xs px-2 py-1 rounded-full ${
-                          professional.availability === 'available' 
-                            ? 'bg-green-100 text-green-800' 
+                          professional.availability === 'available'
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                             : professional.availability === 'busy'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-red-100 text-red-800'
+                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                            : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                         }`}>
                           <div className={`w-2 h-2 rounded-full ${
-                            professional.availability === 'available' 
-                              ? 'bg-green-500' 
+                            professional.availability === 'available'
+                              ? 'bg-green-500'
                               : professional.availability === 'busy'
                               ? 'bg-yellow-500'
                               : 'bg-red-500'
                           }`} />
                           <span className="capitalize">{professional.availability}</span>
                         </div>
+
+                        {/* Recommendation Badge */}
+                        {professional.recommendationReason && (
+                          <div className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-primary/10 text-primary dark:bg-primary/20">
+                            {professional.recommendationReason.includes('Near you') && <MapPin className="w-3 h-3" />}
+                            {professional.recommendationReason.includes('Top rated') && <Star className="w-3 h-3" />}
+                            {professional.recommendationReason.includes('Recently active') && <Clock className="w-3 h-3" />}
+                            {professional.recommendationReason.includes('New to') && <UserCheck className="w-3 h-3" />}
+                            {professional.recommendationReason.includes('Good match') && <Sparkles className="w-3 h-3" />}
+                            {professional.recommendationReason.includes('Complementary') && <Users className="w-3 h-3" />}
+                            {professional.recommendationReason.includes('collaborator') && <Users className="w-3 h-3" />}
+                            <span>{professional.recommendationReason}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
