@@ -229,7 +229,7 @@ const JobFeedPage = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Jobs</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Discover Jobs</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2 max-w-xl">
             {isOrganiser
               ? 'Manage your job postings and find the perfect talent for your events.'
