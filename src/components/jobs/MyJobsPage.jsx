@@ -299,7 +299,7 @@ const MyJobsPage = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => navigate('/jobs')}
+                    onClick={() => navigate(`/jobs/${job.id}`)}
                   >
                     View Job
                   </Button>

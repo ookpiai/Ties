@@ -208,6 +208,267 @@ export async function getJobPostings(filters?: {
   }
 }
 
+// ============================================
+// PERSONALIZED JOB RECOMMENDATIONS
+// ============================================
+
+export type JobDiscoveryTab = 'for_you' | 'best_match' | 'near_you' | 'recent' | 'urgent'
+
+export interface UserJobContext {
+  userId?: string
+  role?: string        // Freelancer, Vendor, Venue, Organiser
+  specialty?: string   // photographer, dj, caterer, etc.
+  city?: string
+  hourlyRate?: number
+}
+
+export interface RecommendedJob extends JobPosting {
+  recommendation_score?: number
+  recommendation_reason?: string
+  matching_roles?: JobRole[]
+}
+
+// Specialty keywords for matching job roles
+const SPECIALTY_KEYWORDS: Record<string, string[]> = {
+  'photographer': ['photographer', 'photography', 'photo', 'visual', 'camera'],
+  'videographer': ['videographer', 'video', 'cinematographer', 'film', 'camera'],
+  'dj': ['dj', 'disc jockey', 'music', 'audio', 'sound'],
+  'makeup_artist': ['makeup', 'mua', 'beauty', 'cosmetics', 'stylist'],
+  'event_planner': ['planner', 'coordinator', 'event manager', 'organizer'],
+  'caterer': ['catering', 'food', 'chef', 'cuisine', 'culinary'],
+  'florist': ['florist', 'floral', 'flowers', 'arrangements', 'bouquet'],
+  'decorator': ['decorator', 'decor', 'design', 'styling', 'setup'],
+  'musician': ['musician', 'band', 'performer', 'singer', 'instrument'],
+  'mc': ['mc', 'host', 'emcee', 'presenter', 'announcer'],
+}
+
+// Map user role to job role_type
+const ROLE_TYPE_MAP: Record<string, 'freelancer' | 'vendor' | 'venue'> = {
+  'Freelancer': 'freelancer',
+  'Vendor': 'vendor',
+  'Venue': 'venue',
+}
+
+/**
+ * Get personalized job recommendations based on user context and tab
+ */
+export async function getRecommendedJobs(
+  tab: JobDiscoveryTab,
+  userContext: UserJobContext,
+  limit: number = 20
+): Promise<{ success: boolean; data: RecommendedJob[]; error?: string }> {
+  try {
+    const { userId, role, specialty, city, hourlyRate } = userContext
+
+    // Organisers don't apply to jobs
+    if (role === 'Organiser') {
+      return { success: true, data: [] }
+    }
+
+    // Build base query
+    let query = supabase
+      .from('job_postings')
+      .select(`
+        *,
+        organiser:profiles!organiser_id(id, display_name, avatar_url, role),
+        roles:job_roles(*)
+      `)
+      .in('status', ['open', 'in_progress'])
+      .order('created_at', { ascending: false })
+
+    // Apply tab-specific filters
+    switch (tab) {
+      case 'near_you':
+        if (city) {
+          query = query.ilike('location', `%${city}%`)
+        }
+        break
+      case 'urgent':
+        // Jobs with deadline within 7 days
+        const sevenDaysFromNow = new Date()
+        sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7)
+        query = query
+          .not('application_deadline', 'is', null)
+          .lte('application_deadline', sevenDaysFromNow.toISOString())
+        break
+      case 'recent':
+        // Sort by most recent (already default)
+        break
+      default:
+        // for_you and best_match use scoring
+        break
+    }
+
+    query = query.limit(limit * 2) // Fetch more for scoring/filtering
+
+    const { data, error } = await query
+
+    if (error) throw error
+
+    // Get user's role_type for matching
+    const userRoleType = role ? ROLE_TYPE_MAP[role] : null
+
+    // Transform and score jobs
+    let results: RecommendedJob[] = (data || []).map((job: any) => {
+      const recommendedJob: RecommendedJob = {
+        ...job,
+        recommendation_score: 0,
+        recommendation_reason: '',
+        matching_roles: []
+      }
+
+      // Find matching roles for this user
+      if (userRoleType && job.roles) {
+        recommendedJob.matching_roles = job.roles.filter(
+          (r: JobRole) => r.role_type === userRoleType && (r.filled_count || 0) < (r.quantity || 1)
+        )
+      }
+
+      // Calculate recommendation score
+      if (tab === 'for_you' || tab === 'best_match') {
+        const { score, reason } = calculateJobScore(recommendedJob, userContext)
+        recommendedJob.recommendation_score = score
+        recommendedJob.recommendation_reason = reason
+      }
+
+      return recommendedJob
+    })
+
+    // Filter to only show jobs with matching roles (for non-organisers)
+    if (userRoleType && (tab === 'for_you' || tab === 'best_match')) {
+      results = results.filter(job => (job.matching_roles?.length || 0) > 0)
+    }
+
+    // Apply tab-specific sorting
+    switch (tab) {
+      case 'for_you':
+      case 'best_match':
+        results.sort((a, b) => (b.recommendation_score || 0) - (a.recommendation_score || 0))
+        break
+      case 'near_you':
+        results.forEach(job => {
+          if (job.location && city && job.location.toLowerCase().includes(city.toLowerCase())) {
+            job.recommendation_reason = `Near you in ${job.location}`
+          }
+        })
+        break
+      case 'urgent':
+        results.sort((a, b) => {
+          const aDeadline = a.application_deadline ? new Date(a.application_deadline).getTime() : Infinity
+          const bDeadline = b.application_deadline ? new Date(b.application_deadline).getTime() : Infinity
+          return aDeadline - bDeadline
+        })
+        results.forEach(job => {
+          if (job.application_deadline) {
+            const daysLeft = Math.ceil(
+              (new Date(job.application_deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+            )
+            job.recommendation_reason = daysLeft <= 1
+              ? 'Deadline today!'
+              : `Deadline in ${daysLeft} days`
+          }
+        })
+        break
+      case 'recent':
+        results.forEach(job => {
+          const daysAgo = Math.floor(
+            (Date.now() - new Date(job.created_at || '').getTime()) / (1000 * 60 * 60 * 24)
+          )
+          if (daysAgo === 0) job.recommendation_reason = 'Just posted'
+          else if (daysAgo === 1) job.recommendation_reason = 'Posted yesterday'
+          else if (daysAgo <= 3) job.recommendation_reason = `Posted ${daysAgo} days ago`
+        })
+        break
+    }
+
+    return { success: true, data: results.slice(0, limit) }
+  } catch (error: any) {
+    console.error('Error fetching recommended jobs:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch recommended jobs',
+      data: []
+    }
+  }
+}
+
+/**
+ * Calculate recommendation score for a job based on user context
+ */
+function calculateJobScore(
+  job: RecommendedJob,
+  userContext: UserJobContext
+): { score: number; reason: string } {
+  const { role, specialty, city, hourlyRate } = userContext
+  let score = 0
+  const reasons: string[] = []
+
+  // 1. Role Match (30% weight) - job has roles matching user's type
+  const userRoleType = role ? ROLE_TYPE_MAP[role] : null
+  if (userRoleType && job.matching_roles && job.matching_roles.length > 0) {
+    score += 0.30
+    reasons.push('Matches your role')
+  }
+
+  // 2. Skill Match (25% weight) - role titles match user's specialty
+  if (specialty && job.matching_roles) {
+    const keywords = SPECIALTY_KEYWORDS[specialty.toLowerCase()] || [specialty.toLowerCase()]
+    const hasSkillMatch = job.matching_roles.some((r: JobRole) =>
+      keywords.some(kw => r.role_title.toLowerCase().includes(kw))
+    )
+    if (hasSkillMatch) {
+      score += 0.25
+      reasons.push('Matches your skills')
+    }
+  }
+
+  // 3. Location Match (20% weight)
+  if (city && job.location) {
+    if (job.location.toLowerCase().includes(city.toLowerCase())) {
+      score += 0.20
+      reasons.push(`Near you in ${city}`)
+    }
+  }
+
+  // 4. Budget Fit (15% weight) - job budget aligns with user's rate
+  if (hourlyRate && job.matching_roles && job.matching_roles.length > 0) {
+    const avgRoleBudget = job.matching_roles.reduce((sum: number, r: JobRole) => sum + (r.budget || 0), 0)
+      / job.matching_roles.length
+
+    // Check if budget is within ±50% of user's expected rate
+    if (avgRoleBudget >= hourlyRate * 0.5 && avgRoleBudget <= hourlyRate * 1.5) {
+      score += 0.15
+      reasons.push('Good budget match')
+    }
+  }
+
+  // 5. Urgency Score (10% weight) - closer deadlines get priority
+  if (job.application_deadline) {
+    const daysUntilDeadline = Math.ceil(
+      (new Date(job.application_deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    )
+    if (daysUntilDeadline <= 3) {
+      score += 0.10
+      reasons.push('Deadline soon')
+    } else if (daysUntilDeadline <= 7) {
+      score += 0.05
+    }
+  }
+
+  // Pick the most relevant reason
+  const primaryReason = reasons[0] || ''
+
+  return { score, reason: primaryReason }
+}
+
+/**
+ * Get the role type filter for a user based on their role
+ */
+export function getJobRoleTypeForUser(userRole?: string): 'freelancer' | 'vendor' | 'venue' | null {
+  if (!userRole) return null
+  return ROLE_TYPE_MAP[userRole] || null
+}
+
 /**
  * Get jobs created by the current user (as organizer)
  * Used for calendar and studio views

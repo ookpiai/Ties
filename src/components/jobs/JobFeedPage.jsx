@@ -1,8 +1,25 @@
 import { useState, useEffect } from 'react'
-import { getJobPostings } from '../../api/jobs'
+import { Link } from 'react-router-dom'
+import { getJobPostings, getRecommendedJobs, getJobRoleTypeForUser } from '../../api/jobs'
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
-import { Calendar, MapPin, DollarSign, Users, Briefcase, Building2, Package, Plus, Search } from 'lucide-react'
+import {
+  Calendar,
+  MapPin,
+  DollarSign,
+  Users,
+  Briefcase,
+  Building2,
+  Package,
+  Plus,
+  Search,
+  Sparkles,
+  Star,
+  Clock,
+  TrendingUp,
+  AlertCircle,
+  ArrowRight
+} from 'lucide-react'
 import { useAuth } from '../../App'
 import { useNavigate } from 'react-router-dom'
 import JobDetailsModal from './JobDetailsModal'
@@ -14,6 +31,7 @@ const JobFeedPage = () => {
   const [selectedJobId, setSelectedJobId] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [activeTab, setActiveTab] = useState('for_you')
   const [filters, setFilters] = useState({
     role_type: '',
     location: '',
@@ -21,6 +39,34 @@ const JobFeedPage = () => {
   })
   const { user } = useAuth()
   const navigate = useNavigate()
+
+  // Job discovery tabs
+  const discoveryTabs = [
+    { id: 'for_you', label: 'For You', icon: Sparkles, description: 'Personalized recommendations' },
+    { id: 'best_match', label: 'Best Match', icon: Star, description: 'Highest skill match' },
+    { id: 'near_you', label: 'Near You', icon: MapPin, description: 'Jobs in your area' },
+    { id: 'recent', label: 'Recent', icon: Clock, description: 'Newest postings' },
+    { id: 'urgent', label: 'Urgent', icon: AlertCircle, description: 'Deadline soon' },
+  ]
+
+  // User context for personalization
+  const userContext = {
+    userId: user?.id,
+    role: user?.role,
+    specialty: user?.specialty,
+    city: user?.city,
+    hourlyRate: user?.hourly_rate
+  }
+
+  // Check if user has active manual filters
+  const hasManualFilters = () => {
+    return (
+      searchQuery ||
+      filters.role_type ||
+      filters.location ||
+      filters.status !== 'open'
+    )
+  }
 
   const openJobDetails = (jobId) => {
     setSelectedJobId(jobId)
@@ -34,16 +80,38 @@ const JobFeedPage = () => {
 
   useEffect(() => {
     loadJobs()
-  }, [filters])
+  }, [filters, activeTab, user?.id])
 
   const loadJobs = async () => {
     setLoading(true)
-    const result = await getJobPostings(filters)
-    if (result.success) {
-      setJobs(result.data)
-    } else {
-      console.error('Error loading jobs:', result.error)
+
+    // For Organisers, redirect to My Jobs or show empty state
+    if (user?.role === 'Organiser' && !hasManualFilters()) {
+      setJobs([])
+      setLoading(false)
+      return
     }
+
+    try {
+      let result
+
+      // Use recommendation API when on discovery tabs without manual filters
+      if (!hasManualFilters()) {
+        result = await getRecommendedJobs(activeTab, userContext, 40)
+      } else {
+        // Use standard search API when filters are applied
+        result = await getJobPostings(filters)
+      }
+
+      if (result.success) {
+        setJobs(result.data)
+      } else {
+        console.error('Error loading jobs:', result.error)
+      }
+    } catch (err) {
+      console.error('Error loading jobs:', err)
+    }
+
     setLoading(false)
   }
 
@@ -152,28 +220,186 @@ const JobFeedPage = () => {
     }
   ]
 
+  // Check if user is an Organiser
+  const isOrganiser = user?.role === 'Organiser'
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0B0B0B]">
       <div className="container mx-auto px-4 py-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Jobs Feed</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Jobs</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2 max-w-xl">
-            Browse and apply to available jobs. Once you're selected for a job, it will appear in your Studio workspace for project management.
+            {isOrganiser
+              ? 'Manage your job postings and find the perfect talent for your events.'
+              : 'Find opportunities that match your skills and experience.'}
           </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={() => navigate('/studio')}>
-            <Briefcase className="h-4 w-4 mr-2" />
-            Go to Studio
-          </Button>
-          <Button onClick={() => navigate('/jobs/create')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Post a Job
-          </Button>
+          {isOrganiser ? (
+            <>
+              <Button variant="outline" onClick={() => navigate('/jobs/my-jobs')}>
+                <Briefcase className="h-4 w-4 mr-2" />
+                My Job Postings
+              </Button>
+              <Button onClick={() => navigate('/jobs/create')}>
+                <Plus className="h-4 w-4 mr-2" />
+                Post a Job
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => navigate('/jobs/my-applications')}>
+                <Briefcase className="h-4 w-4 mr-2" />
+                My Applications
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/studio')}>
+                <Briefcase className="h-4 w-4 mr-2" />
+                Go to Studio
+              </Button>
+            </>
+          )}
         </div>
       </div>
+
+      {/* Organiser Notice */}
+      {isOrganiser && !hasManualFilters() && (
+        <div className="mb-6 p-6 rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20">
+          <div className="flex items-start gap-4">
+            <div className="p-3 rounded-lg bg-primary/20">
+              <Briefcase className="w-6 h-6 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-1">
+                You're an Organiser
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                As an Organiser, you post jobs rather than apply to them. Use the buttons below to manage your postings or create new opportunities.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Button onClick={() => navigate('/jobs/create')}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Post a New Job
+                </Button>
+                <Button variant="outline" onClick={() => navigate('/jobs/my-jobs')}>
+                  <ArrowRight className="h-4 w-4 mr-2" />
+                  View My Job Postings
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Discovery Tabs - Only show for non-Organisers */}
+      {!isOrganiser && (
+        <div className="mb-4">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {discoveryTabs.map((tab) => {
+              const Icon = tab.icon
+              const isActive = activeTab === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id)
+                    // Clear filters when switching tabs
+                    if (hasManualFilters()) {
+                      clearAllFilters()
+                    }
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                    isActive
+                      ? 'bg-primary text-white shadow-md'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                  title={tab.description}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Personalization Context Banner */}
+      {!isOrganiser && activeTab === 'for_you' && user?.role && !hasManualFilters() && (
+        <div className="mb-4 p-4 rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-primary/20">
+              <Sparkles className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-0.5">
+                Jobs recommended for you as a {user.role}
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {user.specialty
+                  ? `Showing ${getJobRoleTypeForUser(user.role)} opportunities matching your ${user.specialty} specialty`
+                  : `Showing ${getJobRoleTypeForUser(user.role)} opportunities based on your profile`}
+                {user.city && `, prioritizing jobs near ${user.city}`}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'near_you' && user?.city && !hasManualFilters() && !isOrganiser && (
+        <div className="mb-4 p-4 rounded-xl bg-gradient-to-r from-blue-500/10 via-blue-500/5 to-transparent border border-blue-500/20">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-blue-500/20">
+              <MapPin className="w-5 h-5 text-blue-500" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-0.5">
+                Jobs near {user.city}
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Showing opportunities in your local area for convenient work
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'near_you' && !user?.city && !isOrganiser && (
+        <div className="mb-4 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/50">
+              <MapPin className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-0.5">
+                Location not set
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Add your city in your <Link to="/profile" className="text-primary hover:underline">profile settings</Link> to see jobs near you
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'urgent' && !isOrganiser && !hasManualFilters() && (
+        <div className="mb-4 p-4 rounded-xl bg-gradient-to-r from-red-500/10 via-red-500/5 to-transparent border border-red-500/20">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-red-500/20">
+              <AlertCircle className="w-5 h-5 text-red-500" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-0.5">
+                Jobs with upcoming deadlines
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                These jobs need applications soon - don't miss out!
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modern Filter Bar */}
       <FilterBar
@@ -285,6 +511,31 @@ const JobFeedPage = () => {
                     <Badge variant="outline">+{job.roles.length - 4} more</Badge>
                   )}
                 </div>
+
+                {/* Recommendation Badge */}
+                {job.recommendation_reason && (
+                  <div className="mb-4">
+                    <Badge
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium ${
+                        job.recommendation_reason.includes('Deadline')
+                          ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                          : job.recommendation_reason.includes('Near you')
+                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                          : job.recommendation_reason.includes('Just posted') || job.recommendation_reason.includes('Posted')
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                          : 'bg-primary/10 text-primary dark:bg-primary/20'
+                      }`}
+                    >
+                      {job.recommendation_reason.includes('Deadline') && <AlertCircle className="w-3 h-3" />}
+                      {job.recommendation_reason.includes('Near you') && <MapPin className="w-3 h-3" />}
+                      {job.recommendation_reason.includes('Just posted') && <Clock className="w-3 h-3" />}
+                      {job.recommendation_reason.includes('Posted') && !job.recommendation_reason.includes('Just') && <Clock className="w-3 h-3" />}
+                      {job.recommendation_reason.includes('Matches your') && <Sparkles className="w-3 h-3" />}
+                      {job.recommendation_reason.includes('Good budget') && <DollarSign className="w-3 h-3" />}
+                      {job.recommendation_reason}
+                    </Badge>
+                  </div>
+                )}
 
                 {/* Footer Row */}
                 <div className="flex justify-between items-center pt-4 border-t border-gray-100 dark:border-gray-700">
