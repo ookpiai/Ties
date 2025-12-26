@@ -62,7 +62,7 @@ import { getUserSkills } from '../../api/skills'
 import { getUserBadges } from '../../api/badges'
 import { getServicePackages } from '../../api/servicePackages'
 import { getProfileStats, getPublicStats, recordProfileView } from '../../api/profileStats'
-import JobOfferComposer from '../messages/JobOfferComposer'
+import BriefComposer from '../messages/BriefComposer'
 import { FileText } from 'lucide-react'
 
 const PublicProfileView = () => {
@@ -80,7 +80,7 @@ const PublicProfileView = () => {
   const [badges, setBadges] = useState([])
   const [packages, setPackages] = useState([])
   const [stats, setStats] = useState(null)
-  const [showJobOfferComposer, setShowJobOfferComposer] = useState(false)
+  const [showBriefComposer, setShowBriefComposer] = useState(false)
 
 
   // Load profile data
@@ -275,9 +275,9 @@ const PublicProfileView = () => {
                       <MessageCircle className="w-4 h-4 mr-2" />
                       Message
                     </Button>
-                    <Button variant="outline" onClick={() => setShowJobOfferComposer(true)}>
+                    <Button variant="outline" onClick={() => setShowBriefComposer(true)}>
                       <FileText className="w-4 h-4 mr-2" />
-                      Send Offer
+                      Send Brief
                     </Button>
                     <CheckAvailabilityButton
                       freelancerId={profile.id}
@@ -616,19 +616,14 @@ const PublicProfileView = () => {
         </Tabs>
       </div>
 
-      {/* Job Offer Composer Modal */}
-      {profile && !isOwnProfile && (
-        <JobOfferComposer
-          open={showJobOfferComposer}
-          onOpenChange={setShowJobOfferComposer}
-          recipient={{
-            id: profile.id,
-            display_name: profile.display_name || profile.full_name,
-            avatar_url: profile.avatar_url,
-            role: profile.role
-          }}
-          onSuccess={() => {
-            setShowJobOfferComposer(false)
+      {/* Brief Composer Modal */}
+      {showBriefComposer && profile && !isOwnProfile && (
+        <BriefComposer
+          recipientId={profile.id}
+          recipientName={profile.display_name || profile.full_name}
+          onClose={() => setShowBriefComposer(false)}
+          onSent={() => {
+            setShowBriefComposer(false)
             navigate('/messages')
           }}
         />

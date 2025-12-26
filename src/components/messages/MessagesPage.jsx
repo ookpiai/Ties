@@ -17,9 +17,9 @@ import {
   searchUsers
 } from '../../api/messages'
 import { getProfile } from '../../api/profiles'
-import { getConversationOffers } from '../../api/jobOffers'
-import JobOfferCard from './JobOfferCard'
-import JobOfferComposer from './JobOfferComposer'
+import { getConversationBriefs } from '../../api/briefs'
+import BriefCard from './BriefCard'
+import BriefComposer from './BriefComposer'
 import {
   MessageCircle,
   Send,
@@ -52,8 +52,8 @@ const MessagesPage = () => {
   const [pendingOpenUserId, setPendingOpenUserId] = useState(null)
   const [pendingJobContext, setPendingJobContext] = useState(null) // Job context when starting from job page
   const [conversationJobContext, setConversationJobContext] = useState(null) // Current conversation's job context
-  const [showJobOfferComposer, setShowJobOfferComposer] = useState(false)
-  const [jobOffersCache, setJobOffersCache] = useState({}) // Cache for loaded job offers
+  const [showBriefComposer, setShowBriefComposer] = useState(false)
+  const [briefsCache, setBriefsCache] = useState({}) // Cache for loaded briefs
   const messagesEndRef = useRef(null)
   const subscriptionRef = useRef(null)
   const allMessagesSubscriptionRef = useRef(null)
@@ -192,14 +192,14 @@ const MessagesPage = () => {
       setMessages(result.data)
     }
 
-    // Load job offers for this conversation separately
-    const offersResult = await getConversationOffers(otherUserId)
-    if (offersResult.success && offersResult.data.length > 0) {
-      const newOffers = {}
-      offersResult.data.forEach(offer => {
-        newOffers[offer.id] = offer
+    // Load briefs for this conversation separately
+    const briefsResult = await getConversationBriefs(otherUserId)
+    if (briefsResult.success && briefsResult.data.length > 0) {
+      const newBriefs = {}
+      briefsResult.data.forEach(brief => {
+        newBriefs[brief.id] = brief
       })
-      setJobOffersCache(prev => ({ ...prev, ...newOffers }))
+      setBriefsCache(prev => ({ ...prev, ...newBriefs }))
     }
   }
 
@@ -314,22 +314,22 @@ const MessagesPage = () => {
     return colors[role] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
   }
 
-  // Handle job offer updates (accept/reject/withdraw)
-  const handleJobOfferUpdate = (updatedOffer) => {
-    setJobOffersCache(prev => ({
+  // Handle brief updates (accept/decline/withdraw)
+  const handleBriefUpdate = (updatedBrief) => {
+    setBriefsCache(prev => ({
       ...prev,
-      [updatedOffer.id]: updatedOffer
+      [updatedBrief.id]: updatedBrief
     }))
   }
 
-  // Handle successful job offer sent
-  const handleJobOfferSent = (newOffer) => {
+  // Handle successful brief sent
+  const handleBriefSent = (newBrief) => {
     // Add to cache
-    setJobOffersCache(prev => ({
+    setBriefsCache(prev => ({
       ...prev,
-      [newOffer.id]: newOffer
+      [newBrief.id]: newBrief
     }))
-    // Reload messages to show the new offer message
+    // Reload messages to show the new brief message
     if (selectedConversation) {
       loadConversationMessages(selectedConversation.otherUser.id)
     }
@@ -468,15 +468,15 @@ const MessagesPage = () => {
               </Badge>
             </div>
 
-            {/* Send Job Offer Button */}
+            {/* Send Brief Button */}
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setShowJobOfferComposer(true)}
+              onClick={() => setShowBriefComposer(true)}
               className="hidden sm:flex items-center gap-2"
             >
               <FileText size={16} />
-              Send Offer
+              Send Brief
             </Button>
           </div>
 
@@ -539,15 +539,15 @@ const MessagesPage = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {/* Show job offers at the top if any */}
-                {Object.values(jobOffersCache).length > 0 && (
+                {/* Show briefs at the top if any */}
+                {Object.values(briefsCache).length > 0 && (
                   <div className="space-y-3 mb-4">
-                    {Object.values(jobOffersCache).map((offer) => (
-                      <div key={offer.id} className="max-w-md mx-auto">
-                        <JobOfferCard
-                          offer={offer}
+                    {Object.values(briefsCache).map((brief) => (
+                      <div key={brief.id} className="max-w-md mx-auto">
+                        <BriefCard
+                          brief={brief}
                           currentUserId={user.id}
-                          onUpdate={handleJobOfferUpdate}
+                          onUpdate={handleBriefUpdate}
                         />
                       </div>
                     ))}
@@ -685,13 +685,13 @@ const MessagesPage = () => {
         </div>
       )}
 
-      {/* Job Offer Composer Modal */}
-      {selectedConversation && (
-        <JobOfferComposer
-          open={showJobOfferComposer}
-          onOpenChange={setShowJobOfferComposer}
-          recipient={selectedConversation.otherUser}
-          onSuccess={handleJobOfferSent}
+      {/* Brief Composer Modal */}
+      {showBriefComposer && selectedConversation && (
+        <BriefComposer
+          recipientId={selectedConversation.otherUser.id}
+          recipientName={selectedConversation.otherUser.display_name}
+          onClose={() => setShowBriefComposer(false)}
+          onSent={handleBriefSent}
         />
       )}
     </div>
