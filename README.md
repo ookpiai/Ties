@@ -1,181 +1,84 @@
-# TIES Together - Creative Collaboration Platform
+# TIES Together
 
-A comprehensive platform for booking, collaboration, and project management in the creative industry. Connect freelancers, organisers, vendors, and venues for seamless creative projects.
+A creative marketplace platform connecting freelancers, organisers, vendors, and venues for booking, collaboration, and project management.
 
-## ✅ Platform Status: FULLY OPERATIONAL
+## Live Platform
 
-**Frontend:** http://localhost:5173 (Running)  
-**Backend:** http://localhost:5001 (Running)
+**Production:** https://ties-coral.vercel.app
 
-## 🎯 Overview
+## Tech Stack
 
-TIES Together is a full-featured MVP platform that enables:
-- **Multi-role user system** - Freelancers, Organisers, Vendors, Venues, and Collectives
-- **Smart discovery** - Find and connect with creative professionals
-- **Booking system** - Request and manage jobs with escrow payments
-- **TIES Studio** - Project management with tasks, budgets, and file sharing
-- **In-app messaging** - Real-time communication
-- **Pro subscriptions** - Enhanced features for power users
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 19, TypeScript, Vite 7 |
+| Styling | TailwindCSS v4, Radix UI |
+| Backend | Supabase (PostgreSQL, Auth, Storage, Edge Functions) |
+| Payments | Stripe + Stripe Connect |
+| Maps | Mapbox GL |
 
-## 🚀 Quick Start
+## Quick Start
 
-### Prerequisites
-- Node.js 16+
-- Firebase account (for authentication and database)
-- Stripe account (for payments)
-
-### Installation
-
-1. **Clone and install dependencies:**
 ```bash
-cd creative-hub
+# Install dependencies
 npm install
-```
 
-2. **Set up environment variables:**
-```bash
+# Set up environment (copy and edit)
 cp .env.example .env
-```
 
-Edit `.env` and add your Firebase and Stripe credentials.
-
-3. **Start development server:**
-```bash
+# Start development server
 npm run dev
 ```
 
 Visit `http://localhost:5173`
 
-## 📁 Project Structure
+## Environment Variables
 
-```
-src/
-├── components/          # Reusable UI components
-├── contexts/           # React contexts (Auth, User, Studio)
-├── pages/              # Page components
-│   ├── auth/          # Login, Signup
-│   ├── dashboard/     # User dashboard
-│   ├── discover/      # Discovery feed
-│   ├── profile/       # User profiles
-│   ├── bookings/      # Booking management
-│   ├── studio/        # TIES Studio workspace
-│   └── messages/      # Messaging
-├── services/          # Firebase, Stripe, API
-├── types/             # TypeScript definitions
-└── utils/             # Helper functions
-
-docs/
-├── windsurf-mvp-build-spec.md  # Complete MVP specification
-├── PROJECT_STRUCTURE.md         # Architecture details
-└── PROGRESS.md                  # Development progress
+```env
+VITE_SUPABASE_URL=your-supabase-url
+VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_MAPBOX_ACCESS_TOKEN=your-mapbox-token
+VITE_STRIPE_PUBLISHABLE_KEY=your-stripe-key
+VITE_STRIPE_CONNECT_CLIENT_ID=your-connect-id
 ```
 
-## 🔑 Key Features
+## User Roles
 
-### User Roles
-- **Creative Freelancer** - Offer services, manage bookings
-- **Organiser/Client** - Find talent, manage projects
-- **Vendor** - List equipment and services
-- **Venue** - Offer spaces for events
-- **Collective** - Manage creative groups
+- **Freelancer** - Photographers, DJs, musicians, designers
+- **Organiser** - Event planners, project managers
+- **Vendor** - Equipment, catering, mobile bar
+- **Venue** - Space rental
+- **Collective** - Group management
 
-### Core Features (Phase 1) ✅
-- [x] Firebase authentication
-- [x] Multi-role user system
-- [x] Role-based navigation
-- [x] Protected routes
-- [x] Dark mode
-- [x] Responsive design
+## Core Features
 
-### Coming Soon (Phase 2-4)
-- [ ] Profile/portfolio builders
-- [ ] Discovery feed with search
-- [ ] Booking request system
-- [ ] Escrow payments (Stripe Connect)
-- [ ] TIES Studio project workspace
-- [ ] Task management
-- [ ] Budget tracking
-- [ ] File uploads
-- [ ] In-app messaging
-- [ ] Reviews & ratings
-- [ ] Pro subscriptions
+- Multi-role authentication (email + Google OAuth)
+- Profile & portfolio management
+- Discovery with map-based search
+- Booking system with calendar management
+- Job posting & applications
+- TIES Studio project workspace
+- Real-time messaging
+- Stripe payments with escrow
+- Review & rating system
+- Subscription tiers (Free/Lite/Pro)
 
-## 💻 Tech Stack
+## Documentation
 
-- **Frontend:** React 19, TypeScript, Vite 7
-- **Styling:** TailwindCSS v4
-- **Routing:** React Router v7
-- **Auth:** Firebase Authentication
-- **Database:** Firestore
-- **Payments:** Stripe Connect
-- **Storage:** Firebase Storage
-- **State:** React Context + Hooks
+See `docs/DEPLOYMENT_ROADMAP.md` for the implementation roadmap.
 
-## 📖 Documentation
-
-- **[MVP Build Spec](docs/windsurf-mvp-build-spec.md)** - Complete feature specification
-- **[Progress Tracker](docs/PROGRESS.md)** - Development status
-- **[Project Structure](docs/PROJECT_STRUCTURE.md)** - Architecture overview
-
-## 🔧 Development
-
-### Available Scripts
+## Scripts
 
 ```bash
-npm run dev      # Start dev server
-npm run build    # Build for production
-npm run preview  # Preview production build
-npm run lint     # Run ESLint
+npm run dev      # Development server
+npm run build    # Production build
+npm run preview  # Preview build
+npm run lint     # Run linter
 ```
 
-### Environment Variables
+## License
 
-Required environment variables (see `.env.example`):
-
-```
-VITE_FIREBASE_API_KEY=
-VITE_FIREBASE_AUTH_DOMAIN=
-VITE_FIREBASE_PROJECT_ID=
-VITE_FIREBASE_STORAGE_BUCKET=
-VITE_FIREBASE_MESSAGING_SENDER_ID=
-VITE_FIREBASE_APP_ID=
-VITE_STRIPE_PUBLISHABLE_KEY=
-```
-
-## 🎨 Design System
-
-- **Primary Color:** Blue (#3B82F6)
-- **Secondary Color:** Purple (#9333EA)
-- **Success:** Green (#10B981)
-- **Warning:** Yellow (#F59E0B)
-- **Error:** Red (#EF4444)
-
-## 📝 Current Status
-
-**Phase 1 Complete** - Foundation is ready:
-- Authentication system working
-- All routes configured
-- Basic UI components created
-- TypeScript types defined
-
-**Next Steps:**
-1. Set up Firestore collections
-2. Build profile pages for each role
-3. Implement discovery feed
-4. Add booking system
-
-## 🤝 Contributing
-
-This is an MVP project. See `docs/windsurf-mvp-build-spec.md` for the complete feature roadmap.
-
-## 📄 License
-
-MIT License - See LICENSE file for details
-
-## 👤 Maintainer
-
-Charlie White - TIES Together Platform
+MIT
 
 ---
 
-**Built with ❤️ for the creative community**
+Built for the creative community
