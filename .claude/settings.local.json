@@ -94,7 +94,10 @@
       "Bash(/mnt/c/Users/oo/Desktop/ties-together/TIES-Together-V2/PHASE_5_SETUP_INSTRUCTIONS.md )",
       "Bash(/mnt/c/Users/oo/Desktop/ties-together/TIES-Together-V2/SUPABASE_CONFIG_CHECKLIST.md )",
       "Bash(/mnt/c/Users/oo/Desktop/ties-together/TIES-Together-V2/SUPABASE_EMAIL_SETUP.md )",
-      "Bash(/mnt/c/Users/oo/Desktop/ties-together/TIES-Together-V2/DEPLOYMENT_GUIDE.md)"
+      "Bash(/mnt/c/Users/oo/Desktop/ties-together/TIES-Together-V2/DEPLOYMENT_GUIDE.md)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: Add social media-style feed to home page\n\n- Replace dashboard with SocialFeed showing nearby community activity\n- Add feed_items, feed_interactions, feed_comments, user_follows tables\n- Auto-generate feed items from platform activity \\(jobs, bookings, reviews\\)\n- Implement proximity-based feed ranking algorithm\n- Add like, save, follow, and comment functionality\n- Support \"For You\", \"Following\", and \"Nearby\" feed filters\n- Add real-time feed updates via Supabase subscriptions\n- Clean up legacy documentation files\n- Update README with current tech stack\n\nPrivacy: Payment amounts excluded from feed, only public activity shown\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(xargs cat:*)",
+      "Bash(xargs -I {} sh -c 'echo \"\"\"\"=== {} ===\"\"\"\" && head -100 {}')"
     ],
     "deny": [],
     "ask": []

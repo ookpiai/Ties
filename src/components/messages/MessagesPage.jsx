@@ -17,6 +17,9 @@ import {
   searchUsers
 } from '../../api/messages'
 import { getProfile } from '../../api/profiles'
+import { getJobOffer } from '../../api/jobOffers'
+import JobOfferCard from './JobOfferCard'
+import JobOfferComposer from './JobOfferComposer'
 import {
   MessageCircle,
   Send,
@@ -29,7 +32,8 @@ import {
   Briefcase,
   MapPin,
   Calendar,
-  ExternalLink
+  ExternalLink,
+  FileText
 } from 'lucide-react'
 
 const MessagesPage = () => {
@@ -48,6 +52,8 @@ const MessagesPage = () => {
   const [pendingOpenUserId, setPendingOpenUserId] = useState(null)
   const [pendingJobContext, setPendingJobContext] = useState(null) // Job context when starting from job page
   const [conversationJobContext, setConversationJobContext] = useState(null) // Current conversation's job context
+  const [showJobOfferComposer, setShowJobOfferComposer] = useState(false)
+  const [jobOffersCache, setJobOffersCache] = useState({}) // Cache for loaded job offers
   const messagesEndRef = useRef(null)
   const subscriptionRef = useRef(null)
   const allMessagesSubscriptionRef = useRef(null)
@@ -184,6 +190,21 @@ const MessagesPage = () => {
     const result = await getConversation(otherUserId)
     if (result.success) {
       setMessages(result.data)
+      // Load job offers for messages that have them
+      const offerIds = result.data
+        .filter(msg => msg.job_offer_id && !jobOffersCache[msg.job_offer_id])
+        .map(msg => msg.job_offer_id)
+
+      if (offerIds.length > 0) {
+        const newOffers = {}
+        for (const offerId of offerIds) {
+          const offerResult = await getJobOffer(offerId)
+          if (offerResult.success && offerResult.data) {
+            newOffers[offerId] = offerResult.data
+          }
+        }
+        setJobOffersCache(prev => ({ ...prev, ...newOffers }))
+      }
     }
   }
 
@@ -296,6 +317,27 @@ const MessagesPage = () => {
       organiser: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
     }
     return colors[role] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+  }
+
+  // Handle job offer updates (accept/reject/withdraw)
+  const handleJobOfferUpdate = (updatedOffer) => {
+    setJobOffersCache(prev => ({
+      ...prev,
+      [updatedOffer.id]: updatedOffer
+    }))
+  }
+
+  // Handle successful job offer sent
+  const handleJobOfferSent = (newOffer) => {
+    // Add to cache
+    setJobOffersCache(prev => ({
+      ...prev,
+      [newOffer.id]: newOffer
+    }))
+    // Reload messages to show the new offer message
+    if (selectedConversation) {
+      loadConversationMessages(selectedConversation.otherUser.id)
+    }
   }
 
   if (!user) {
@@ -424,12 +466,23 @@ const MessagesPage = () => {
               </AvatarFallback>
             </Avatar>
 
-            <div>
+            <div className="flex-1">
               <p className="font-semibold dark:text-white">{selectedConversation.otherUser.display_name}</p>
               <Badge variant="outline" className={getRoleColor(selectedConversation.otherUser.role)}>
                 {selectedConversation.otherUser.role}
               </Badge>
             </div>
+
+            {/* Send Job Offer Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowJobOfferComposer(true)}
+              className="hidden sm:flex items-center gap-2"
+            >
+              <FileText size={16} />
+              Send Offer
+            </Button>
           </div>
 
           {/* Job Context Banner - Facebook Marketplace Style */}
@@ -493,6 +546,23 @@ const MessagesPage = () => {
               <div className="space-y-4">
                 {messages.map((msg) => {
                   const isMe = msg.from_id === user.id
+
+                  // Check if this is a job offer message
+                  if (msg.job_offer_id && jobOffersCache[msg.job_offer_id]) {
+                    return (
+                      <div key={msg.id} className="max-w-md mx-auto">
+                        <JobOfferCard
+                          offer={jobOffersCache[msg.job_offer_id]}
+                          currentUserId={user.id}
+                          onUpdate={handleJobOfferUpdate}
+                        />
+                        <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-2">
+                          {formatTime(msg.created_at)}
+                        </p>
+                      </div>
+                    )
+                  }
+
                   return (
                     <div
                       key={msg.id}
@@ -618,6 +688,16 @@ const MessagesPage = () => {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Job Offer Composer Modal */}
+      {selectedConversation && (
+        <JobOfferComposer
+          open={showJobOfferComposer}
+          onOpenChange={setShowJobOfferComposer}
+          recipient={selectedConversation.otherUser}
+          onSuccess={handleJobOfferSent}
+        />
       )}
     </div>
   )
