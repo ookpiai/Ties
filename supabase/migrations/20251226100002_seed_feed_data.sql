@@ -256,17 +256,18 @@ LIMIT 5;
 DO $$
 DECLARE
   v_count INTEGER;
+  v_row RECORD;
 BEGIN
   SELECT COUNT(*) INTO v_count FROM feed_items;
   RAISE NOTICE 'Feed seeding complete! Total feed items: %', v_count;
 
   RAISE NOTICE 'Breakdown by type:';
-  FOR v_count IN
-    SELECT item_type || ': ' || COUNT(*)::TEXT
+  FOR v_row IN
+    SELECT item_type, COUNT(*)::INTEGER as cnt
     FROM feed_items
     GROUP BY item_type
     ORDER BY item_type
   LOOP
-    RAISE NOTICE '  %', v_count;
+    RAISE NOTICE '  %: %', v_row.item_type, v_row.cnt;
   END LOOP;
 END $$;
