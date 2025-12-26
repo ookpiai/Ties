@@ -147,9 +147,7 @@ export async function sendJobOffer(
         from_id: senderId,
         to_id: input.recipientId,
         body: `[Job Offer] ${input.title}`,
-        message_type: 'job_offer',
-        job_offer_id: offer.id,
-        context_type: 'job_offer'
+        job_offer_id: offer.id
       })
       .select()
       .single()
@@ -343,9 +341,7 @@ export async function acceptJobOffer(
     await supabase.from('messages').insert({
       from_id: userId,
       to_id: data.sender_id,
-      body: responseMessage || `I've accepted your job offer: ${data.title}`,
-      message_type: 'text',
-      context_type: 'job_offer_response'
+      body: responseMessage || `I've accepted your job offer: ${data.title}`
     })
 
     return { success: true, data }
