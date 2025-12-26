@@ -38,14 +38,27 @@ import { useToast } from '@/hooks/use-toast'
 import PaymentButton from '../payments/PaymentButton'
 import { supabase } from '../../lib/supabase'
 
-const BookingCard = ({ booking, currentUserId, onUpdate }) => {
+const BookingCard = ({ booking, currentUserId, onUpdate, autoOpenDetails = false, onDetailsClose }) => {
   const navigate = useNavigate()
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+  const [isDetailsOpen, setIsDetailsOpen] = useState(autoOpenDetails)
   const [isProcessing, setIsProcessing] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const [jobInfo, setJobInfo] = useState(null)
   const [loadingJobInfo, setLoadingJobInfo] = useState(false)
   const { toast } = useToast()
+
+  // Auto-open details modal when autoOpenDetails prop changes to true
+  useEffect(() => {
+    if (autoOpenDetails) {
+      setIsDetailsOpen(true)
+    }
+  }, [autoOpenDetails])
+
+  // Handle details modal close
+  const handleDetailsClose = () => {
+    setIsDetailsOpen(false)
+    onDetailsClose?.()
+  }
 
   // Load related job info if booking came from a job application
   useEffect(() => {
@@ -588,7 +601,7 @@ const BookingCard = ({ booking, currentUserId, onUpdate }) => {
           bookingId={booking.id}
           currentUserId={currentUserId}
           isOpen={isDetailsOpen}
-          onClose={() => setIsDetailsOpen(false)}
+          onClose={handleDetailsClose}
           onUpdate={onUpdate}
         />
       )}

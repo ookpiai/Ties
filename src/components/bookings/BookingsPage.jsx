@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
@@ -27,6 +28,7 @@ import { createCalendarBlock } from '../../api/calendarUnified'
 
 const BookingsPage = () => {
   const { user } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState('schedule')
   const [bookings, setBookings] = useState([])
   const [stats, setStats] = useState(null)
@@ -38,12 +40,30 @@ const BookingsPage = () => {
   const [showBlockModal, setShowBlockModal] = useState(false)
   const [isBlockingDates, setIsBlockingDates] = useState(false)
 
+  // Get booking ID from URL parameter (for deep linking from feed)
+  const selectedBookingId = searchParams.get('id')
+
   useEffect(() => {
     if (user?.id) {
       loadBookings()
       loadStats()
     }
   }, [user?.id])
+
+  // Auto-switch to "All Bookings" tab when a specific booking ID is in URL
+  useEffect(() => {
+    if (selectedBookingId && bookings.length > 0) {
+      setActiveTab('all')
+      // Clear any filters so the booking is visible
+      setStatusFilter('all')
+      setSearchQuery('')
+    }
+  }, [selectedBookingId, bookings.length])
+
+  // Clear the URL parameter when user navigates away from the booking
+  const handleClearSelectedBooking = () => {
+    setSearchParams({})
+  }
 
   const loadBookings = async () => {
     setIsLoading(true)
@@ -396,6 +416,8 @@ const BookingsPage = () => {
                     bookings={filteredBookings}
                     currentUserId={user?.id}
                     onUpdate={handleBookingUpdate}
+                    selectedBookingId={selectedBookingId}
+                    onClearSelection={handleClearSelectedBooking}
                   />
                 </TabsContent>
 
@@ -422,7 +444,7 @@ const BookingsPage = () => {
 }
 
 // Separate component for bookings list
-const BookingsList = ({ bookings, currentUserId, onUpdate }) => {
+const BookingsList = ({ bookings, currentUserId, onUpdate, selectedBookingId, onClearSelection }) => {
   if (bookings.length === 0) {
     return (
       <EmptyState
@@ -451,6 +473,8 @@ const BookingsList = ({ bookings, currentUserId, onUpdate }) => {
           booking={booking}
           currentUserId={currentUserId}
           onUpdate={onUpdate}
+          autoOpenDetails={booking.id === selectedBookingId}
+          onDetailsClose={booking.id === selectedBookingId ? onClearSelection : undefined}
         />
       ))}
     </div>

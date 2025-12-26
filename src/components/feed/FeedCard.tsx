@@ -129,13 +129,66 @@ export default function FeedCard({
     }
   }
 
-  const getRelatedLink = () => {
-    if (!item.related_id || !item.related_type) return null
-    switch (item.related_type) {
-      case 'job_posting': return `/jobs/${item.related_id}`
-      case 'booking': return `/bookings/${item.related_id}`
-      case 'profile': return `/profile/${item.related_id}`
-      default: return null
+  // Get the appropriate link based on item type and related data
+  const getRelatedLink = (): string | null => {
+    // Handle based on item_type first (more specific)
+    switch (item.item_type) {
+      case 'job_posted':
+        // Link to the job posting
+        return item.related_id ? `/jobs/${item.related_id}` : null
+
+      case 'gig_completed':
+        // Link to bookings page with specific booking ID as query param
+        return item.related_id ? `/bookings?id=${item.related_id}` : null
+
+      case 'review_posted':
+        // Link to the reviewed user's profile (about_user_id is in metadata)
+        const reviewedUserId = item.metadata?.about_user_id
+        return reviewedUserId ? `/profile/${reviewedUserId}` : `/profile/${item.actor_id}`
+
+      case 'profile_joined':
+        // Link to the new member's profile
+        return `/profile/${item.actor_id}`
+
+      case 'availability_opened':
+        // Link to the freelancer's profile to see their availability
+        return `/profile/${item.actor_id}`
+
+      case 'portfolio_update':
+        // Link to the user's profile/portfolio section
+        return `/profile/${item.actor_id}`
+
+      case 'event_posted':
+        // Link to the job/event posting if available
+        return item.related_id ? `/jobs/${item.related_id}` : null
+
+      default:
+        // Fallback to related_type based routing
+        if (!item.related_id || !item.related_type) return null
+        switch (item.related_type) {
+          case 'job_posting': return `/jobs/${item.related_id}`
+          case 'booking': return `/bookings?id=${item.related_id}`
+          case 'profile': return `/profile/${item.related_id}`
+          case 'review': return item.metadata?.about_user_id
+            ? `/profile/${item.metadata.about_user_id}`
+            : null
+          case 'calendar_block': return `/profile/${item.actor_id}`
+          default: return null
+        }
+    }
+  }
+
+  // Get a descriptive label for the "View details" link
+  const getViewDetailsLabel = (): string => {
+    switch (item.item_type) {
+      case 'job_posted': return 'View job'
+      case 'gig_completed': return 'View booking'
+      case 'review_posted': return 'View profile'
+      case 'profile_joined': return 'View profile'
+      case 'availability_opened': return 'Book now'
+      case 'portfolio_update': return 'View portfolio'
+      case 'event_posted': return 'View event'
+      default: return 'View details'
     }
   }
 
@@ -277,29 +330,155 @@ export default function FeedCard({
 
       {/* Metadata (for jobs, events, etc.) */}
       {item.metadata && Object.keys(item.metadata).length > 0 && (
-        <div className="mb-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-          {item.item_type === 'job_posted' && item.metadata.budget && (
+        <div className="mb-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg space-y-2">
+          {/* Job Posted Metadata */}
+          {item.item_type === 'job_posted' && (
+            <>
+              {item.metadata.budget && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-400">Budget</span>
+                  <span className="font-medium text-slate-900 dark:text-white">
+                    ${item.metadata.budget}
+                  </span>
+                </div>
+              )}
+              {item.metadata.event_type && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-400">Event Type</span>
+                  <span className="font-medium text-slate-900 dark:text-white capitalize">
+                    {item.metadata.event_type}
+                  </span>
+                </div>
+              )}
+              {item.metadata.start_date && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-400">Date</span>
+                  <span className="font-medium text-slate-900 dark:text-white">
+                    {new Date(item.metadata.start_date).toLocaleDateString()}
+                    {item.metadata.end_date && item.metadata.end_date !== item.metadata.start_date && (
+                      <> - {new Date(item.metadata.end_date).toLocaleDateString()}</>
+                    )}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Gig Completed Metadata */}
+          {item.item_type === 'gig_completed' && (
+            <>
+              {item.metadata.client_name && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-400">Client</span>
+                  <span className="font-medium text-slate-900 dark:text-white">
+                    {item.metadata.client_name}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Availability Metadata */}
+          {item.item_type === 'availability_opened' && (
+            <>
+              {item.metadata.start_date && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-400">Available</span>
+                  <span className="font-medium text-slate-900 dark:text-white">
+                    {new Date(item.metadata.start_date).toLocaleDateString()}
+                    {item.metadata.end_date && (
+                      <> - {new Date(item.metadata.end_date).toLocaleDateString()}</>
+                    )}
+                  </span>
+                </div>
+              )}
+              {item.metadata.role && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-400">Type</span>
+                  <span className="font-medium text-slate-900 dark:text-white capitalize">
+                    {item.metadata.role}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Profile Joined Metadata */}
+          {item.item_type === 'profile_joined' && (
+            <>
+              {item.metadata.role && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-400">Role</span>
+                  <span className="font-medium text-slate-900 dark:text-white capitalize">
+                    {item.metadata.role}
+                  </span>
+                </div>
+              )}
+              {item.metadata.specialty && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-400">Specialty</span>
+                  <span className="font-medium text-slate-900 dark:text-white capitalize">
+                    {item.metadata.specialty}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Review Posted Metadata */}
+          {item.item_type === 'review_posted' && (
+            <>
+              {item.metadata.rating && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-400">Rating</span>
+                  <div className="flex items-center space-x-1">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <span
+                        key={i}
+                        className={i < item.metadata.rating ? 'text-yellow-400' : 'text-slate-300 dark:text-slate-600'}
+                      >
+                        ★
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {item.metadata.about_user_name && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-400">Reviewed</span>
+                  <span className="font-medium text-slate-900 dark:text-white">
+                    {item.metadata.about_user_name}
+                  </span>
+                </div>
+              )}
+              {item.metadata.review_type && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-400">Type</span>
+                  <span className="font-medium text-slate-900 dark:text-white capitalize">
+                    {item.metadata.review_type.replace('_', ' ')}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Portfolio Update Metadata */}
+          {item.item_type === 'portfolio_update' && item.metadata.specialty && (
             <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-600 dark:text-slate-400">Budget</span>
-              <span className="font-medium text-slate-900 dark:text-white">
-                ${item.metadata.budget}
+              <span className="text-slate-600 dark:text-slate-400">Category</span>
+              <span className="font-medium text-slate-900 dark:text-white capitalize">
+                {item.metadata.specialty}
               </span>
             </div>
           )}
-          {item.item_type === 'gig_completed' && item.metadata.amount && (
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-600 dark:text-slate-400">Earned</span>
-              <span className="font-medium text-green-600 dark:text-green-400">
-                ${item.metadata.amount}
-              </span>
-            </div>
-          )}
-          {item.metadata.rating && (
+
+          {/* Generic rating display (fallback for other types) */}
+          {item.metadata.rating && item.item_type !== 'review_posted' && (
             <div className="flex items-center space-x-1 text-sm">
               {Array.from({ length: 5 }).map((_, i) => (
                 <span
                   key={i}
-                  className={i < item.metadata.rating ? 'text-yellow-400' : 'text-slate-300'}
+                  className={i < item.metadata.rating ? 'text-yellow-400' : 'text-slate-300 dark:text-slate-600'}
                 >
                   ★
                 </span>
@@ -315,7 +494,7 @@ export default function FeedCard({
           to={relatedLink}
           className="inline-flex items-center text-sm text-primary hover:underline mb-3"
         >
-          View details
+          {getViewDetailsLabel()}
           <ExternalLink className="ml-1 h-3 w-3" />
         </Link>
       )}
