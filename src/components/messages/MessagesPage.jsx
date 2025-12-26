@@ -17,7 +17,7 @@ import {
   searchUsers
 } from '../../api/messages'
 import { getProfile } from '../../api/profiles'
-import { getJobOffer } from '../../api/jobOffers'
+import { getConversationOffers } from '../../api/jobOffers'
 import JobOfferCard from './JobOfferCard'
 import JobOfferComposer from './JobOfferComposer'
 import {
@@ -190,21 +190,16 @@ const MessagesPage = () => {
     const result = await getConversation(otherUserId)
     if (result.success) {
       setMessages(result.data)
-      // Load job offers for messages that have them
-      const offerIds = result.data
-        .filter(msg => msg.job_offer_id && !jobOffersCache[msg.job_offer_id])
-        .map(msg => msg.job_offer_id)
+    }
 
-      if (offerIds.length > 0) {
-        const newOffers = {}
-        for (const offerId of offerIds) {
-          const offerResult = await getJobOffer(offerId)
-          if (offerResult.success && offerResult.data) {
-            newOffers[offerId] = offerResult.data
-          }
-        }
-        setJobOffersCache(prev => ({ ...prev, ...newOffers }))
-      }
+    // Load job offers for this conversation separately
+    const offersResult = await getConversationOffers(otherUserId)
+    if (offersResult.success && offersResult.data.length > 0) {
+      const newOffers = {}
+      offersResult.data.forEach(offer => {
+        newOffers[offer.id] = offer
+      })
+      setJobOffersCache(prev => ({ ...prev, ...newOffers }))
     }
   }
 
@@ -544,24 +539,24 @@ const MessagesPage = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {messages.map((msg) => {
-                  const isMe = msg.from_id === user.id
-
-                  // Check if this is a job offer message
-                  if (msg.job_offer_id && jobOffersCache[msg.job_offer_id]) {
-                    return (
-                      <div key={msg.id} className="max-w-md mx-auto">
+                {/* Show job offers at the top if any */}
+                {Object.values(jobOffersCache).length > 0 && (
+                  <div className="space-y-3 mb-4">
+                    {Object.values(jobOffersCache).map((offer) => (
+                      <div key={offer.id} className="max-w-md mx-auto">
                         <JobOfferCard
-                          offer={jobOffersCache[msg.job_offer_id]}
+                          offer={offer}
                           currentUserId={user.id}
                           onUpdate={handleJobOfferUpdate}
                         />
-                        <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-2">
-                          {formatTime(msg.created_at)}
-                        </p>
                       </div>
-                    )
-                  }
+                    ))}
+                  </div>
+                )}
+
+                {/* Messages */}
+                {messages.map((msg) => {
+                  const isMe = msg.from_id === user.id
 
                   return (
                     <div

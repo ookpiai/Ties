@@ -140,29 +140,20 @@ export async function sendJobOffer(
 
     if (offerError) throw offerError
 
-    // Create a message with the job offer attached
+    // Create a notification message in the conversation
+    // Note: We don't link job_offer_id to messages - offers are fetched separately
     const { data: message, error: msgError } = await supabase
       .from('messages')
       .insert({
         from_id: senderId,
         to_id: input.recipientId,
-        body: `[Job Offer] ${input.title}`,
-        job_offer_id: offer.id
+        body: `I've sent you a job offer: "${input.title}". Please check the offer details above.`
       })
       .select()
       .single()
 
     if (msgError) {
       console.error('Failed to create message for job offer:', msgError)
-      // Don't fail the whole operation, the offer was created
-    }
-
-    // Update the offer with the message_id
-    if (message) {
-      await supabase
-        .from('job_offers')
-        .update({ message_id: message.id })
-        .eq('id', offer.id)
     }
 
     // Create notification for recipient
@@ -620,5 +611,33 @@ export async function getOffersSummary(): Promise<{
   } catch (error: any) {
     console.error('Error getting offers summary:', error)
     return { success: false, error: error.message }
+  }
+}
+
+/**
+ * Get job offers between current user and another user (for conversation view)
+ */
+export async function getConversationOffers(
+  otherUserId: string
+): Promise<{ success: boolean; data: JobOffer[]; error?: string }> {
+  try {
+    const userId = await getCurrentUserId()
+
+    const { data, error } = await supabase
+      .from('job_offers')
+      .select(`
+        *,
+        sender:profiles!job_offers_sender_id_fkey(id, display_name, avatar_url, role),
+        recipient:profiles!job_offers_recipient_id_fkey(id, display_name, avatar_url, role)
+      `)
+      .or(`and(sender_id.eq.${userId},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${userId})`)
+      .order('created_at', { ascending: true })
+
+    if (error) throw error
+
+    return { success: true, data: data || [] }
+  } catch (error: any) {
+    console.error('Error getting conversation offers:', error)
+    return { success: false, data: [], error: error.message }
   }
 }
